@@ -128,6 +128,14 @@ npm run smoke     # 창을 잠깐 띄워 렌더러 오류가 없는지 확인
 
 규칙 코드(`shared`, `behavior`, `store`)는 화면과 분리한 순수 로직이라 테스트로 고정되어 있습니다.
 
+## 앞으로의 계획
+
+GitHub 로그인으로 펫을 모으고, 뽑고, 사고팔고, 진화시키는 웹사이트를 함께 만들 계획입니다(서버는 Supabase 사용).
+설계는 [docs/platform-design.md](docs/platform-design.md)에 있고, 프론트엔드·서버(DB)·데스크톱 앱을 이 한 레포에서 함께 관리합니다.
+
+- ✅ DB(스키마·권한·뽑기·거래·진화 서버 함수)와 SQL 테스트: [supabase/](supabase/README.md)
+- ⬜ 웹사이트(`web/`), 데스크톱 앱 로그인·동기화
+
 ## 기술 스택
 
 Electron + TypeScript. 테스트는 Vitest.
