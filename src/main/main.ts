@@ -8,11 +8,15 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BrowserWindow, Menu, Tray, app, ipcMain, nativeImage, screen } from 'electron';
+import { scanLocalPages, type Finding } from '../inspect/scan.js';
 import { WINDOW, petPixelSize } from '../shared/layout.js';
+import { LESSONS } from '../shared/lessons.js';
 import {
+  LEARN_XP,
   applyElapsed,
   createPet,
   feed,
+  learn,
   levelOf,
   moodOf,
   play,
@@ -25,9 +29,12 @@ import {
 import { EGG, SPECIES, frameToRgba, getSpecies, type SpeciesId } from '../shared/species.js';
 import type { PetView } from '../shared/view.js';
 import {
+  canInspect,
   carry,
   createBehavior,
   drop,
+  endAlert,
+  goInspect,
   resize,
   step,
   trigger,
@@ -36,6 +43,19 @@ import {
   type StepContext,
   type Trigger,
 } from './behavior.js';
+import { petTargetFor } from './inspect-target.js';
+import {
+  confirm,
+  detectFixes,
+  emptyProgress,
+  loadProgress,
+  markFixed,
+  pendingFindings,
+  prune,
+  saveProgress,
+  snooze,
+  type Progress,
+} from './progress.js';
 import { loadPet, savePet } from './store.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -47,6 +67,13 @@ const SAVE_MS = 30_000;
 const HUNGRY_NOTICE_MS = 5 * 60_000;
 /** 마우스가 이 거리 이상 움직여야 "움직였다"고 본다 */
 const CURSOR_MOVE_PX = 3;
+/** 크롬 원격 디버깅 포트. 환경 변수 PET_CDP_PORT 로 바꿀 수 있다. */
+const CDP_PORT = Number(process.env['PET_CDP_PORT'] ?? 9222);
+const SCAN_MS = 10_000;
+/** 문제를 찾아 알린 뒤 다음 문제를 알리기까지 최소 간격 */
+const INSPECT_GAP_MS = 30_000;
+const STATUS_OFF = '검사: 크롬이 연결되지 않았어요 (npm run chrome)';
+const CARD_SIZE = { width: 380, height: 470 } as const;
 
 if (SMOKE) {
   // 스모크 실행은 사용자의 실제 저장 파일을 건드리지 않는다.
@@ -64,6 +91,17 @@ let lastCursorMoveAt = Date.now();
 let lastSentKey = '';
 let lastHungryNoticeAt = 0;
 let savePath = '';
+
+// 검사 상태: 찾은 문제 대기열, 지금 알리는 문제, 학습 진행도
+let progress: Progress = emptyProgress();
+let progressPath = '';
+let queue: Finding[] = [];
+let active: Finding | null = null;
+let announcedKey = '';
+let lastInspectAt = 0;
+let scanning = false;
+let scanStatus = STATUS_OFF;
+let cardWin: BrowserWindow | null = null;
 
 const randomSpecies = (): SpeciesId => {
   const pick = SPECIES[Math.floor(Math.random() * SPECIES.length)];
@@ -119,7 +157,135 @@ function stepContext(now: number, dtMs: number): StepContext {
   };
 }
 
+function setScanStatus(text: string): void {
+  if (text === scanStatus) return;
+  scanStatus = text;
+  updateTray();
+}
+
+function persistProgress(): void {
+  try {
+    saveProgress(progressPath, progress);
+  } catch (error) {
+    console.error('진행도 저장 실패', error);
+  }
+}
+
+/** 열려 있는 로컬 페이지를 검사해서 새 문제를 대기열에 넣고, 고친 것을 찾아 보상한다. */
+async function scanOnce(): Promise<void> {
+  if (scanning) return;
+  if (stageOf(pet) === 'egg') {
+    queue = [];
+    setScanStatus('검사: 알이 부화하면 시작해요');
+    return;
+  }
+  scanning = true;
+  try {
+    const result = await scanLocalPages(CDP_PORT);
+    const now = Date.now();
+    if (!result.reachable) {
+      queue = [];
+      setScanStatus(STATUS_OFF);
+      return;
+    }
+    setScanStatus(`검사: 연결됨 · 로컬 페이지 ${result.scannedUrls.length}개`);
+
+    const fixed = detectFixes(progress, result.scannedUrls, new Set(result.findings.map((f) => f.key)));
+    if (fixed.length > 0) {
+      progress = markFixed(progress, fixed);
+      let message = '';
+      for (let i = 0; i < fixed.length; i++) {
+        const r = learn(applyElapsedInPlace(), 'fixed');
+        pet = r.pet;
+        message = r.message;
+      }
+      say(fixed.length === 1 ? message : `${fixed.length}개나 고쳤네요! 경험치 +${fixed.length * LEARN_XP.fixed}`);
+      updateTray();
+      sendView();
+      persist();
+    }
+
+    progress = prune(progress, now);
+    // 화면에 위치가 있는 문제를 먼저 알린다.
+    queue = pendingFindings(result.findings, progress, now).sort((a, b) => Number(b.rect !== null) - Number(a.rect !== null));
+    persistProgress();
+  } finally {
+    scanning = false;
+  }
+}
+
+function closeCard(): void {
+  if (cardWin && !cardWin.isDestroyed()) cardWin.destroy();
+  cardWin = null;
+}
+
+/** 펫 근처에 배움 카드 창을 연다. */
+function openCard(): void {
+  if (!active) return;
+  closeCard();
+  const area = screen.getDisplayNearestPoint({ x: Math.round(behavior.x), y: Math.round(behavior.y) }).workArea;
+  const { width, height } = CARD_SIZE;
+  const x = Math.round(Math.min(Math.max(behavior.x + petSize / 2 - width / 2, area.x), area.x + area.width - width));
+  let y = behavior.y - height - 8;
+  if (y < area.y) y = behavior.y + petSize + 8;
+  y = Math.round(Math.min(Math.max(y, area.y), area.y + area.height - height));
+
+  const w = new BrowserWindow({
+    x,
+    y,
+    width,
+    height,
+    frame: false,
+    resizable: false,
+    skipTaskbar: true,
+    show: false,
+    backgroundColor: '#fffdf5',
+    webPreferences: {
+      preload: path.join(projectRoot, 'static', 'card-preload.cjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  w.setAlwaysOnTop(true, 'screen-saver');
+  w.once('ready-to-show', () => w.show());
+  w.on('closed', () => {
+    if (cardWin === w) cardWin = null;
+  });
+  void w.loadFile(path.join(projectRoot, 'static', 'card.html'));
+  cardWin = w;
+}
+
+/** 카드를 닫는다: 확인했으면 경험치를 주고, 나중에 보기로 했으면 한동안 다시 알리지 않는다. */
+function finishCard(kind: 'confirm' | 'later'): void {
+  const finding = active;
+  const now = Date.now();
+  if (finding) {
+    if (kind === 'confirm') {
+      progress = confirm(progress, finding.key, now);
+      const result = learn(applyElapsedInPlace(), 'confirm');
+      pet = result.pet;
+      say(result.message);
+      persist();
+      updateTray();
+    } else {
+      progress = snooze(progress, finding.key, now);
+    }
+    persistProgress();
+    queue = queue.filter((f) => f.key !== finding.key);
+    active = null;
+    behavior = endAlert(behavior, now);
+  }
+  closeCard();
+  sendView();
+}
+
 function act(type: 'touch' | 'feed' | 'play'): ActionResult {
+  // 문제를 찾아 알리는 중에 펫을 누르면 쓰다듬기 대신 배움 카드가 열린다.
+  if (type === 'touch' && active && behavior.mode === 'alert') {
+    openCard();
+    return { pet, ok: true, message: '' };
+  }
   const now = Date.now();
   const current = applyElapsed(pet, now);
   const result = type === 'touch' ? touch(current, now) : type === 'feed' ? feed(current) : play(current);
@@ -157,6 +323,8 @@ function buildMenu(): Menu {
   });
   return Menu.buildFromTemplate([
     { label: '상태 보기', click: () => say(statusText(applyElapsedInPlace())) },
+    { label: scanStatus, enabled: false },
+    { label: '지금 검사하기', enabled: !egg, click: () => void scanOnce() },
     { type: 'separator' },
     { label: '쓰다듬기', click: () => act('touch') },
     { label: '밥 주기', enabled: !egg, click: () => act('feed') },
@@ -248,6 +416,35 @@ function createWindow(): BrowserWindow {
   return w;
 }
 
+/** 찾은 문제가 있으면 그 자리로 가고, 도착하면 알리고, 다른 일로 끊기면 한동안 미룬다. */
+function updateInspection(now: number, dtMs: number): void {
+  if (active) {
+    const traveling = behavior.mode === 'run' && behavior.then === 'alert';
+    if (behavior.mode === 'alert') {
+      if (announcedKey !== active.key) {
+        announcedKey = active.key;
+        say(LESSONS[active.ruleId].bubble);
+      }
+    } else if (!traveling && !cardWin) {
+      progress = snooze(progress, active.key, now);
+      persistProgress();
+      queue = queue.filter((f) => f.key !== active?.key);
+      active = null;
+    }
+    return;
+  }
+  const next = queue[0];
+  if (!next || drag || cardWin || now - lastInspectAt < INSPECT_GAP_MS) return;
+  if (!canInspect(behavior, stageOf(pet))) return;
+
+  queue = queue.slice(1);
+  active = next;
+  lastInspectAt = now;
+  const ctx = stepContext(now, dtMs);
+  const target = petTargetFor(next, petSize, ctx.areas);
+  behavior = goInspect(behavior, ctx, target.x, target.y);
+}
+
 function tick(lastAt: number): number {
   const now = Date.now();
   if (!win || win.isDestroyed()) return now;
@@ -269,6 +466,7 @@ function tick(lastAt: number): number {
   } else {
     behavior = step(behavior, stepContext(now, now - lastAt));
   }
+  updateInspection(now, now - lastAt);
   placeWindow();
   sendView();
 
@@ -304,6 +502,19 @@ function setupIpc(): void {
   ipcMain.on('pet:context-menu', () => {
     if (win) buildMenu().popup({ window: win });
   });
+  ipcMain.handle('card:get', () =>
+    active
+      ? {
+          ruleId: active.ruleId,
+          lesson: LESSONS[active.ruleId],
+          selector: active.selector,
+          detail: active.detail,
+          xp: LEARN_XP.confirm,
+        }
+      : null,
+  );
+  ipcMain.on('card:confirm', () => finishCard('confirm'));
+  ipcMain.on('card:later', () => finishCard('later'));
 }
 
 /** 스모크 실행: 렌더러가 에러 없이 뜨는지만 확인하고 종료한다. */
@@ -335,6 +546,8 @@ if (!app.requestSingleInstanceLock()) {
 } else {
   app.whenReady().then(() => {
     savePath = path.join(app.getPath('userData'), 'pet.json');
+    progressPath = path.join(app.getPath('userData'), 'progress.json');
+    progress = loadProgress(progressPath);
     const now = Date.now();
     // 처음 실행하면 임의의 종이 든 알로 시작한다. 알은 쓰다듬으면 부화한다.
     pet = applyElapsed(loadPet(savePath) ?? createPet(randomSpecies(), now), now);
@@ -361,6 +574,9 @@ if (!app.requestSingleInstanceLock()) {
       pet = applyElapsed(pet, Date.now());
       persist();
     }, SAVE_MS);
+
+    setTimeout(() => void scanOnce(), 3_000);
+    setInterval(() => void scanOnce(), SCAN_MS);
   });
 
   app.on('before-quit', () => {

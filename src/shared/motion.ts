@@ -15,7 +15,9 @@ export type Mode =
   | 'play'
   | 'hang'
   | 'fall'
-  | 'carried';
+  | 'carried'
+  /** 검사에서 문제를 찾아 그 자리에서 사용자를 기다린다 */
+  | 'alert';
 export type PlayKind = 'hop' | 'roll' | 'look';
 
 /** 원본 그림(오른쪽을 보고 서 있음)을 먼저 좌우로 뒤집고, 시계 방향으로 quarter 번 돌린다. */

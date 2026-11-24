@@ -16,7 +16,7 @@ export interface Rect {
 }
 
 /** 걷거나 뛰어서 도착한 뒤 이어서 할 일 */
-export type Then = 'none' | 'climb' | 'hang';
+export type Then = 'none' | 'climb' | 'hang' | 'alert';
 export type Side = 'left' | 'right';
 
 export interface BehaviorState {
@@ -65,6 +65,8 @@ export const HANG_AFTER_MS = 10_000;
 export const HANG_RELEASE_PX = 6;
 /** 벽을 타는 동안 초당 미끄러질 확률 */
 export const SLIP_PER_SEC = 0.12;
+/** 문제를 찾은 자리에서 사용자를 기다리는 최대 시간 */
+export const ALERT_MS = 90_000;
 
 const PLAY_MS: Record<PlayKind, number> = { hop: 1_800, roll: 1_600, look: 2_400 };
 
@@ -235,6 +237,37 @@ export function wake(s: BehaviorState, now: number): BehaviorState {
   return { ...s, mode: 'idle', since: now, until: now + 1_500 };
 }
 
+/** 점 (x, y) 에 펫이 통째로 들어가도록 가장 가까운 모니터 안으로 옮긴다. */
+export function clampToAreas(
+  x: number,
+  y: number,
+  size: number,
+  areas: readonly Rect[],
+): { x: number; y: number } {
+  const area = areaAt(areas, x + size / 2, y + size / 2);
+  if (!area) return { x, y };
+  return {
+    x: Math.min(Math.max(x, area.x), area.x + Math.max(0, area.width - size)),
+    y: Math.min(Math.max(y, area.y), area.y + Math.max(0, area.height - size)),
+  };
+}
+
+/** 검사하러 갈 수 있는 상태인지: 알이 아니고, 자거나 벽을 타거나 다른 일을 하는 중이 아니어야 한다. */
+export function canInspect(s: BehaviorState, stage: Stage): boolean {
+  if (stage === 'egg' || s.then !== 'none') return false;
+  return s.mode === 'idle' || s.mode === 'walk' || s.mode === 'run' || s.mode === 'play';
+}
+
+/** 문제 자리로 달려가서, 도착하면 알림(alert) 상태로 기다린다. */
+export function goInspect(s: BehaviorState, ctx: StepContext, x: number, y: number): BehaviorState {
+  return startTravel(s, ctx, 'run', x, y, 'alert');
+}
+
+/** 알림을 끝내고 가만히 선다(확인했거나 나중에 보기로 했을 때). */
+export function endAlert(s: BehaviorState, now: number): BehaviorState {
+  return { ...s, mode: 'idle', surface: 'floor', since: now, until: now + 2_000, then: 'none' };
+}
+
 export type Trigger = 'sleep' | 'run' | 'climb' | 'play';
 
 /** 메뉴에서 특정 동작을 바로 시켜 본다(알은 아무것도 하지 않는다). */
@@ -260,11 +293,13 @@ export function step(s: BehaviorState, ctx: StepContext): BehaviorState {
   if (s.mode === 'carried') return s;
 
   // 마우스를 한참 가만히 두면 매달리러 간다(알은 제외).
+  // 문제를 알리러 가는 중이면 방해하지 않는다: 화면을 읽느라 마우스를 안 움직이는 때가 많기 때문이다.
   if (
     ctx.stage !== 'egg' &&
     ctx.cursorIdleMs >= HANG_AFTER_MS &&
     HANGABLE.includes(s.mode) &&
-    s.then !== 'hang'
+    s.then !== 'hang' &&
+    s.then !== 'alert'
   ) {
     return startTravel(s, ctx, 'run', ctx.cursor.x - ctx.size / 2, ctx.cursor.y, 'hang');
   }
@@ -292,6 +327,8 @@ export function step(s: BehaviorState, ctx: StepContext): BehaviorState {
       return stepHang(s, ctx);
     case 'fall':
       return stepFall(s, ctx);
+    case 'alert':
+      return ctx.now < s.until ? s : toIdle(s, ctx, 1_000, 3_000);
     default:
       return s;
   }
@@ -329,6 +366,9 @@ function stepTravel(s: BehaviorState, ctx: StepContext): BehaviorState {
   if (dist <= stepPx) {
     const arrived = { ...s, x: targetX, y: targetY, targetX, targetY };
     if (s.then === 'climb') return startClimb(arrived, ctx);
+    if (s.then === 'alert') {
+      return { ...arrived, mode: 'alert', surface: 'floor', since: ctx.now, until: ctx.now + ALERT_MS, then: 'none' };
+    }
     if (s.then === 'hang') {
       return { ...arrived, mode: 'hang', surface: 'floor', since: ctx.now, then: 'none', anchorX: ctx.cursor.x, anchorY: ctx.cursor.y };
     }

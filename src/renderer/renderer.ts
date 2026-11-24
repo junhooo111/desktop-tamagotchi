@@ -26,6 +26,7 @@ const CLICK_MOVE_LIMIT = 4;
 const HIT_PADDING = 3;
 const BUBBLE_MS = 4_000;
 const ZZZ_COLOR = '#5b6bbf';
+const ALERT_COLOR = '#e5484d';
 /** 'Z' 모양 4x4 도트 */
 const Z_GLYPH = ['###.', '..#.', '.#..', '###.'];
 
@@ -76,6 +77,16 @@ function drawZzz(rect: { x: number; y: number; size: number }, now: number): voi
   });
 }
 
+/** 머리 위에 빨간 느낌표를 띄운다. */
+function drawAlert(rect: { x: number; y: number; size: number }, dy: number): void {
+  ctx.fillStyle = ALERT_COLOR;
+  const unit = 3;
+  const left = rect.x + Math.round(rect.size / 2 - unit / 2);
+  const top = rect.y - 7 * unit + dy * 2;
+  ctx.fillRect(left, top, unit, 4 * unit);
+  ctx.fillRect(left, top + 5 * unit, unit, unit);
+}
+
 function draw(now: number): void {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!view) return;
@@ -97,6 +108,7 @@ function draw(now: number): void {
     });
   });
   if (pose.zzz) drawZzz(rect, now);
+  if (pose.alert) drawAlert(rect, pose.dy);
 }
 
 function showBubble(text: string): void {

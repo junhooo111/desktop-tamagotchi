@@ -23,6 +23,8 @@ export interface Pose {
   eyesClosed: boolean;
   /** 졸거나 자는 중이라 'z' 를 띄운다 */
   zzz: boolean;
+  /** 문제를 찾았다는 느낌표를 머리 위에 띄운다 */
+  alert: boolean;
 }
 
 const WALK_CYCLE: readonly FrameName[] = ['walkA', 'stand', 'walkB', 'stand'];
@@ -50,6 +52,7 @@ export function resolvePose(v: MotionView, now: number): Pose {
     dy: 0,
     eyesClosed: false,
     zzz: false,
+    alert: false,
     ...extra,
   });
 
@@ -81,6 +84,9 @@ export function resolvePose(v: MotionView, now: number): Pose {
       return make(pick(['hangB', 'hangA'] as const, now, 130), { orientation: FRONT });
     case 'fall':
       return make('runB');
+    case 'alert':
+      // 제자리에서 통통 뛰며 "여기요!" 하고 알린다.
+      return make('stand', { alert: true, dy: Math.floor(now / 350) % 2 === 0 ? 0 : -2 });
   }
 }
 

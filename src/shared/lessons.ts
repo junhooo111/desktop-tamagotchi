@@ -1,0 +1,112 @@
+/**
+ * 검사 규칙과 학습 카드 문구.
+ * 규칙마다 "무엇이 문제인지 · 왜 문제인지 · 어떻게 고치는지"를 한국어로 설명한다.
+ */
+
+export const RULE_IDS = [
+  'img-alt',
+  'button-name',
+  'form-label',
+  'html-lang',
+  'page-title',
+  'viewport-meta',
+  'heading-order',
+  'touch-target',
+  'h-overflow',
+  'contrast',
+] as const;
+
+export type RuleId = (typeof RULE_IDS)[number];
+
+export interface Lesson {
+  title: string;
+  /** 펫이 문제 자리에서 띄우는 한 줄 */
+  bubble: string;
+  problem: string;
+  why: string;
+  fix: string;
+  code: string;
+}
+
+export const LESSONS: Record<RuleId, Lesson> = {
+  'img-alt': {
+    title: '이미지에 대체 텍스트(alt)가 없어요',
+    bubble: '여기 이미지에 alt가 없어요!',
+    problem: '<img> 태그에 alt 속성이 아예 없습니다.',
+    why: '스크린 리더는 alt가 없으면 파일 이름을 읽어 줍니다. 이미지가 깨졌을 때도 아무 설명이 남지 않고, 검색엔진도 이미지를 이해하지 못합니다.',
+    fix: '이미지가 의미를 전달하면 내용을 한 문장으로 쓰고, 장식용이면 alt="" 로 비워 두세요(속성 자체는 있어야 합니다).',
+    code: '<img src="/team.jpg" alt="회의실에서 웃고 있는 팀원 다섯 명" />\n<img src="/divider.svg" alt="" />',
+  },
+  'button-name': {
+    title: '버튼·링크에 이름이 없어요',
+    bubble: '이 버튼이 뭘 하는지 알 수가 없어요!',
+    problem: '아이콘만 있는 버튼이나 링크에 글자도 aria-label 도 없습니다.',
+    why: '스크린 리더 사용자는 "버튼"이라고만 듣고 무슨 기능인지 알 수 없습니다. 음성 제어로도 이름을 불러서 누를 수 없습니다.',
+    fix: '보이는 글자를 넣거나, 아이콘 버튼에는 aria-label 로 기능을 적어 주세요.',
+    code: '<button aria-label="메뉴 열기">\n  <svg aria-hidden="true">…</svg>\n</button>',
+  },
+  'form-label': {
+    title: '입력칸에 라벨이 없어요',
+    bubble: '이 입력칸이 무엇인지 몰라요!',
+    problem: '<input>·<select>·<textarea> 에 연결된 <label> 이나 aria-label 이 없습니다. placeholder 만 있는 경우도 해당합니다.',
+    why: 'placeholder 는 입력을 시작하면 사라지고 스크린 리더가 라벨로 인정하지 않는 경우가 많습니다. 라벨을 누르면 입력칸에 포커스가 가는 편의도 사라집니다.',
+    fix: '<label for> 로 입력칸과 연결하거나, 라벨을 숨기고 싶다면 aria-label 을 쓰세요.',
+    code: '<label for="email">이메일</label>\n<input id="email" type="email" />',
+  },
+  'html-lang': {
+    title: '<html> 에 lang 이 없어요',
+    bubble: '이 페이지가 무슨 언어인지 몰라요!',
+    problem: '<html> 요소에 lang 속성이 없습니다.',
+    why: '스크린 리더가 발음 규칙을 고르는 기준이고, 브라우저의 번역·맞춤법 검사·하이픈 처리도 lang 을 봅니다.',
+    fix: '<html> 에 페이지 주 언어를 적어 주세요.',
+    code: '<html lang="ko">',
+  },
+  'page-title': {
+    title: '페이지 제목(<title>)이 비어 있어요',
+    bubble: '탭 제목이 비어 있어요!',
+    problem: 'document.title 이 비어 있거나 없습니다.',
+    why: '브라우저 탭, 즐겨찾기, 검색 결과, 스크린 리더의 페이지 안내가 모두 제목에서 시작합니다. 탭이 여러 개일 때 구분할 수 없습니다.',
+    fix: '페이지마다 내용을 알려 주는 고유한 제목을 넣으세요. SPA 라면 라우트가 바뀔 때 제목도 바꿔야 합니다.',
+    code: '<title>주문 내역 - 마이 서비스</title>',
+  },
+  'viewport-meta': {
+    title: 'viewport 메타 태그가 없어요',
+    bubble: '모바일에서 깨질 수 있어요!',
+    problem: '<meta name="viewport"> 가 없습니다.',
+    why: '모바일 브라우저는 이 태그가 없으면 데스크톱 폭(약 980px)으로 그린 뒤 축소해서 보여 줍니다. 반응형 CSS 가 의도대로 동작하지 않습니다.',
+    fix: '<head> 에 viewport 를 추가하세요.',
+    code: '<meta name="viewport" content="width=device-width, initial-scale=1" />',
+  },
+  'heading-order': {
+    title: '제목 단계를 건너뛰었어요',
+    bubble: '제목 단계가 건너뛰어졌어요!',
+    problem: 'h1 다음에 바로 h3 처럼 제목 단계를 건너뛴 곳이 있습니다.',
+    why: '스크린 리더 사용자는 제목 목록으로 페이지 구조를 파악합니다. 단계가 건너뛰어지면 내용이 빠졌다고 오해하게 됩니다.',
+    fix: '크기가 아니라 구조에 맞춰 h1→h2→h3 순서를 지키고, 크기는 CSS 로 조절하세요.',
+    code: '<h1>대시보드</h1>\n<h2>최근 주문</h2>\n<h3>배송 중</h3>',
+  },
+  'touch-target': {
+    title: '누를 영역이 너무 작아요',
+    bubble: '손가락으로 누르기엔 너무 작아요!',
+    problem: '버튼·입력칸 같은 조작 요소의 가로나 세로가 24px 보다 작습니다.',
+    why: '모바일에서 잘못 누르기 쉽고, 손이 떨리는 사용자는 누르기 어렵습니다. 접근성 기준(WCAG 2.2)은 최소 24px, 권장은 44px 입니다.',
+    fix: '보이는 크기가 작더라도 padding 이나 min-width/min-height 로 누르는 영역을 키우세요.',
+    code: '.icon-button {\n  min-width: 44px;\n  min-height: 44px;\n}',
+  },
+  'h-overflow': {
+    title: '화면 폭을 넘어서 가로로 스크롤돼요',
+    bubble: '화면 밖으로 삐져나갔어요!',
+    problem: '페이지가 브라우저 폭보다 넓어서 가로 스크롤이 생깁니다. 아래 요소가 오른쪽 끝을 넘습니다.',
+    why: '모바일에서 화면이 좌우로 흔들리고 내용이 잘립니다. 고정 px 폭이나 긴 단어·표·이미지가 흔한 원인입니다.',
+    fix: '폭을 %·max-width: 100% 로 바꾸고, 긴 텍스트에는 overflow-wrap, 표에는 가로 스크롤 영역을 따로 두세요.',
+    code: 'img { max-width: 100%; height: auto; }\n.card { width: min(100%, 480px); }',
+  },
+  contrast: {
+    title: '글자와 배경의 명암 대비가 부족해요',
+    bubble: '글자가 잘 안 보여요!',
+    problem: '글자색과 배경색의 명암 대비가 기준(일반 글자 4.5:1, 큰 글자 3:1)보다 낮습니다.',
+    why: '저시력 사용자뿐 아니라 밝은 야외나 낮은 화면 밝기에서도 읽기 어렵습니다. 연한 회색 글씨가 가장 흔한 원인입니다.',
+    fix: '글자색을 더 진하게 하거나 배경을 바꿔 대비를 높이세요. 브라우저 개발자 도구의 색상 선택기에서 대비 비율을 볼 수 있습니다.',
+    code: '/* 대비 2.3:1 → 4.6:1 */\ncolor: #aaa;  →  color: #595959;',
+  },
+};

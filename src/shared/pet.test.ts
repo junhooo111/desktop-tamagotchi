@@ -4,6 +4,7 @@ import {
   applyElapsed,
   createPet,
   feed,
+  learn,
   levelOf,
   moodOf,
   play,
@@ -136,6 +137,29 @@ describe('play', () => {
     expect(r.pet.hunger).toBe(45);
     expect(r.pet.xp).toBe(HATCH_XP + 8);
     expect(play(hatched({ happiness: 90 })).pet.happiness).toBe(100);
+  });
+});
+
+describe('learn', () => {
+  it('카드를 확인하면 경험치 +10, 고친 걸 확인하면 +20 을 준다', () => {
+    const a = learn(hatched(), 'confirm');
+    expect(a.pet.xp).toBe(HATCH_XP + 10);
+    expect(a.message).toContain('+10');
+    const b = learn(hatched(), 'fixed');
+    expect(b.pet.xp).toBe(HATCH_XP + 20);
+    expect(b.message).toContain('+20');
+    expect(a.ok && b.ok).toBe(true);
+  });
+
+  it('경험치로 알이 부화하거나 레벨이 오르면 문구가 붙는다', () => {
+    expect(learn(base({ xp: HATCH_XP - 5 }), 'confirm').message).toContain('부화');
+    expect(learn(hatched({ xp: 35 }), 'confirm').message).toContain('레벨 3');
+  });
+
+  it('원본 펫을 바꾸지 않는다', () => {
+    const p = hatched();
+    learn(p, 'fixed');
+    expect(p.xp).toBe(HATCH_XP);
   });
 });
 

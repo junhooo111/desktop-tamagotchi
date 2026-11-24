@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'"
+    />
+    <title>배움 카드</title>
+    <link rel="stylesheet" href="./card.css" />
+  </head>
+  <body>
+    <main id="card" hidden>
+      <header>
+        <span class="badge">배움 카드</span>
+        <button id="close" type="button" aria-label="닫기">×</button>
+      </header>
+      <h1 id="title"></h1>
+      <p class="where" id="where"></p>
+
+      <h2>무엇이 문제인가요?</h2>
+      <p id="problem"></p>
+
+      <h2>왜 문제인가요?</h2>
+      <p id="why"></p>
+
+      <h2>어떻게 고치나요?</h2>
+      <p id="fix"></p>
+      <pre id="code"></pre>
+
+      <footer>
+        <button id="later" type="button" class="secondary">나중에</button>
+        <button id="confirm" type="button" class="primary">확인했어요</button>
+      </footer>
+    </main>
+    <p id="empty" hidden>지금 확인할 문제가 없어요.</p>
+    <script type="module" src="../dist/renderer/card.js"></script>
+  </body>
+</html>

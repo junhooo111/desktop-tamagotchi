@@ -107,6 +107,15 @@ export function play(pet: PetState): ActionResult {
   return { pet: gained.pet, ok: true, message: '신나요!' + gained.note };
 }
 
+export const LEARN_XP = { confirm: 10, fixed: 20 } as const;
+
+/** 학습 카드를 확인(confirm)했거나, 확인했던 문제를 고친 것(fixed)이 확인됐을 때 경험치를 준다. */
+export function learn(pet: PetState, kind: keyof typeof LEARN_XP): ActionResult {
+  const gained = gainXp(pet, LEARN_XP[kind]);
+  const head = kind === 'confirm' ? '배웠어요!' : '고쳤네요, 대단해요!';
+  return { pet: gained.pet, ok: true, message: `${head} 경험치 +${LEARN_XP[kind]}${gained.note}` };
+}
+
 export function statusText(pet: PetState): string {
   const stageName = { egg: '알', baby: '새끼', adult: '성체' }[stageOf(pet)];
   const name = stageOf(pet) === 'egg' ? '알' : getSpecies(pet.speciesId).name;

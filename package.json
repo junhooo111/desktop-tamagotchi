@@ -10,12 +10,15 @@
     "start": "npm run build && electron .",
     "smoke": "npm run build && electron . --smoke",
     "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "chrome": "node scripts/open-chrome.mjs",
+    "demo": "node scripts/demo-server.mjs"
   },
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^26.6.6",
     "electron": "^45.4.1",
+    "jsdom": "^31.0.1",
     "typescript": "^7.0.2",
     "vitest": "^5.1.1"
   }

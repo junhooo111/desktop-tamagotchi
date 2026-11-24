@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ALERT_MS,
   GRAVITY,
   HANG_AFTER_MS,
   SPEED,
+  canInspect,
   carry,
+  clampToAreas,
   createBehavior,
   drop,
+  endAlert,
+  goInspect,
   pickSpot,
   resize,
   step,
@@ -228,6 +233,55 @@ describe('마우스 매달리기', () => {
 
     const landed = step({ ...falling, y: 800 - SIZE - 1, vy: 2_000 }, ctxOf({ dtMs: 100 }));
     expect(landed).toMatchObject({ mode: 'idle', y: 800 - SIZE, surface: 'floor' });
+  });
+});
+
+describe('검사 알림', () => {
+  it('canInspect: 알이거나 자거나 다른 일을 하러 가는 중이면 갈 수 없다', () => {
+    expect(canInspect(base(), 'adult')).toBe(true);
+    expect(canInspect(base({ mode: 'walk' }), 'baby')).toBe(true);
+    expect(canInspect(base(), 'egg')).toBe(false);
+    expect(canInspect(base({ mode: 'sleep' }), 'adult')).toBe(false);
+    expect(canInspect(base({ mode: 'climb', surface: 'wallL' }), 'adult')).toBe(false);
+    expect(canInspect(base({ mode: 'run', then: 'hang' }), 'adult')).toBe(false);
+    expect(canInspect(base({ mode: 'run', then: 'alert' }), 'adult')).toBe(false);
+  });
+
+  it('goInspect: 문제 자리로 뛰어가고, 도착하면 알림 상태로 기다린다', () => {
+    const going = goInspect(base({ x: 100, y: 200 }), ctxOf(), 400, 200);
+    expect(going).toMatchObject({ mode: 'run', then: 'alert', targetX: 400, targetY: 200, dir: 'right' });
+
+    const midway = step(going, ctxOf({ dtMs: 1000 }));
+    expect(midway.mode).toBe('run');
+    expect(midway.x).toBeCloseTo(100 + SPEED.run);
+
+    const arrived = step({ ...going, x: 399 }, ctxOf({ dtMs: 1000, now: 50_000 }));
+    expect(arrived).toMatchObject({ mode: 'alert', x: 400, then: 'none', since: 50_000, until: 50_000 + ALERT_MS });
+  });
+
+  it('알림 상태는 제자리에서 기다리다가 시간이 지나면 쉬는 상태로 돌아간다', () => {
+    const alerting = base({ mode: 'alert', until: 60_000 });
+    expect(step(alerting, ctxOf({ now: 59_999 }))).toBe(alerting);
+    expect(step(alerting, ctxOf({ now: 60_000 })).mode).toBe('idle');
+  });
+
+  it('endAlert: 확인하거나 미루면 가만히 선다', () => {
+    expect(endAlert(base({ mode: 'alert' }), 5)).toMatchObject({ mode: 'idle', then: 'none', since: 5 });
+  });
+
+  it('문제를 알리러 가는 중이거나 알리는 중이면, 마우스를 오래 두어도 매달리러 가지 않는다', () => {
+    // 화면을 읽느라 마우스를 안 움직이는 동안에도 알림이 끊기지 않아야 한다.
+    const idleCursor = ctxOf({ cursorIdleMs: HANG_AFTER_MS, cursor: { x: 600, y: 300 } });
+    const alerting = base({ mode: 'alert', until: 99_999 });
+    expect(step(alerting, idleCursor)).toBe(alerting);
+    const going = step(base({ mode: 'run', then: 'alert', x: 100, y: 200, targetX: 900, targetY: 200 }), idleCursor);
+    expect(going).toMatchObject({ mode: 'run', then: 'alert' });
+  });
+
+  it('clampToAreas: 가장 가까운 모니터 안으로 펫이 통째로 들어가게 옮긴다', () => {
+    expect(clampToAreas(-30, 900, SIZE, [screenA])).toEqual({ x: 0, y: 800 - SIZE });
+    expect(clampToAreas(1500, 100, SIZE, [screenA, screenB])).toEqual({ x: 1500, y: 100 });
+    expect(clampToAreas(5, 5, SIZE, [])).toEqual({ x: 5, y: 5 });
   });
 });
 

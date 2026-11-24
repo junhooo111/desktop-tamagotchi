@@ -75,6 +75,14 @@ describe('resolvePose', () => {
     expect(a).not.toBe(b);
   });
 
+  it('문제를 찾아 알릴 땐 서서 통통 뛰며 느낌표를 띄운다', () => {
+    const a = resolvePose(view({ mode: 'alert' }), 0);
+    const b = resolvePose(view({ mode: 'alert' }), 350);
+    expect(a).toMatchObject({ frame: 'stand', alert: true, dy: 0 });
+    expect(b.dy).toBe(-2);
+    expect(resolvePose(view({ mode: 'idle' }), 0).alert).toBe(false);
+  });
+
   it('떨어질 땐 다리를 벌린 뛰기 그림이다', () => {
     expect(resolvePose(view({ mode: 'fall' }), 0).frame).toBe('runB');
   });
