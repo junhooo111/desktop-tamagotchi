@@ -9,10 +9,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BrowserWindow, Menu, Tray, app, ipcMain, nativeImage, screen } from 'electron';
 import { scanLocalPages, type Finding } from '../inspect/scan.js';
-import { WINDOW, petPixelSize } from '../shared/layout.js';
 import { LESSONS } from '../shared/lessons.js';
+import { QUIZZES } from '../shared/quizzes.js';
+import { TIP_PENDING_MS, pickTip, shouldOfferTip, type Tip } from '../shared/tips.js';
+import { BUBBLE_GAP, TIP_BUBBLE, WINDOW, bubbleShift, petPixelSize } from '../shared/layout.js';
 import {
   LEARN_XP,
+  QUIZ_BONUS,
   applyElapsed,
   createPet,
   feed,
@@ -27,7 +30,7 @@ import {
   type PetState,
 } from '../shared/pet.js';
 import { EGG, SPECIES, frameToRgba, getSpecies, type SpeciesId } from '../shared/species.js';
-import type { PetView } from '../shared/view.js';
+import type { PetView, TipBubble } from '../shared/view.js';
 import {
   canInspect,
   carry,
@@ -50,6 +53,7 @@ import {
   emptyProgress,
   loadProgress,
   markFixed,
+  markTipSeen,
   pendingFindings,
   prune,
   saveProgress,
@@ -73,7 +77,7 @@ const SCAN_MS = 10_000;
 /** 문제를 찾아 알린 뒤 다음 문제를 알리기까지 최소 간격 */
 const INSPECT_GAP_MS = 30_000;
 const STATUS_OFF = '검사: 크롬이 연결되지 않았어요 (npm run chrome)';
-const CARD_SIZE = { width: 380, height: 470 } as const;
+const CARD_SIZE = { width: 380, height: 600 } as const;
 
 if (SMOKE) {
   // 스모크 실행은 사용자의 실제 저장 파일을 건드리지 않는다.
@@ -103,6 +107,12 @@ let scanning = false;
 let scanStatus = STATUS_OFF;
 let cardWin: BrowserWindow | null = null;
 
+// FE 지식: 펫 위 말풍선으로 보여 주고 사용자가 확인하기를 기다리는 지식
+let pendingTip: { tip: Tip; until: number } | null = null;
+let lastTipAt = Date.now();
+/** 지식 말풍선이 화면 밖으로 잘리지 않도록 옆으로 미는 거리 */
+let tipShift = 0;
+
 const randomSpecies = (): SpeciesId => {
   const pick = SPECIES[Math.floor(Math.random() * SPECIES.length)];
   return (pick ?? SPECIES[0]!).id;
@@ -119,7 +129,57 @@ function currentView(): PetView {
     dir: behavior.dir,
     play: behavior.play,
     since: behavior.since,
+    bubbleShift: tipShift,
   };
+}
+
+// ---- FE 지식 말풍선 ----
+
+function tipPayload(tip: Tip): TipBubble {
+  const seen = progress.tipsSeen.includes(tip.id);
+  return { title: tip.title, body: tip.body, code: tip.code, xp: seen ? 0 : LEARN_XP.tip };
+}
+
+function sendTip(): void {
+  if (win && !win.isDestroyed()) win.webContents.send('pet:tip', pendingTip ? tipPayload(pendingTip.tip) : null);
+}
+
+/** 펫 머리 위 말풍선에 FE 지식을 띄운다. 직접 요청(menu)이면 위쪽에 자리가 없을 때 펫을 아래로 떨어뜨린다. */
+function offerTip(now: number, requested = false): void {
+  if (pendingTip) return;
+  if (requested && !roomAboveForTip()) behavior = drop(behavior, now);
+  pendingTip = { tip: pickTip(progress.tipsSeen, Math.random), until: now + TIP_PENDING_MS };
+  lastTipAt = now;
+  sendTip();
+}
+
+/** 말풍선의 `확인`: 처음 읽는 지식이면 경험치를 주고, 말풍선을 지운다. */
+function confirmTip(): void {
+  const current = pendingTip;
+  if (!current) return;
+  if (!progress.tipsSeen.includes(current.tip.id)) {
+    const result = learn(applyElapsedInPlace(), 'tip');
+    pet = result.pet;
+    say(result.message);
+    persist();
+    updateTray();
+  }
+  progress = markTipSeen(progress, current.tip.id);
+  persistProgress();
+  pendingTip = null;
+  sendTip();
+}
+
+function roomAboveForTip(): boolean {
+  const area = screen.getDisplayNearestPoint({ x: Math.round(behavior.x), y: Math.round(behavior.y) }).workArea;
+  return behavior.y - (TIP_BUBBLE.maxHeight + BUBBLE_GAP) >= area.y;
+}
+
+/** 지식 말풍선이 있으면, 화면 가장자리에서 잘리지 않도록 옆으로 밀 거리를 계산한다. */
+function computeTipShift(): number {
+  if (!pendingTip) return 0;
+  const area = screen.getDisplayNearestPoint({ x: Math.round(behavior.x), y: Math.round(behavior.y) }).workArea;
+  return bubbleShift(behavior.x + petSize / 2, TIP_BUBBLE.width, area.x, area.x + area.width);
 }
 
 function sendView(force = false): void {
@@ -219,7 +279,7 @@ function closeCard(): void {
   cardWin = null;
 }
 
-/** 펫 근처에 배움 카드 창을 연다. */
+/** 펫 근처에 찾은 문제의 배움 카드 창을 연다. */
 function openCard(): void {
   if (!active) return;
   closeCard();
@@ -256,14 +316,20 @@ function openCard(): void {
   cardWin = w;
 }
 
-/** 카드를 닫는다: 확인했으면 경험치를 주고, 나중에 보기로 했으면 한동안 다시 알리지 않는다. */
-function finishCard(kind: 'confirm' | 'later'): void {
-  const finding = active;
+/**
+ * 배움 카드를 닫는다: 퀴즈를 풀고 확인하면 경험치(맞히면 보너스), 나중에 보기로 하면 한동안 다시 알리지 않는다.
+ * choice 는 퀴즈에서 고른 보기 번호다. 채점은 여기서 한다.
+ */
+function finishCard(kind: 'confirm' | 'later', choice: number | null = null): void {
   const now = Date.now();
+  const finding = active;
   if (finding) {
     if (kind === 'confirm') {
+      // 퀴즈를 풀지 않은 확인은 받아 주지 않는다.
+      if (choice === null || choice < 0 || choice > 2) return;
+      const correct = choice === QUIZZES[finding.ruleId].answer;
       progress = confirm(progress, finding.key, now);
-      const result = learn(applyElapsedInPlace(), 'confirm');
+      const result = learn(applyElapsedInPlace(), 'confirm', correct ? QUIZ_BONUS : 0);
       pet = result.pet;
       say(result.message);
       persist();
@@ -325,6 +391,11 @@ function buildMenu(): Menu {
     { label: '상태 보기', click: () => say(statusText(applyElapsedInPlace())) },
     { label: scanStatus, enabled: false },
     { label: '지금 검사하기', enabled: !egg, click: () => void scanOnce() },
+    {
+      label: '오늘의 FE 지식',
+      enabled: !egg,
+      click: () => offerTip(Date.now(), true),
+    },
     { type: 'separator' },
     { label: '쓰다듬기', click: () => act('touch') },
     { label: '밥 주기', enabled: !egg, click: () => act('feed') },
@@ -418,6 +489,18 @@ function createWindow(): BrowserWindow {
 
 /** 찾은 문제가 있으면 그 자리로 가고, 도착하면 알리고, 다른 일로 끊기면 한동안 미룬다. */
 function updateInspection(now: number, dtMs: number): void {
+  // 말풍선으로 알려 준 FE 지식을 한참 확인하지 않으면 거둔다.
+  if (pendingTip && now >= pendingTip.until) {
+    pendingTip = null;
+    sendTip();
+  }
+  // 지식 말풍선이 떠 있는 동안에는 펫이 돌아다니지 않고 그 자리에 서 있는다(확인 버튼을 누를 수 있게).
+  if (pendingTip && behavior.mode === 'idle') behavior = { ...behavior, until: now + 1_500 };
+  const busy = active !== null || queue.length > 0 || cardWin !== null || drag !== null || pendingTip !== null;
+  if (shouldOfferTip({ now, lastTipAt, mode: behavior.mode, stage: stageOf(pet), busy, roomAbove: roomAboveForTip() })) {
+    offerTip(now);
+  }
+
   if (active) {
     const traveling = behavior.mode === 'run' && behavior.then === 'alert';
     if (behavior.mode === 'alert') {
@@ -467,6 +550,7 @@ function tick(lastAt: number): number {
     behavior = step(behavior, stepContext(now, now - lastAt));
   }
   updateInspection(now, now - lastAt);
+  tipShift = Math.round(computeTipShift());
   placeWindow();
   sendView();
 
@@ -502,18 +586,21 @@ function setupIpc(): void {
   ipcMain.on('pet:context-menu', () => {
     if (win) buildMenu().popup({ window: win });
   });
-  ipcMain.handle('card:get', () =>
-    active
-      ? {
-          ruleId: active.ruleId,
-          lesson: LESSONS[active.ruleId],
-          selector: active.selector,
-          detail: active.detail,
-          xp: LEARN_XP.confirm,
-        }
-      : null,
+  ipcMain.handle('card:get', () => {
+    if (!active) return null;
+    return {
+      lesson: LESSONS[active.ruleId],
+      quiz: QUIZZES[active.ruleId],
+      selector: active.selector,
+      detail: active.detail,
+      xp: LEARN_XP.confirm,
+      bonus: QUIZ_BONUS,
+    };
+  });
+  ipcMain.on('tip:confirm', () => confirmTip());
+  ipcMain.on('card:confirm', (_event, choice: unknown) =>
+    finishCard('confirm', typeof choice === 'number' ? choice : null),
   );
-  ipcMain.on('card:confirm', () => finishCard('confirm'));
   ipcMain.on('card:later', () => finishCard('later'));
 }
 
@@ -549,6 +636,7 @@ if (!app.requestSingleInstanceLock()) {
     progressPath = path.join(app.getPath('userData'), 'progress.json');
     progress = loadProgress(progressPath);
     const now = Date.now();
+    lastTipAt = now;
     // 처음 실행하면 임의의 종이 든 알로 시작한다. 알은 쓰다듬으면 부화한다.
     pet = applyElapsed(loadPet(savePath) ?? createPet(randomSpecies(), now), now);
     persist();

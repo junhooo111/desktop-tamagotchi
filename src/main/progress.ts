@@ -17,11 +17,19 @@ export interface Progress {
   confirmed: Record<string, ConfirmedEntry>;
   /** key → 이 시각(ms)까지 다시 알리지 않는다 */
   snoozed: Record<string, number>;
+  /** 이미 읽은 FE 지식의 id (처음 읽을 때만 경험치를 준다) */
+  tipsSeen: string[];
 }
 
 export const SNOOZE_MS = 10 * 60_000;
 
-export const emptyProgress = (): Progress => ({ confirmed: {}, snoozed: {} });
+export const emptyProgress = (): Progress => ({ confirmed: {}, snoozed: {}, tipsSeen: [] });
+
+/** 지식을 읽었다고 기록한다. 이미 읽었으면 그대로다. */
+export function markTipSeen(progress: Progress, id: string): Progress {
+  if (progress.tipsSeen.includes(id)) return progress;
+  return { ...progress, tipsSeen: [...progress.tipsSeen, id] };
+}
 
 /** 아직 확인하지 않았고 미루지도 않은 문제만 고른다. */
 export function pendingFindings(findings: readonly Finding[], progress: Progress, now: number): Finding[] {
@@ -30,7 +38,7 @@ export function pendingFindings(findings: readonly Finding[], progress: Progress
 
 export function confirm(progress: Progress, key: string, now: number): Progress {
   const { [key]: _removed, ...snoozed } = progress.snoozed;
-  return { confirmed: { ...progress.confirmed, [key]: { at: now, fixed: false } }, snoozed };
+  return { ...progress, confirmed: { ...progress.confirmed, [key]: { at: now, fixed: false } }, snoozed };
 }
 
 export function snooze(progress: Progress, key: string, now: number, ms = SNOOZE_MS): Progress {
@@ -87,7 +95,10 @@ export function loadProgress(file: string): Progress {
         if (typeof v === 'number') snoozed[key] = v;
       }
     }
-    return { confirmed, snoozed };
+    const tipsSeen = Array.isArray(p['tipsSeen'])
+      ? (p['tipsSeen'] as unknown[]).filter((v): v is string => typeof v === 'string')
+      : [];
+    return { confirmed, snoozed, tipsSeen };
   } catch {
     return emptyProgress();
   }

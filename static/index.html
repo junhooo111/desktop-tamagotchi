@@ -10,8 +10,18 @@
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
+    <canvas id="pet" width="460" height="410"></canvas>
     <div id="bubble" hidden></div>
-    <canvas id="pet" width="160" height="120"></canvas>
+    <section id="tip" hidden aria-live="polite">
+      <span class="tag">FE 지식</span>
+      <strong id="tip-title"></strong>
+      <p id="tip-body"></p>
+      <pre id="tip-code" hidden></pre>
+      <div class="actions">
+        <button id="tip-toggle" type="button" class="ghost">코드 보기</button>
+        <button id="tip-ok" type="button">확인</button>
+      </div>
+    </section>
     <script type="module" src="../dist/renderer/renderer.js"></script>
   </body>
 </html>

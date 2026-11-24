@@ -22,11 +22,6 @@ body {
   overflow-y: auto;
 }
 
-#card[hidden],
-#empty[hidden] {
-  display: none;
-}
-
 header {
   display: flex;
   align-items: center;
@@ -63,6 +58,13 @@ h2 {
   color: #8a5a2b;
 }
 
+p,
+h1 {
+  /* 한글은 단어(어절) 단위로 줄바꿈하고, 아주 긴 토큰만 강제로 자른다. */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+
 p {
   margin: 0;
 }
@@ -84,12 +86,17 @@ pre {
   word-break: break-all;
 }
 
+/* 내용이 길어 스크롤되어도 버튼은 항상 아래에 보이게 한다. */
 footer {
+  position: sticky;
+  bottom: -14px;
   display: flex;
   gap: 8px;
   justify-content: flex-end;
   margin-top: auto;
-  padding-top: 14px;
+  padding: 12px 0 14px;
+  background: #fffdf5;
+  border-top: 1px solid #eadfc4;
 }
 
 footer button {
@@ -114,4 +121,60 @@ footer button {
 #empty {
   padding: 24px;
   text-align: center;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+#question {
+  font-weight: 700;
+}
+
+#options {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+#options button {
+  padding: 7px 10px;
+  border: 2px solid #3b2f2f;
+  border-radius: 8px;
+  background: #fffdf5;
+  color: #3b2f2f;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+#options button:hover:not(:disabled) {
+  background: #fff3c4;
+}
+
+#options button:disabled {
+  cursor: default;
+}
+
+#options button.correct {
+  background: #d7f2c4;
+  border-color: #3e8e3a;
+}
+
+#options button.wrong {
+  background: #fde0e0;
+  border-color: #c0392b;
+}
+
+#explain {
+  margin-top: 8px;
+  padding: 8px 10px;
+  background: #f3efe0;
+  border-radius: 6px;
+}
+
+footer button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }

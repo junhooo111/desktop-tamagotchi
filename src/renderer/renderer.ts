@@ -1,9 +1,9 @@
 /** 펫 화면: 캔버스에 픽셀 스프라이트를 그리고 마우스 입력을 메인으로 넘긴다. */
 import { resolvePose } from '../shared/animation.js';
-import { STAGE_SCALE, WINDOW, petPixelSize } from '../shared/layout.js';
+import { BUBBLE_GAP, STAGE_SCALE, WINDOW, petPixelSize } from '../shared/layout.js';
 import { orientRows } from '../shared/pixel.js';
 import { EGG, getSpecies, type FrameName, type SpriteSet } from '../shared/species.js';
-import type { PetView } from '../shared/view.js';
+import type { PetView, TipBubble } from '../shared/view.js';
 
 interface PetApi {
   getView(): Promise<PetView>;
@@ -11,8 +11,10 @@ interface PetApi {
   setInteractive(value: boolean): void;
   drag(phase: 'start' | 'end'): void;
   contextMenu(): void;
+  tipConfirm(): void;
   onView(callback: (view: PetView) => void): void;
   onSay(callback: (text: string) => void): void;
+  onTip(callback: (tip: TipBubble | null) => void): void;
 }
 
 declare global {
@@ -32,6 +34,9 @@ const Z_GLYPH = ['###.', '..#.', '.#..', '###.'];
 
 const canvas = document.getElementById('pet') as HTMLCanvasElement;
 const bubble = document.getElementById('bubble') as HTMLDivElement;
+const tipEl = document.getElementById('tip') as HTMLElement;
+canvas.width = WINDOW.width;
+canvas.height = WINDOW.height;
 const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
 ctx.imageSmoothingEnabled = false;
 
@@ -120,6 +125,46 @@ function showBubble(text: string): void {
   }, BUBBLE_MS);
 }
 
+/**
+ * 말풍선들을 펫 머리 위에 쌓는다. 지식 말풍선이 펫 바로 위에 서고,
+ * 한마디 말풍선(쓰다듬기·알림 등)은 지식 말풍선이 있으면 그 위에, 없으면 펫 바로 위에 선다.
+ */
+function anchorBubbles(): void {
+  if (!view) return;
+  const petTop = petRect(view).y;
+  const base = WINDOW.height - petTop + BUBBLE_GAP;
+  tipEl.style.bottom = `${base}px`;
+  const above = tipEl.hidden ? base : WINDOW.height - tipEl.getBoundingClientRect().top + 8;
+  bubble.style.bottom = `${above}px`;
+  document.documentElement.style.setProperty('--shift', `${view.bubbleShift}px`);
+}
+
+function showTip(tip: TipBubble | null): void {
+  if (!tip) {
+    tipEl.hidden = true;
+  } else {
+    // 글자는 textContent 로만 넣는다(HTML 로 해석하지 않는다).
+    (document.getElementById('tip-title') as HTMLElement).textContent = tip.title;
+    (document.getElementById('tip-body') as HTMLElement).textContent = tip.body;
+    // 코드는 접어 두었다가 `코드 보기`를 누르면 펼친다(말풍선이 너무 커지지 않게).
+    const code = document.getElementById('tip-code') as HTMLElement;
+    code.textContent = tip.code;
+    code.hidden = true;
+    const toggle = document.getElementById('tip-toggle') as HTMLElement;
+    toggle.textContent = '코드 보기';
+    toggle.hidden = tip.code.trim() === '';
+    (document.getElementById('tip-ok') as HTMLElement).textContent = tip.xp > 0 ? `확인 (+${tip.xp})` : '확인';
+    tipEl.hidden = false;
+  }
+  anchorBubbles();
+}
+
+function insideTip(x: number, y: number): boolean {
+  if (tipEl.hidden) return false;
+  const r = tipEl.getBoundingClientRect();
+  return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+}
+
 /** 마우스에 매달려 있을 땐 클릭이 그대로 통과해야 하므로 펫이 입력을 받지 않는다. */
 function acceptsInput(v: PetView): boolean {
   return v.mode !== 'hang';
@@ -147,7 +192,21 @@ function setInteractive(value: boolean): void {
 }
 
 document.addEventListener('mousemove', (e) => {
-  if (!pointer) setInteractive(insidePet(e.clientX, e.clientY));
+  // 펫이나 지식 말풍선(확인 버튼) 위에서만 클릭을 받는다.
+  if (!pointer) setInteractive(insidePet(e.clientX, e.clientY) || insideTip(e.clientX, e.clientY));
+});
+
+(document.getElementById('tip-toggle') as HTMLElement).addEventListener('click', (e) => {
+  const code = document.getElementById('tip-code') as HTMLElement;
+  code.hidden = !code.hidden;
+  (e.currentTarget as HTMLElement).textContent = code.hidden ? '코드 보기' : '코드 접기';
+  anchorBubbles(); // 말풍선이 커지거나 작아지면 한마디 말풍선 자리도 다시 잡는다
+});
+
+(document.getElementById('tip-ok') as HTMLElement).addEventListener('click', () => {
+  window.petApi.tipConfirm();
+  showTip(null);
+  setInteractive(false);
 });
 
 canvas.addEventListener('pointerdown', (e) => {
@@ -174,14 +233,21 @@ document.addEventListener('contextmenu', (e) => {
 
 // ---- 시작 ----
 window.petApi.onView((next) => {
+  const moved = !view || view.stage !== next.stage || view.bubbleShift !== next.bubbleShift;
   view = next;
+  if (moved) anchorBubbles();
   // 매달리기처럼 입력을 받지 않는 동작으로 바뀌면 바로 클릭 통과로 돌린다.
-  if (interactive && !acceptsInput(next)) setInteractive(false);
+  if (interactive && !acceptsInput(next) && tipEl.hidden) setInteractive(false);
 });
-window.petApi.onSay(showBubble);
+window.petApi.onSay((text) => {
+  showBubble(text);
+  anchorBubbles();
+});
+window.petApi.onTip(showTip);
 
 void window.petApi.getView().then((initial) => {
   view = initial;
+  anchorBubbles();
   draw(Date.now());
   window.__petReady = true;
 });

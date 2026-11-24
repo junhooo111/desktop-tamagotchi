@@ -8,6 +8,7 @@ import {
   levelOf,
   moodOf,
   play,
+  QUIZ_BONUS,
   stageOf,
   statusText,
   touch,
@@ -149,6 +150,17 @@ describe('learn', () => {
     expect(b.pet.xp).toBe(HATCH_XP + 20);
     expect(b.message).toContain('+20');
     expect(a.ok && b.ok).toBe(true);
+  });
+
+  it('퀴즈를 맞히면 보너스 +5 가 더해지고, 지식을 읽으면 +2 다', () => {
+    const quiz = learn(hatched(), 'confirm', QUIZ_BONUS);
+    expect(quiz.pet.xp).toBe(HATCH_XP + 15);
+    expect(quiz.message).toContain('정답');
+    expect(quiz.message).toContain('+15');
+    const tip = learn(hatched(), 'tip');
+    expect(tip.pet.xp).toBe(HATCH_XP + 2);
+    expect(tip.message).toContain('+2');
+    expect(learn(hatched(), 'confirm').message).not.toContain('정답');
   });
 
   it('경험치로 알이 부화하거나 레벨이 오르면 문구가 붙는다', () => {

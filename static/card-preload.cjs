@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('cardApi', {
   getCard: () => ipcRenderer.invoke('card:get'),
-  confirm: () => ipcRenderer.send('card:confirm'),
+  // choice: 퀴즈에서 고른 보기 번호(퀴즈가 없는 카드는 null). 채점은 메인 프로세스가 한다.
+  confirm: (choice) => ipcRenderer.send('card:confirm', choice),
   later: () => ipcRenderer.send('card:later'),
 });

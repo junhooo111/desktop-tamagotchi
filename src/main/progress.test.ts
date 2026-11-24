@@ -10,6 +10,7 @@ import {
   emptyProgress,
   loadProgress,
   markFixed,
+  markTipSeen,
   pendingFindings,
   prune,
   saveProgress,
@@ -81,6 +82,22 @@ describe('detectFixes', () => {
   });
 });
 
+describe('markTipSeen', () => {
+  it('처음 읽은 지식만 기록하고, 원본은 바꾸지 않는다', () => {
+    const p0 = emptyProgress();
+    const p1 = markTipSeen(p0, 'a');
+    expect(p1.tipsSeen).toEqual(['a']);
+    expect(p0.tipsSeen).toEqual([]);
+    expect(markTipSeen(p1, 'a')).toBe(p1);
+    expect(markTipSeen(p1, 'b').tipsSeen).toEqual(['a', 'b']);
+  });
+
+  it('confirm·snooze 가 읽은 지식 기록을 지우지 않는다', () => {
+    const p = confirm(snooze(markTipSeen(emptyProgress(), 'a'), A.key, NOW), B.key, NOW);
+    expect(p.tipsSeen).toEqual(['a']);
+  });
+});
+
 describe('저장·복원', () => {
   let dir: string;
   beforeEach(() => {
@@ -92,7 +109,7 @@ describe('저장·복원', () => {
 
   it('저장한 진행도를 그대로 불러온다', () => {
     const file = path.join(dir, 'nested', 'progress.json');
-    const p = snooze(confirm(emptyProgress(), A.key, 5), B.key, 7);
+    const p = markTipSeen(snooze(confirm(emptyProgress(), A.key, 5), B.key, 7), 'tip-1');
     saveProgress(file, p);
     expect(loadProgress(file)).toEqual(p);
     expect(fs.existsSync(`${file}.tmp`)).toBe(false);
@@ -104,7 +121,7 @@ describe('저장·복원', () => {
     fs.writeFileSync(file, '{ nope');
     expect(loadProgress(file)).toEqual(emptyProgress());
     fs.writeFileSync(file, JSON.stringify({ confirmed: { k: { at: 'x', fixed: 1 }, ok: { at: 1, fixed: false } }, snoozed: { a: 'b', c: 3 } }));
-    expect(loadProgress(file)).toEqual({ confirmed: { ok: { at: 1, fixed: false } }, snoozed: { c: 3 } });
+    expect(loadProgress(file)).toEqual({ confirmed: { ok: { at: 1, fixed: false } }, snoozed: { c: 3 }, tipsSeen: [] });
     fs.writeFileSync(file, 'null');
     expect(loadProgress(file)).toEqual(emptyProgress());
   });

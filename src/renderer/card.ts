@@ -1,17 +1,22 @@
-/** 배움 카드 화면. 내용은 textContent 로만 넣는다(페이지에서 가져온 글자가 섞여 있으므로 HTML 로 해석하지 않는다). */
+/**
+ * 배움 카드 화면(찾은 문제를 설명하고 확인 퀴즈를 푼다).
+ * 내용은 textContent 로만 넣는다(페이지에서 가져온 글자가 섞여 있으므로 HTML 로 해석하지 않는다).
+ */
 import type { Lesson } from '../shared/lessons.js';
+import type { Quiz } from '../shared/quizzes.js';
 
-interface CardData {
-  ruleId: string;
+interface LessonCard {
   lesson: Lesson;
+  quiz: Quiz;
   selector: string;
   detail: string;
   xp: number;
+  bonus: number;
 }
 
 interface CardApi {
-  getCard(): Promise<CardData | null>;
-  confirm(): void;
+  getCard(): Promise<LessonCard | null>;
+  confirm(choice: number | null): void;
   later(): void;
 }
 
@@ -27,11 +32,9 @@ function setText(id: string, text: string): void {
   $(id).textContent = text;
 }
 
-void window.cardApi.getCard().then((card) => {
-  if (!card) {
-    $('empty').hidden = false;
-    return;
-  }
+let choice: number | null = null;
+
+function render(card: LessonCard): void {
   setText('title', card.lesson.title);
   setText('where', `${card.selector}${card.detail ? ` · ${card.detail}` : ''}`);
   setText('problem', card.lesson.problem);
@@ -39,11 +42,42 @@ void window.cardApi.getCard().then((card) => {
   setText('fix', card.lesson.fix);
   setText('code', card.lesson.code);
   setText('confirm', `확인했어요 (+${card.xp})`);
+
+  // 퀴즈를 풀어야 확인할 수 있다(대충 누르기 방지). 틀려도 해설을 읽고 확인할 수 있다.
+  setText('question', card.quiz.question);
+  const buttons = card.quiz.options.map((text, index) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = text;
+    button.addEventListener('click', () => {
+      choice = index;
+      buttons.forEach((b, i) => {
+        b.disabled = true;
+        if (i === card.quiz.answer) b.classList.add('correct');
+        else if (i === index) b.classList.add('wrong');
+      });
+      const right = index === card.quiz.answer;
+      setText('explain', `${right ? `정답이에요! (+${card.bonus} 보너스) ` : '아쉬워요. '}${card.quiz.explain}`);
+      $('explain').hidden = false;
+      ($('confirm') as HTMLButtonElement).disabled = false;
+      $('confirm').focus();
+    });
+    return button;
+  });
+  $('options').replaceChildren(...buttons);
+  ($('confirm') as HTMLButtonElement).disabled = true;
+}
+
+void window.cardApi.getCard().then((card) => {
+  if (!card) {
+    $('empty').hidden = false;
+    return;
+  }
+  render(card);
   $('card').hidden = false;
-  $('confirm').focus();
 });
 
-$('confirm').addEventListener('click', () => window.cardApi.confirm());
+$('confirm').addEventListener('click', () => window.cardApi.confirm(choice));
 $('later').addEventListener('click', () => window.cardApi.later());
 $('close').addEventListener('click', () => window.cardApi.later());
 document.addEventListener('keydown', (e) => {

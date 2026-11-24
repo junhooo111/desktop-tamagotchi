@@ -14,4 +14,15 @@ export interface PetView {
   play: PlayKind;
   /** 현재 동작이 시작된 시각(ms) */
   since: number;
+  /** 말풍선이 화면 밖으로 잘리지 않도록 옆으로 밀 거리(px) */
+  bubbleShift: number;
+}
+
+/** 펫 위 말풍선으로 보여 주는 FE 지식 */
+export interface TipBubble {
+  title: string;
+  body: string;
+  code: string;
+  /** 처음 읽는 지식이면 받을 경험치, 이미 읽었으면 0 */
+  xp: number;
 }

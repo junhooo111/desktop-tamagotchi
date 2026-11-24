@@ -107,13 +107,27 @@ export function play(pet: PetState): ActionResult {
   return { pet: gained.pet, ok: true, message: '신나요!' + gained.note };
 }
 
-export const LEARN_XP = { confirm: 10, fixed: 20 } as const;
+export const LEARN_XP = { confirm: 10, fixed: 20, tip: 2 } as const;
+/** 확인 퀴즈를 맞히면 더해 주는 경험치 */
+export const QUIZ_BONUS = 5;
 
-/** 학습 카드를 확인(confirm)했거나, 확인했던 문제를 고친 것(fixed)이 확인됐을 때 경험치를 준다. */
-export function learn(pet: PetState, kind: keyof typeof LEARN_XP): ActionResult {
-  const gained = gainXp(pet, LEARN_XP[kind]);
-  const head = kind === 'confirm' ? '배웠어요!' : '고쳤네요, 대단해요!';
-  return { pet: gained.pet, ok: true, message: `${head} 경험치 +${LEARN_XP[kind]}${gained.note}` };
+const LEARN_HEAD = {
+  confirm: '배웠어요!',
+  fixed: '고쳤네요, 대단해요!',
+  tip: '새로 알았어요!',
+} as const;
+
+/**
+ * 학습으로 경험치를 준다.
+ *   confirm  배움 카드를 확인했다(퀴즈를 맞히면 bonus 로 QUIZ_BONUS 를 더한다)
+ *   fixed    확인했던 문제를 고친 것이 확인됐다
+ *   tip      FE 지식을 처음 읽었다
+ */
+export function learn(pet: PetState, kind: keyof typeof LEARN_XP, bonus = 0): ActionResult {
+  const xp = LEARN_XP[kind] + bonus;
+  const gained = gainXp(pet, xp);
+  const head = kind === 'confirm' && bonus > 0 ? '정답! 배웠어요!' : LEARN_HEAD[kind];
+  return { pet: gained.pet, ok: true, message: `${head} 경험치 +${xp}${gained.note}` };
 }
 
 export function statusText(pet: PetState): string {
