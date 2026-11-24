@@ -1,0 +1,397 @@
+/**
+ * 펫의 행동을 정하는 상태 머신(순수 로직, 화면·Electron 과 무관).
+ *
+ * 위치(x, y)는 펫 그림의 왼쪽 위 모서리이고, 화면(모니터 작업 영역) 좌표다.
+ * 행동: 가만히(idle) · 걷기 · 뛰기 · 졸기 · 자기 · 벽 타기 · 미끄러지기 · 놀기 ·
+ *       마우스에 매달리기 · 떨어지기 · 잡혀 있기(carried)
+ */
+import type { Dir, Mode, PlayKind, Surface } from '../shared/motion.js';
+import type { Stage } from '../shared/pet.js';
+
+export interface Rect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/** 걷거나 뛰어서 도착한 뒤 이어서 할 일 */
+export type Then = 'none' | 'climb' | 'hang';
+export type Side = 'left' | 'right';
+
+export interface BehaviorState {
+  x: number;
+  y: number;
+  surface: Surface;
+  dir: Dir;
+  mode: Mode;
+  /** 현재 동작이 시작된 시각(ms) */
+  since: number;
+  /** 시간이 정해진 동작(가만히·졸기·자기·놀기·미끄러지기)이 끝나는 시각(ms) */
+  until: number;
+  targetX: number;
+  targetY: number;
+  then: Then;
+  /** 어느 쪽 벽을 탈지 */
+  side: Side;
+  play: PlayKind;
+  /** 떨어지는 속도(px/s) */
+  vy: number;
+  /** 매달린 자리(마우스 위치) */
+  anchorX: number;
+  anchorY: number;
+}
+
+export interface StepContext {
+  now: number;
+  dtMs: number;
+  /** 모니터별 작업 영역 */
+  areas: readonly Rect[];
+  /** 펫 그림 한 변의 화면 픽셀 */
+  size: number;
+  rng: () => number;
+  cursor: { x: number; y: number };
+  /** 마우스가 가만히 있은 시간(ms) */
+  cursorIdleMs: number;
+  stage: Stage;
+}
+
+/** 초당 이동 픽셀 */
+export const SPEED = { walk: 50, run: 150, climb: 40, slip: 140, roll: 45 } as const;
+export const GRAVITY = 1800;
+/** 마우스를 이 시간 이상 가만히 두면 펫이 매달리러 온다 */
+export const HANG_AFTER_MS = 10_000;
+/** 매달린 뒤 마우스가 이만큼 움직이면 놓친다 */
+export const HANG_RELEASE_PX = 6;
+/** 벽을 타는 동안 초당 미끄러질 확률 */
+export const SLIP_PER_SEC = 0.12;
+
+const PLAY_MS: Record<PlayKind, number> = { hop: 1_800, roll: 1_600, look: 2_400 };
+
+const rand = (rng: () => number, lo: number, hi: number): number => lo + rng() * (hi - lo);
+const horizontal = (d: Dir): Dir => (d === 'left' ? 'left' : 'right');
+
+export function createBehavior(x: number, y: number, now: number): BehaviorState {
+  return {
+    x,
+    y,
+    surface: 'floor',
+    dir: 'right',
+    mode: 'idle',
+    since: now,
+    until: now + 1_000,
+    targetX: x,
+    targetY: y,
+    then: 'none',
+    side: 'left',
+    play: 'hop',
+    vy: 0,
+    anchorX: 0,
+    anchorY: 0,
+  };
+}
+
+/** 펫 크기가 바뀌었을 때 발 위치(아래쪽 가운데)를 유지하도록 좌표를 옮긴다. */
+export function resize(s: BehaviorState, from: number, to: number): BehaviorState {
+  if (from === to) return s;
+  const dx = (to - from) / 2;
+  const dy = to - from;
+  return { ...s, x: s.x - dx, y: s.y - dy, targetX: s.targetX - dx, targetY: s.targetY - dy };
+}
+
+// ---- 영역 도우미 ----
+
+function areaAt(areas: readonly Rect[], cx: number, cy: number): Rect | undefined {
+  const inside = areas.find((a) => cx >= a.x && cx < a.x + a.width && cy >= a.y && cy < a.y + a.height);
+  if (inside) return inside;
+  let best: Rect | undefined;
+  let bestDist = Infinity;
+  for (const a of areas) {
+    const d = Math.hypot(a.x + a.width / 2 - cx, a.y + a.height / 2 - cy);
+    if (d < bestDist) {
+      best = a;
+      bestDist = d;
+    }
+  }
+  return best;
+}
+
+function currentArea(s: BehaviorState, ctx: StepContext): Rect | undefined {
+  return areaAt(ctx.areas, s.x + ctx.size / 2, s.y + ctx.size / 2);
+}
+
+/** 모니터 하나를 골라 그 안에서 펫이 통째로 들어가는 임의의 위치를 돌려준다. */
+export function pickSpot(
+  areas: readonly Rect[],
+  size: number,
+  rng: () => number,
+): { x: number; y: number } | null {
+  const area = areas[Math.min(areas.length - 1, Math.floor(rng() * areas.length))];
+  if (!area) return null;
+  return {
+    x: area.x + Math.round(rng() * Math.max(0, area.width - size)),
+    y: area.y + Math.round(rng() * Math.max(0, area.height - size)),
+  };
+}
+
+// ---- 상태 전환 도우미 ----
+
+function toIdle(s: BehaviorState, ctx: StepContext, minMs: number, maxMs: number, dir?: Dir): BehaviorState {
+  return {
+    ...s,
+    mode: 'idle',
+    surface: 'floor',
+    dir: dir ?? horizontal(s.dir),
+    since: ctx.now,
+    until: ctx.now + rand(ctx.rng, minMs, maxMs),
+    then: 'none',
+    vy: 0,
+  };
+}
+
+function startTravel(
+  s: BehaviorState,
+  ctx: StepContext,
+  mode: 'walk' | 'run',
+  tx: number,
+  ty: number,
+  then: Then,
+  side: Side = s.side,
+): BehaviorState {
+  return {
+    ...s,
+    mode,
+    surface: 'floor',
+    dir: tx >= s.x ? 'right' : 'left',
+    since: ctx.now,
+    targetX: tx,
+    targetY: ty,
+    then,
+    side,
+  };
+}
+
+function startPlay(s: BehaviorState, ctx: StepContext, kind: PlayKind): BehaviorState {
+  return { ...s, mode: 'play', play: kind, surface: 'floor', dir: horizontal(s.dir), since: ctx.now, until: ctx.now + PLAY_MS[kind] };
+}
+
+function randomPlay(rng: () => number, egg: boolean): PlayKind {
+  if (egg) return 'hop';
+  const r = rng();
+  return r < 0.4 ? 'hop' : r < 0.75 ? 'roll' : 'look';
+}
+
+function startRoute(s: BehaviorState, ctx: StepContext, mode: 'walk' | 'run'): BehaviorState {
+  const spot = pickSpot(ctx.areas, ctx.size, ctx.rng);
+  return spot ? startTravel(s, ctx, mode, spot.x, spot.y, 'none') : toIdle(s, ctx, 2_000, 4_000);
+}
+
+/** 벽 쪽으로 걸어가서, 닿으면 기어오른다. */
+function startWallRoute(s: BehaviorState, ctx: StepContext): BehaviorState {
+  const area = ctx.areas[Math.min(ctx.areas.length - 1, Math.floor(ctx.rng() * ctx.areas.length))];
+  if (!area) return toIdle(s, ctx, 2_000, 4_000);
+  const side: Side = ctx.rng() < 0.5 ? 'left' : 'right';
+  // 고른 모니터의 왼쪽 또는 오른쪽 가장자리의 임의의 높이로 간다.
+  const wallX = side === 'left' ? area.x : area.x + area.width - ctx.size;
+  const wallY = area.y + Math.round(ctx.rng() * Math.max(0, area.height - ctx.size));
+  return startTravel(s, ctx, 'walk', wallX, wallY, 'climb', side);
+}
+
+function startClimb(s: BehaviorState, ctx: StepContext): BehaviorState {
+  const area = currentArea(s, ctx);
+  if (!area) return toIdle(s, ctx, 1_000, 2_000);
+  const top = area.y;
+  const bottom = area.y + area.height - ctx.size;
+  let ty = top + ctx.rng() * Math.max(0, bottom - top);
+  if (Math.abs(ty - s.y) < 60) ty = s.y - top > (bottom - top) / 2 ? top : bottom;
+  const wallX = s.side === 'left' ? area.x : area.x + area.width - ctx.size;
+  return {
+    ...s,
+    x: wallX,
+    surface: s.side === 'left' ? 'wallL' : 'wallR',
+    dir: ty < s.y ? 'up' : 'down',
+    mode: 'climb',
+    since: ctx.now,
+    targetY: ty,
+    then: 'none',
+  };
+}
+
+// ---- 외부에서 부르는 전환 ----
+
+/** 사용자가 펫을 집었다. */
+export function carry(s: BehaviorState, now: number): BehaviorState {
+  return { ...s, mode: 'carried', surface: 'floor', dir: horizontal(s.dir), since: now, then: 'none', vy: 0 };
+}
+
+/** 사용자가 펫을 놓았다. 중력으로 떨어진다. */
+export function drop(s: BehaviorState, now: number): BehaviorState {
+  return { ...s, mode: 'fall', surface: 'floor', since: now, vy: 0 };
+}
+
+/** 자거나 조는 펫을 깨운다. */
+export function wake(s: BehaviorState, now: number): BehaviorState {
+  if (s.mode !== 'sleep' && s.mode !== 'doze') return s;
+  return { ...s, mode: 'idle', since: now, until: now + 1_500 };
+}
+
+export type Trigger = 'sleep' | 'run' | 'climb' | 'play';
+
+/** 메뉴에서 특정 동작을 바로 시켜 본다(알은 아무것도 하지 않는다). */
+export function trigger(s: BehaviorState, what: Trigger, ctx: StepContext): BehaviorState {
+  if (ctx.stage === 'egg') return s;
+  switch (what) {
+    case 'sleep':
+      return { ...s, mode: 'sleep', surface: 'floor', dir: horizontal(s.dir), since: ctx.now, until: ctx.now + rand(ctx.rng, 15_000, 30_000), then: 'none' };
+    case 'run':
+      return startRoute(s, ctx, 'run');
+    case 'climb':
+      return startWallRoute(s, ctx);
+    case 'play':
+      return startPlay(s, ctx, randomPlay(ctx.rng, false));
+  }
+}
+
+// ---- 한 틱 진행 ----
+
+const HANGABLE: readonly Mode[] = ['idle', 'walk', 'run', 'doze', 'play'];
+
+export function step(s: BehaviorState, ctx: StepContext): BehaviorState {
+  if (s.mode === 'carried') return s;
+
+  // 마우스를 한참 가만히 두면 매달리러 간다(알은 제외).
+  if (
+    ctx.stage !== 'egg' &&
+    ctx.cursorIdleMs >= HANG_AFTER_MS &&
+    HANGABLE.includes(s.mode) &&
+    s.then !== 'hang'
+  ) {
+    return startTravel(s, ctx, 'run', ctx.cursor.x - ctx.size / 2, ctx.cursor.y, 'hang');
+  }
+
+  switch (s.mode) {
+    case 'idle':
+      return stepIdle(s, ctx);
+    case 'walk':
+    case 'run':
+      return stepTravel(s, ctx);
+    case 'doze':
+      if (ctx.now < s.until) return s;
+      return ctx.rng() < 0.7
+        ? { ...s, mode: 'sleep', since: ctx.now, until: ctx.now + rand(ctx.rng, 15_000, 40_000) }
+        : toIdle(s, ctx, 1_000, 3_000);
+    case 'sleep':
+      return ctx.now < s.until ? s : toIdle(s, ctx, 1_000, 3_000);
+    case 'climb':
+      return stepClimb(s, ctx);
+    case 'slip':
+      return stepSlip(s, ctx);
+    case 'play':
+      return stepPlay(s, ctx);
+    case 'hang':
+      return stepHang(s, ctx);
+    case 'fall':
+      return stepFall(s, ctx);
+    default:
+      return s;
+  }
+}
+
+function stepIdle(s: BehaviorState, ctx: StepContext): BehaviorState {
+  if (ctx.now < s.until) return s;
+  const r = ctx.rng();
+  if (ctx.stage === 'egg') {
+    if (r < 0.6) return startRoute(s, ctx, 'walk');
+    if (r < 0.8) return startPlay(s, ctx, 'hop');
+    return toIdle(s, ctx, 2_000, 6_000);
+  }
+  if (r < 0.35) return startRoute(s, ctx, 'walk');
+  if (r < 0.47) return startRoute(s, ctx, 'run');
+  if (r < 0.57) return { ...s, mode: 'doze', surface: 'floor', since: ctx.now, until: ctx.now + rand(ctx.rng, 3_000, 7_000) };
+  if (r < 0.72) return startPlay(s, ctx, randomPlay(ctx.rng, false));
+  if (r < 0.87) return startWallRoute(s, ctx);
+  return toIdle(s, ctx, 2_000, 6_000);
+}
+
+function stepTravel(s: BehaviorState, ctx: StepContext): BehaviorState {
+  let { targetX, targetY } = s;
+  if (s.then === 'hang') {
+    // 마우스가 다시 움직이면 포기한다. 아니면 마우스 위치를 계속 따라간다.
+    if (ctx.cursorIdleMs < 1_000) return toIdle(s, ctx, 1_000, 2_500);
+    targetX = ctx.cursor.x - ctx.size / 2;
+    targetY = ctx.cursor.y;
+  }
+  const dx = targetX - s.x;
+  const dy = targetY - s.y;
+  const dist = Math.hypot(dx, dy);
+  const stepPx = (SPEED[s.mode === 'run' ? 'run' : 'walk'] * ctx.dtMs) / 1000;
+
+  if (dist <= stepPx) {
+    const arrived = { ...s, x: targetX, y: targetY, targetX, targetY };
+    if (s.then === 'climb') return startClimb(arrived, ctx);
+    if (s.then === 'hang') {
+      return { ...arrived, mode: 'hang', surface: 'floor', since: ctx.now, then: 'none', anchorX: ctx.cursor.x, anchorY: ctx.cursor.y };
+    }
+    return toIdle(arrived, ctx, 2_000, 8_000);
+  }
+  return {
+    ...s,
+    x: s.x + (dx / dist) * stepPx,
+    y: s.y + (dy / dist) * stepPx,
+    targetX,
+    targetY,
+    dir: Math.abs(dx) > 1 ? (dx > 0 ? 'right' : 'left') : s.dir,
+  };
+}
+
+function inwardDir(side: Side): Dir {
+  return side === 'left' ? 'right' : 'left';
+}
+
+function stepClimb(s: BehaviorState, ctx: StepContext): BehaviorState {
+  const dy = s.targetY - s.y;
+  const stepPx = (SPEED.climb * ctx.dtMs) / 1000;
+  if (Math.abs(dy) <= stepPx) return toIdle({ ...s, y: s.targetY }, ctx, 1_000, 3_000, inwardDir(s.side));
+  if (ctx.rng() < (SLIP_PER_SEC * ctx.dtMs) / 1000) {
+    return { ...s, mode: 'slip', dir: 'down', since: ctx.now, until: ctx.now + rand(ctx.rng, 700, 1_400) };
+  }
+  return { ...s, y: s.y + Math.sign(dy) * stepPx, dir: dy < 0 ? 'up' : 'down' };
+}
+
+function stepSlip(s: BehaviorState, ctx: StepContext): BehaviorState {
+  const area = currentArea(s, ctx);
+  const bottom = area ? area.y + area.height - ctx.size : s.y;
+  const y = Math.min(bottom, s.y + (SPEED.slip * ctx.dtMs) / 1000);
+  if (y >= bottom) return toIdle({ ...s, y }, ctx, 1_000, 3_000, inwardDir(s.side));
+  if (ctx.now >= s.until) {
+    return { ...s, y, mode: 'climb', since: ctx.now, dir: s.targetY < y ? 'up' : 'down' };
+  }
+  return { ...s, y };
+}
+
+function stepPlay(s: BehaviorState, ctx: StepContext): BehaviorState {
+  if (ctx.now >= s.until) return toIdle(s, ctx, 800, 2_500);
+  if (s.play !== 'roll') return s;
+  const area = currentArea(s, ctx);
+  const dirSign = s.dir === 'left' ? -1 : 1;
+  let x = s.x + (dirSign * SPEED.roll * ctx.dtMs) / 1000;
+  if (area) x = Math.min(Math.max(x, area.x), area.x + area.width - ctx.size);
+  return { ...s, x };
+}
+
+function stepHang(s: BehaviorState, ctx: StepContext): BehaviorState {
+  if (Math.hypot(ctx.cursor.x - s.anchorX, ctx.cursor.y - s.anchorY) > HANG_RELEASE_PX) {
+    return { ...s, mode: 'fall', since: ctx.now, vy: 0 };
+  }
+  return { ...s, x: s.anchorX - ctx.size / 2, y: s.anchorY };
+}
+
+function stepFall(s: BehaviorState, ctx: StepContext): BehaviorState {
+  const area = currentArea(s, ctx);
+  if (!area) return toIdle(s, ctx, 1_000, 2_500);
+  const ground = area.y + area.height - ctx.size;
+  const vy = s.vy + (GRAVITY * ctx.dtMs) / 1000;
+  const y = s.y + (vy * ctx.dtMs) / 1000;
+  if (y >= ground) return toIdle({ ...s, y: ground }, ctx, 1_000, 2_500);
+  return { ...s, y, vy };
+}
