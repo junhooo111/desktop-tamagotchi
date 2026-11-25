@@ -286,7 +286,7 @@ function insidePet(x: number, y: number): boolean {
 
 // ---- 마우스: 펫 위에서만 클릭을 받고, 나머지는 아래 창으로 통과시킨다 ----
 let interactive = false;
-let pointer: { id: number; startX: number; startY: number } | null = null;
+let pointer: { id: number; startX: number; startY: number; dragging: boolean } | null = null;
 
 function setInteractive(value: boolean): void {
   if (value === interactive) return;
@@ -316,17 +316,27 @@ document.addEventListener('mousemove', (e) => {
 
 canvas.addEventListener('pointerdown', (e) => {
   if (e.button !== 0 || !insidePet(e.clientX, e.clientY)) return;
-  pointer = { id: e.pointerId, startX: e.screenX, startY: e.screenY };
+  // 누르기만 해서는 펫을 "잡은" 것으로 치지 않는다. 마우스가 실제로 움직여야 들어 올린다.
+  // (눌렀다 떼는 순간 바로 들어 올렸다 놓으면, 공중이나 벽에 있던 펫이 클릭만으로 바닥에 떨어진다.)
+  pointer = { id: e.pointerId, startX: e.screenX, startY: e.screenY, dragging: false };
   canvas.setPointerCapture(e.pointerId);
-  window.petApi.drag('start');
+});
+
+canvas.addEventListener('pointermove', (e) => {
+  if (!pointer || pointer.id !== e.pointerId || pointer.dragging) return;
+  if (Math.hypot(e.screenX - pointer.startX, e.screenY - pointer.startY) >= CLICK_MOVE_LIMIT) {
+    pointer.dragging = true;
+    window.petApi.drag('start');
+  }
 });
 
 function endPointer(e: PointerEvent): void {
   if (!pointer || pointer.id !== e.pointerId) return;
   const moved = Math.hypot(e.screenX - pointer.startX, e.screenY - pointer.startY);
+  const wasDragging = pointer.dragging;
   pointer = null;
-  window.petApi.drag('end');
-  if (moved < CLICK_MOVE_LIMIT) {
+  if (wasDragging) window.petApi.drag('end');
+  if (!wasDragging && moved < CLICK_MOVE_LIMIT) {
     // 찾은 문제 말풍선이 떠 있을 때 펫을 누르면 쓰다듬기 대신 배움 카드가 열린다.
     if (!noticeEl.hidden) {
       window.petApi.openNotice();

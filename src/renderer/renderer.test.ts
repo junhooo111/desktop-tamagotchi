@@ -423,3 +423,54 @@ describe('찾은 문제 말풍선', () => {
     expect(el('bubble').style.bottom).toBe(String(WINDOW.height - 80 + 8) + 'px');
   });
 });
+
+describe('클릭과 드래그', () => {
+  const petX = Math.round(WINDOW.width / 2);
+  const petY = WINDOW.height - 10;
+  const fire = (type: string, screenX: number, screenY: number): void => {
+    const canvas = el('pet') as HTMLCanvasElement;
+    (canvas as unknown as { setPointerCapture: () => void }).setPointerCapture = () => {};
+    canvas.dispatchEvent(
+      Object.assign(new MouseEvent(type, { clientX: petX, clientY: petY, screenX, screenY, button: 0, bubbles: true }), { pointerId: 1 }),
+    );
+  };
+
+  it('그냥 누르기만 하면 펫을 들어 올리지 않는다(공중·벽에 있던 펫이 바닥에 떨어지지 않는다)', async () => {
+    const h = await start();
+    fire('pointerdown', 100, 100);
+    fire('pointerup', 100, 100);
+    expect(h.api.drag).not.toHaveBeenCalled();
+    expect(h.api.act).toHaveBeenCalledWith('touch');
+  });
+
+  it('누른 채 살짝 떨리는 정도(4px 미만)는 클릭으로 본다', async () => {
+    const h = await start();
+    fire('pointerdown', 100, 100);
+    fire('pointermove', 102, 101);
+    fire('pointerup', 102, 101);
+    expect(h.api.drag).not.toHaveBeenCalled();
+    expect(h.api.act).toHaveBeenCalledWith('touch');
+  });
+
+  it('누른 채 4px 이상 움직여야 들어 올리고, 놓으면 내려놓으며 쓰다듬기는 하지 않는다', async () => {
+    const h = await start();
+    fire('pointerdown', 100, 100);
+    fire('pointermove', 106, 100);
+    fire('pointermove', 140, 100); // 계속 움직여도 들어 올리기는 한 번만
+    expect(h.api.drag).toHaveBeenCalledTimes(1);
+    expect(h.api.drag).toHaveBeenLastCalledWith('start');
+    fire('pointerup', 140, 100);
+    expect(h.api.drag).toHaveBeenCalledTimes(2);
+    expect(h.api.drag).toHaveBeenLastCalledWith('end');
+    expect(h.api.act).not.toHaveBeenCalled();
+  });
+
+  it('문제 말풍선이 떠 있을 때 눌러도 펫을 들어 올리지 않고 배움 카드만 연다', async () => {
+    const h = await start();
+    h.emitNotice({ title: '문제', where: 'a', fix: 'b' }, true);
+    fire('pointerdown', 100, 100);
+    fire('pointerup', 100, 100);
+    expect(h.api.drag).not.toHaveBeenCalled();
+    expect(h.api.openNotice).toHaveBeenCalledTimes(1);
+  });
+});
