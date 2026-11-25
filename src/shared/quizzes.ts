@@ -110,4 +110,22 @@ export const QUIZZES: Record<RuleId, Quiz> = {
     answer: 0,
     explain: 'th 는 이 칸이 열의 제목이라는 의미를 전달합니다. 굵게만 하면 모양뿐이라 스크린 리더가 알 수 없어요.',
   },
+  'meta-description': {
+    question: '검색 결과에 나오는 두 줄 설명을 직접 정하려면?',
+    options: ['<title> 을 길게 쓴다', '<meta name="description"> 을 쓴다', '<h1> 을 두 개 쓴다'],
+    answer: 1,
+    explain: 'meta description 이 설명 문구의 첫 후보입니다. 페이지마다 다른 한두 문장으로 요약해 주세요.',
+  },
+  'img-oversized': {
+    question: '화면에 400px 로 보이는 이미지에 가장 알맞은 원본 폭은(고해상도 화면까지 생각하면)?',
+    options: ['4000px (원본 그대로)', '약 800px', '40px'],
+    answer: 1,
+    explain: '고해상도 화면은 한 칸에 픽셀 2개를 쓰므로 보이는 크기의 2배면 충분합니다. 그보다 크면 낭비예요.',
+  },
+  'vague-link': {
+    question: '"자세한 내용은 여기를 눌러 주세요"에서 링크로 만들기에 가장 알맞은 부분은?',
+    options: ['"여기"', '"자세한 내용"', '"눌러 주세요"'],
+    answer: 1,
+    explain: '링크 글자만 읽어도 어디로 가는지 알 수 있어야 해요. "여기"는 스크린 리더 링크 목록에서 아무 정보가 없습니다.',
+  },
 };

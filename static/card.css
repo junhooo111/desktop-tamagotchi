@@ -178,3 +178,18 @@ footer button:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }
+
+.tertiary {
+  margin-right: auto;
+  padding: 4px 6px;
+  background: none;
+  border: none;
+  color: #7a6a5a;
+  font: 12px 'Malgun Gothic', sans-serif;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.tertiary:hover {
+  color: #3b2f2f;
+}

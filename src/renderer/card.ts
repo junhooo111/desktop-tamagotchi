@@ -18,6 +18,7 @@ interface CardApi {
   getCard(): Promise<LessonCard | null>;
   confirm(choice: number | null): void;
   later(): void;
+  ignore(): void;
 }
 
 declare global {
@@ -79,6 +80,7 @@ void window.cardApi.getCard().then((card) => {
 
 $('confirm').addEventListener('click', () => window.cardApi.confirm(choice));
 $('later').addEventListener('click', () => window.cardApi.later());
+$('ignore').addEventListener('click', () => window.cardApi.ignore());
 $('close').addEventListener('click', () => window.cardApi.later());
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') window.cardApi.later();

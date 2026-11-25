@@ -2,6 +2,7 @@
  * 설정 창 화면. 선택지는 shared/settings.ts 의 SETTING_CHOICES 로 그리고,
  * 바꿀 때마다 메인에 보내서 바로 적용·저장한다(메인이 값을 다시 검증하고 저장된 전체 설정을 돌려준다).
  */
+import { CATEGORY_LABELS, LESSONS, RULE_IDS, type RuleCategory } from '../shared/lessons.js';
 import { SETTING_CHOICES, type Settings } from '../shared/settings.js';
 
 interface SettingsApi {
@@ -45,7 +46,32 @@ function renderChoices(key: ChoiceKey): void {
   }
 }
 
+/** 규칙을 분류별로 묶어 체크박스로 보여 준다. 체크 해제 = 그 규칙은 알리지 않는다. */
+function renderRules(): void {
+  const box = $('rules');
+  box.textContent = '';
+  for (const category of Object.keys(CATEGORY_LABELS) as RuleCategory[]) {
+    const ids = RULE_IDS.filter((id) => LESSONS[id].category === category);
+    if (ids.length === 0) continue;
+    const head = document.createElement('h3');
+    head.textContent = CATEGORY_LABELS[category];
+    box.append(head);
+    for (const id of ids) {
+      const label = document.createElement('label');
+      label.className = 'check';
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.dataset['rule'] = id;
+      input.checked = !current.disabledRules.includes(id);
+      input.addEventListener('change', () => void change({ disabledRules: RULE_IDS.filter((r) => (r === id ? !input.checked : current.disabledRules.includes(r))) }));
+      label.append(input, ' ' + LESSONS[id].title);
+      box.append(label);
+    }
+  }
+}
+
 function render(): void {
+  renderRules();
   for (const key of Object.keys(SETTING_CHOICES) as ChoiceKey[]) renderChoices(key);
   $<HTMLInputElement>('inspectEnabled').checked = current.inspectEnabled;
   $<HTMLInputElement>('autoUpdate').checked = current.autoUpdate;
@@ -69,6 +95,7 @@ async function start(): Promise<void> {
 
   $<HTMLInputElement>('inspectEnabled').addEventListener('change', (e) => void change({ inspectEnabled: (e.target as HTMLInputElement).checked }));
   $<HTMLInputElement>('autoUpdate').addEventListener('change', (e) => void change({ autoUpdate: (e.target as HTMLInputElement).checked }));
+  $('rules-all-on').addEventListener('click', () => void change({ disabledRules: [] }));
   $('check-update').addEventListener('click', () => {
     setStatus('확인하는 중…');
     void window.settingsApi.checkUpdate().then(setStatus);

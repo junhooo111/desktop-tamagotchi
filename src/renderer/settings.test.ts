@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { CATEGORY_LABELS, LESSONS, RULE_IDS } from '../shared/lessons.js';
 import { DEFAULT_SETTINGS, SETTING_CHOICES, type Settings } from '../shared/settings.js';
 
 const html = fs.readFileSync(path.join(process.cwd(), 'static', 'settings.html'), 'utf8');
@@ -112,5 +113,41 @@ describe('설정 창', () => {
     el('close').click();
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     expect(api.close).toHaveBeenCalledTimes(2);
+  });
+
+  describe('검사할 규칙', () => {
+    const boxes = (): HTMLInputElement[] => [...el('rules').querySelectorAll('input[type="checkbox"]')] as HTMLInputElement[];
+
+    it('모든 규칙을 분류별로 묶어 체크박스로 보여 주고, 켜 둔 규칙은 체크되어 있다', async () => {
+      await open({ ...DEFAULT_SETTINGS, disabledRules: ['contrast'] });
+      expect(boxes()).toHaveLength(RULE_IDS.length);
+      expect([...el('rules').querySelectorAll('h3')].map((h) => h.textContent)).toEqual(Object.values(CATEGORY_LABELS));
+      const byRule = Object.fromEntries(boxes().map((b) => [b.dataset['rule'], b.checked]));
+      expect(byRule['contrast']).toBe(false);
+      expect(byRule['img-alt']).toBe(true);
+      expect(el('rules').textContent).toContain(LESSONS['img-alt'].title);
+    });
+
+    it('체크를 해제하면 꺼 둔 규칙 목록에 그 규칙이 더해져서 메인에 간다', async () => {
+      const { api } = await open({ ...DEFAULT_SETTINGS, disabledRules: ['contrast'] });
+      const box = boxes().find((b) => b.dataset['rule'] === 'img-alt')!;
+      box.checked = false;
+      box.dispatchEvent(new Event('change'));
+      await flush();
+      expect(api.set).toHaveBeenCalledWith({ disabledRules: ['img-alt', 'contrast'] });
+    });
+
+    it('다시 체크하면 목록에서 빠지고, "모두 켜기"는 목록을 비운다', async () => {
+      const { api } = await open({ ...DEFAULT_SETTINGS, disabledRules: ['img-alt', 'contrast'] });
+      const box = boxes().find((b) => b.dataset['rule'] === 'img-alt')!;
+      box.checked = true;
+      box.dispatchEvent(new Event('change'));
+      await flush();
+      expect(api.set).toHaveBeenLastCalledWith({ disabledRules: ['contrast'] });
+      el('rules-all-on').click();
+      await flush();
+      expect(api.set).toHaveBeenLastCalledWith({ disabledRules: [] });
+      expect(boxes().every((b) => b.checked)).toBe(true);
+    });
   });
 });

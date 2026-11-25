@@ -10,7 +10,7 @@ describe('sanitizeSettings', () => {
   });
 
   it('유효한 값은 그대로 받는다', () => {
-    const s = { petScale: 2, inspectEnabled: false, scanSeconds: 30, tipMinutes: 0, autoUpdate: false };
+    const s = { petScale: 2, inspectEnabled: false, scanSeconds: 30, tipMinutes: 0, autoUpdate: false, disabledRules: ['contrast'], ignored: ['http://localhost:3000/|img-alt|img'] };
     expect(sanitizeSettings(s)).toEqual(s);
   });
 
@@ -49,5 +49,28 @@ describe('tipIntervalMs', () => {
     expect(tipIntervalMs({ tipMinutes: 20 })).toBe(1_200_000);
     expect(tipIntervalMs({ tipMinutes: 10 })).toBe(600_000);
     expect(tipIntervalMs({ tipMinutes: 0 })).toBe(Infinity);
+  });
+});
+
+describe('규칙 끄기·무시 목록', () => {
+  it('아는 규칙만 받고(순서는 규칙 목록 순서), 중복·모르는 값은 버린다', () => {
+    const s = sanitizeSettings({ disabledRules: ['contrast', 'nope', 'img-alt', 'contrast', 5] });
+    expect(s.disabledRules).toEqual(['img-alt', 'contrast']);
+    expect(sanitizeSettings({ disabledRules: 'img-alt' }).disabledRules).toEqual([]);
+  });
+
+  it('무시 키는 문자열만 받고, 중복·빈 값·너무 긴 값은 버리고, 최근 500개까지만 둔다', () => {
+    const s = sanitizeSettings({ ignored: ['a', 'a', '', 7, 'x'.repeat(601), 'b'] });
+    expect(s.ignored).toEqual(['a', 'b']);
+    const many = Array.from({ length: 520 }, (_, i) => 'k' + i);
+    const kept = sanitizeSettings({ ignored: many }).ignored;
+    expect(kept).toHaveLength(500);
+    expect(kept[0]).toBe('k20');
+    expect(kept.at(-1)).toBe('k519');
+  });
+
+  it('기본값은 모든 규칙을 켜고 무시 목록은 비어 있다', () => {
+    expect(DEFAULT_SETTINGS.disabledRules).toEqual([]);
+    expect(DEFAULT_SETTINGS.ignored).toEqual([]);
   });
 });

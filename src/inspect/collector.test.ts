@@ -2,7 +2,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { collectPage, collectorExpression, type RawFinding } from './collector.js';
 
-const run = (html: string, head = '<title>테스트</title><meta name="viewport" content="width=device-width">'): RawFinding[] => {
+const run = (html: string, head = '<title>테스트</title><meta name="viewport" content="width=device-width"><meta name="description" content="설명">'): RawFinding[] => {
   document.documentElement.lang = 'ko';
   document.head.innerHTML = head;
   document.body.innerHTML = html;
@@ -67,12 +67,12 @@ describe('collectPage 규칙', () => {
     ]);
   });
 
-  it('html-lang · page-title · viewport-meta: 문서 설정이 빠졌으면 페이지 전체 문제로 알린다', () => {
+  it('html-lang · page-title · viewport-meta · meta-description: 문서 설정이 빠졌으면 페이지 전체 문제로 알린다', () => {
     document.documentElement.removeAttribute('lang');
     document.head.innerHTML = '';
     document.body.innerHTML = '<p>내용</p>';
     const found = collectPage({ requireLayout: false }).findings;
-    expect(rules(found).sort()).toEqual(['html-lang', 'page-title', 'viewport-meta']);
+    expect(rules(found).sort()).toEqual(['html-lang', 'meta-description', 'page-title', 'viewport-meta']);
     expect(found.every((f) => f.rect === null && f.selector === 'document')).toBe(true);
   });
 
@@ -144,17 +144,17 @@ describe('collectPage 규칙: 추가 6종', () => {
   });
 
   it('zoom-disabled: user-scalable=no·maximum-scale 1 이하를 찾는다', () => {
-    const noScale = run('<p>글</p>', '<title>t</title><meta name="viewport" content="width=device-width, user-scalable=no">');
+    const noScale = run('<p>글</p>', '<title>t</title><meta name="description" content="d"><meta name="viewport" content="width=device-width, user-scalable=no">');
     expect(rules(noScale)).toEqual(['zoom-disabled']);
-    const max1 = run('<p>글</p>', '<title>t</title><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0">');
+    const max1 = run('<p>글</p>', '<title>t</title><meta name="description" content="d"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0">');
     expect(rules(max1)).toEqual(['zoom-disabled']);
-    const zero = run('<p>글</p>', '<title>t</title><meta name="viewport" content="width=device-width,user-scalable=0">');
+    const zero = run('<p>글</p>', '<title>t</title><meta name="description" content="d"><meta name="viewport" content="width=device-width,user-scalable=0">');
     expect(rules(zero)).toEqual(['zoom-disabled']);
   });
 
   it('zoom-disabled: 확대를 허용하는 viewport 는 통과한다(maximum-scale 5 포함)', () => {
-    expect(run('<p>글</p>', '<title>t</title><meta name="viewport" content="width=device-width, initial-scale=1">')).toEqual([]);
-    expect(run('<p>글</p>', '<title>t</title><meta name="viewport" content="width=device-width, maximum-scale=5, user-scalable=yes">')).toEqual([]);
+    expect(run('<p>글</p>', '<title>t</title><meta name="description" content="d"><meta name="viewport" content="width=device-width, initial-scale=1">')).toEqual([]);
+    expect(run('<p>글</p>', '<title>t</title><meta name="description" content="d"><meta name="viewport" content="width=device-width, maximum-scale=5, user-scalable=yes">')).toEqual([]);
   });
 
   it('tabindex-positive: 1 이상만 찾고 0·-1 은 통과한다', () => {
@@ -232,5 +232,37 @@ describe('collectPage 규칙: 추가 6종', () => {
        <div id="one" tabindex="0">포커스</div><div id="two"></div>`,
     );
     expect(found).toEqual([]);
+  });
+});
+
+describe('collectPage 규칙: 검색·성능·링크 3종', () => {
+  it('meta-description: 없거나 비어 있으면 페이지 전체 문제로 찾고, 있으면 통과한다', () => {
+    const missing = run('<p>글</p>', '<title>t</title><meta name="viewport" content="width=device-width">');
+    expect(missing.map((f) => [f.ruleId, f.selector])).toEqual([['meta-description', 'document']]);
+    const empty = run('<p>글</p>', '<title>t</title><meta name="viewport" content="width=device-width"><meta name="description" content="  ">');
+    expect(rules(empty)).toEqual(['meta-description']);
+    expect(run('<p>글</p>')).toEqual([]);
+  });
+
+  it('vague-link: "여기"·"click here" 같은 링크 글자를 찾는다(공백·구두점·대소문자 무시)', () => {
+    const found = run(
+      `<a href="/a">여기</a><a href="/b">Click Here!</a><a href="/c"> 여기를 클릭 </a><a href="/d">link</a>`,
+    );
+    expect(rules(found)).toEqual(['vague-link', 'vague-link', 'vague-link']); // 규칙당 최대 3개
+    expect(found[0]?.detail).toBe('"여기"');
+  });
+
+  it('vague-link: 구체적인 링크 글자, aria-label 이 구체적인 것, href 없는 a 는 통과한다', () => {
+    const found = run(
+      `<a href="/docs">사용 설명서</a>
+       <a href="/x" aria-label="주문 내역 보기">여기</a>
+       <a>여기</a>
+       <p>자세한 내용은 <a href="/y">배송 정책 문서</a>를 보세요.</p>`,
+    );
+    expect(found).toEqual([]);
+  });
+
+  it('img-oversized: 레이아웃이 없는 환경에서는 건너뛰고 오류도 내지 않는다', () => {
+    expect(run('<img src="/big.png" alt="큰 그림" width="100">')).toEqual([]);
   });
 });

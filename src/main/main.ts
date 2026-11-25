@@ -17,6 +17,7 @@ import { LESSONS, RULE_IDS, type RuleId } from '../shared/lessons.js';
 import { noticeOf } from '../shared/notice.js';
 import type { NoticeMessage } from '../shared/view.js';
 import { QUIZZES } from '../shared/quizzes.js';
+import { addIgnored, buildResults, isMuted, visibleFindings } from '../shared/results.js';
 import { DEFAULT_SETTINGS, sanitizeSettings, tipIntervalMs, type Settings } from '../shared/settings.js';
 import { TIP_PENDING_MS, pickTip, shouldOfferTip, type Tip } from '../shared/tips.js';
 import { BUBBLE_GAP, TIP_BUBBLE, WINDOW, bubbleShift, petPixelSize } from '../shared/layout.js';
@@ -135,6 +136,10 @@ let updates: UpdateController | null = null;
 let growth: Growth = emptyGrowth();
 let growthPath = '';
 let codexWin: BrowserWindow | null = null;
+/** 가장 최근 검사에서 찾은 모든 문제(꺼 둔 규칙·무시한 문제 포함). 검사 결과 창이 보여 준다. */
+let lastFindings: Finding[] = [];
+let lastConnected = false;
+let resultsWin: BrowserWindow | null = null;
 let queue: Finding[] = [];
 let active: Finding | null = null;
 /** 마지막으로 알린 문제. 말풍선이 사라진 뒤에도 기억해 두었다가, 펫에 마우스를 올리면 다시 보여 준다. */
@@ -298,6 +303,9 @@ async function scanOnce(): Promise<void> {
     const now = Date.now();
     const fromExtension = extensionFeed.scan(now);
     const result = mergeScans(await scanLocalPages(CDP_PORT), fromExtension);
+    lastFindings = result.findings;
+    lastConnected = result.reachable;
+    refreshResults();
     if (!result.reachable) {
       queue = [];
       if (notice) setNotice(null, false);
@@ -326,10 +334,10 @@ async function scanOnce(): Promise<void> {
     }
 
     // 고쳐서 사라진 문제는 더 알리지 않는다.
-    if (notice && !result.findings.some((f) => f.key === notice?.key)) setNotice(null, false);
+    if (notice && (!result.findings.some((f) => f.key === notice?.key) || isMuted(notice, settings))) setNotice(null, false);
     progress = prune(progress, now);
     // 화면에 위치가 있는 문제를 먼저 알린다.
-    queue = pendingFindings(result.findings, progress, now).sort((a, b) => Number(b.rect !== null) - Number(a.rect !== null));
+    queue = pendingFindings(visibleFindings(result.findings, settings), progress, now).sort((a, b) => Number(b.rect !== null) - Number(a.rect !== null));
     persistProgress();
   } finally {
     scanning = false;
@@ -353,6 +361,9 @@ function applySettings(patch: unknown): Settings {
     console.error('설정 저장 실패', error);
   }
   if (settings.scanSeconds !== before.scanSeconds) scheduleScan();
+  queue = visibleFindings(queue, settings);
+  if (notice && isMuted(notice, settings)) setNotice(null, false);
+  refreshResults();
   if (!settings.inspectEnabled) {
     queue = [];
     setNotice(null, false);
@@ -397,6 +408,56 @@ function recordGrowth(event: GrowthEvent): void {
   const names = result.unlocked.map((a) => a.name).join(', ');
   setTimeout(() => say('업적 달성: ' + names + '! 경험치 +' + xp + note), 2_500);
 }
+
+function refreshResults(): void {
+  if (resultsWin && !resultsWin.isDestroyed()) resultsWin.webContents.send('results:refresh');
+}
+
+function closeResults(): void {
+  if (resultsWin && !resultsWin.isDestroyed()) resultsWin.close();
+  resultsWin = null;
+}
+
+function openResults(): void {
+  if (resultsWin && !resultsWin.isDestroyed()) {
+    resultsWin.show();
+    resultsWin.focus();
+    return;
+  }
+  const area = screen.getDisplayNearestPoint({ x: Math.round(behavior.x), y: Math.round(behavior.y) }).workArea;
+  const width = 520;
+  const height = Math.min(680, area.height - 40);
+  const w = new BrowserWindow({
+    x: area.x + Math.round((area.width - width) / 2),
+    y: area.y + Math.round((area.height - height) / 2),
+    width,
+    height,
+    resizable: true,
+    minimizable: false,
+    maximizable: false,
+    autoHideMenuBar: true,
+    title: '검사 결과',
+    backgroundColor: '#fffdf5',
+    show: false,
+    webPreferences: {
+      preload: path.join(projectRoot, 'static', 'results-preload.cjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  w.setMenu(null);
+  w.setAlwaysOnTop(true, 'screen-saver');
+  w.once('ready-to-show', () => w.show());
+  w.on('closed', () => {
+    if (resultsWin === w) resultsWin = null;
+  });
+  void w.loadFile(path.join(projectRoot, 'static', 'results.html'));
+  resultsWin = w;
+}
+
+/** IPC 로 받은 문제 키가 쓸 만한 문자열인지 */
+const isKey = (v: unknown): v is string => typeof v === 'string' && v !== '' && v.length <= 600;
 
 function closeCodex(): void {
   if (codexWin && !codexWin.isDestroyed()) codexWin.close();
@@ -454,7 +515,7 @@ function openSettings(): void {
   }
   const area = screen.getDisplayNearestPoint({ x: Math.round(behavior.x), y: Math.round(behavior.y) }).workArea;
   const width = 400;
-  const height = 490;
+  const height = Math.min(760, area.height - 40);
   const w = new BrowserWindow({
     x: area.x + Math.round((area.width - width) / 2),
     y: area.y + Math.round((area.height - height) / 2),
@@ -548,7 +609,7 @@ function openCard(): void {
  * 배움 카드를 닫는다: 퀴즈를 풀고 확인하면 경험치(맞히면 보너스), 나중에 보기로 하면 한동안 다시 알리지 않는다.
  * choice 는 퀴즈에서 고른 보기 번호다. 채점은 여기서 한다.
  */
-function finishCard(kind: 'confirm' | 'later', choice: number | null = null): void {
+function finishCard(kind: 'confirm' | 'later' | 'ignore', choice: number | null = null): void {
   const now = Date.now();
   const finding = active;
   if (finding) {
@@ -564,6 +625,9 @@ function finishCard(kind: 'confirm' | 'later', choice: number | null = null): vo
       say(result.message);
       persist();
       updateTray();
+    } else if (kind === 'ignore') {
+      applySettings({ ignored: addIgnored(settings.ignored, finding.key) });
+      say('이 문제는 더 알리지 않을게요. 검사 결과에서 되돌릴 수 있어요');
     } else {
       progress = snooze(progress, finding.key, now);
     }
@@ -667,6 +731,7 @@ function buildMenu(): Menu {
   });
   return Menu.buildFromTemplate([
     { label: '상태 보기', click: () => say(statusText(applyElapsedInPlace())) },
+    { label: '검사 결과…', click: () => openResults() },
     { label: '도감·기록…', click: () => openCodex() },
     { label: '설정…', click: () => openSettings() },
     ...(updates?.ready
@@ -906,6 +971,23 @@ function setupIpc(): void {
     };
   });
   ipcMain.on('tip:confirm', () => confirmTip());
+  ipcMain.on('card:ignore', () => finishCard('ignore'));
+  ipcMain.handle('results:get', () =>
+    buildResults(lastFindings, {
+      connected: lastConnected,
+      confirmed: new Set(Object.keys(progress.confirmed)),
+      snoozedUntil: progress.snoozed,
+      settings,
+      now: Date.now(),
+    }),
+  );
+  ipcMain.handle('results:ignore', (_event, key: unknown) => {
+    if (isKey(key)) applySettings({ ignored: addIgnored(settings.ignored, key) });
+  });
+  ipcMain.handle('results:unignore', (_event, key: unknown) => {
+    if (isKey(key)) applySettings({ ignored: settings.ignored.filter((k) => k !== key) });
+  });
+  ipcMain.on('results:close', () => closeResults());
   ipcMain.handle('codex:get', () => buildCodex(growth, { tipsSeen: progress.tipsSeen.length }, Date.now()));
   ipcMain.on('codex:close', () => closeCodex());
   ipcMain.handle('settings:get', () => settings);

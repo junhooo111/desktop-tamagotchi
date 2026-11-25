@@ -2,6 +2,10 @@
  * 사용자 설정. 설정 창에서 바꾸고 settings.json 에 저장한다.
  * 파일이 깨졌거나 허용하지 않는 값이 들어 있어도 앱이 죽지 않도록, 읽을 때마다 sanitizeSettings 로 걸러 낸다.
  */
+import { RULE_IDS, type RuleId } from './lessons.js';
+
+export const MAX_IGNORED_KEYS = 500;
+const MAX_KEY_LENGTH = 600;
 
 export interface Settings {
   /** 펫 크기 배율. 도트가 뭉개지지 않게 정수 배율만 쓴다(1 = 마우스 커서 정도). */
@@ -14,6 +18,10 @@ export interface Settings {
   tipMinutes: 0 | 10 | 20 | 60;
   /** 새 버전이 있으면 알려 주고 받아 두는지(설치본에서만 동작) */
   autoUpdate: boolean;
+  /** 검사하지 않을 규칙(꺼 둔 규칙은 알리지 않는다) */
+  disabledRules: RuleId[];
+  /** 무시한 문제의 키(주소|규칙|요소 경로). 다시 알리지 않는다. */
+  ignored: string[];
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -22,6 +30,8 @@ export const DEFAULT_SETTINGS: Settings = {
   scanSeconds: 10,
   tipMinutes: 20,
   autoUpdate: true,
+  disabledRules: [],
+  ignored: [],
 };
 
 /** 설정 창이 보여 주는 선택지(허용하는 값과 같다) */
@@ -38,6 +48,17 @@ function pick<T extends number>(value: unknown, allowed: readonly T[], fallback:
   return typeof value === 'number' && (allowed as readonly number[]).includes(value) ? (value as T) : fallback;
 }
 
+function ruleList(v: unknown): RuleId[] {
+  if (!Array.isArray(v)) return [];
+  return RULE_IDS.filter((id) => v.includes(id));
+}
+
+function keyList(v: unknown): string[] {
+  if (!Array.isArray(v)) return [];
+  const keys = v.filter((k): k is string => typeof k === 'string' && k !== '' && k.length <= MAX_KEY_LENGTH);
+  return [...new Set(keys)].slice(-MAX_IGNORED_KEYS);
+}
+
 /** 어떤 값이 와도 항상 유효한 설정을 돌려준다. 모르는 항목은 버리고, 빠진 항목은 기본값으로 채운다. */
 export function sanitizeSettings(raw: unknown): Settings {
   const r = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
@@ -48,6 +69,8 @@ export function sanitizeSettings(raw: unknown): Settings {
     scanSeconds: pick(r['scanSeconds'], SETTING_CHOICES.scanSeconds, DEFAULT_SETTINGS.scanSeconds),
     tipMinutes: pick(r['tipMinutes'], SETTING_CHOICES.tipMinutes, DEFAULT_SETTINGS.tipMinutes),
     autoUpdate: bool(r['autoUpdate'], DEFAULT_SETTINGS.autoUpdate),
+    disabledRules: ruleList(r['disabledRules']),
+    ignored: keyList(r['ignored']),
   };
 }
 

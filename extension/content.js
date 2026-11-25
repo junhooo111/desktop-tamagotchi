@@ -294,6 +294,35 @@
         if (table.querySelector('th') === null && table.querySelector('td') !== null)
             add('table-header', table, 'th 없음');
     });
+    // 17. meta description 없음
+    const description = doc.querySelector('meta[name="description"]');
+    if (!description || (description.getAttribute('content') ?? '').trim() === '')
+        add('meta-description', null, 'meta description 없음');
+    // 18. 화면에 보이는 크기보다 훨씬 큰 이미지 (레이아웃이 있을 때만, SVG 는 벡터라 제외)
+    if (opts.requireLayout) {
+        const dpr = Math.max(window.devicePixelRatio || 1, 1);
+        doc.querySelectorAll('img').forEach((img) => {
+            if (full('img-oversized') || !isShown(img) || !img.complete)
+                return;
+            const src = img.currentSrc || img.getAttribute('src') || '';
+            if (/\.svg(\?|#|$)/i.test(src) || src.startsWith('data:image/svg'))
+                return;
+            const shown = img.getBoundingClientRect().width;
+            if (img.naturalWidth >= 800 && shown > 0 && img.naturalWidth > shown * dpr * 2) {
+                add('img-oversized', img, `원본 ${img.naturalWidth}px → 표시 ${Math.round(shown)}px`);
+            }
+        });
+    }
+    // 19. 뜻 없는 링크 글자("여기", "click here" 등)
+    const vagueLinks = ['여기', '여기를클릭', '여기를클릭하세요', '여기클릭', '클릭', '링크', 'clickhere', 'here', 'link', 'thislink', 'click'];
+    doc.querySelectorAll('a[href]').forEach((a) => {
+        if (full('vague-link') || !isShown(a))
+            return;
+        const name = nameOf(a);
+        const plain = name.replace(/[\s.!…·>»]+/g, '').toLowerCase();
+        if (plain !== '' && vagueLinks.includes(plain))
+            add('vague-link', a, `"${name.slice(0, 30)}"`);
+    });
     return {
         url: location.href,
         title: doc.title,

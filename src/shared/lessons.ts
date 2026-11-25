@@ -20,11 +20,25 @@ export const RULE_IDS = [
   'alt-quality',
   'clickable-div',
   'table-header',
+  'meta-description',
+  'img-oversized',
+  'vague-link',
 ] as const;
 
 export type RuleId = (typeof RULE_IDS)[number];
 
+/** 규칙 분류: 설정 창과 검사 결과 목록에서 묶어 보여 주는 기준 */
+export type RuleCategory = 'a11y' | 'seo' | 'responsive' | 'perf';
+
+export const CATEGORY_LABELS: Record<RuleCategory, string> = {
+  a11y: '접근성',
+  seo: '검색·공유(SEO)',
+  responsive: '반응형·모바일',
+  perf: '성능',
+};
+
 export interface Lesson {
+  category: RuleCategory;
   title: string;
   /** 펫이 문제 자리에서 띄우는 한 줄 */
   bubble: string;
@@ -36,6 +50,7 @@ export interface Lesson {
 
 export const LESSONS: Record<RuleId, Lesson> = {
   'img-alt': {
+    category: 'a11y',
     title: '이미지에 대체 텍스트(alt)가 없어요',
     bubble: '여기 이미지에 alt가 없어요!',
     problem: '<img> 태그에 alt 속성이 아예 없습니다.',
@@ -44,6 +59,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<img src="/team.jpg" alt="회의실에서 웃고 있는 팀원 다섯 명" />\n<img src="/divider.svg" alt="" />',
   },
   'button-name': {
+    category: 'a11y',
     title: '버튼·링크에 이름이 없어요',
     bubble: '이 버튼이 뭘 하는지 알 수가 없어요!',
     problem: '아이콘만 있는 버튼이나 링크에 글자도 aria-label 도 없습니다.',
@@ -52,6 +68,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<button aria-label="메뉴 열기">\n  <svg aria-hidden="true">…</svg>\n</button>',
   },
   'form-label': {
+    category: 'a11y',
     title: '입력칸에 라벨이 없어요',
     bubble: '이 입력칸이 무엇인지 몰라요!',
     problem: '<input>·<select>·<textarea> 에 연결된 <label> 이나 aria-label 이 없습니다. placeholder 만 있는 경우도 해당합니다.',
@@ -60,6 +77,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<label for="email">이메일</label>\n<input id="email" type="email" />',
   },
   'html-lang': {
+    category: 'a11y',
     title: '<html> 에 lang 이 없어요',
     bubble: '이 페이지가 무슨 언어인지 몰라요!',
     problem: '<html> 요소에 lang 속성이 없습니다.',
@@ -68,6 +86,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<html lang="ko">',
   },
   'page-title': {
+    category: 'seo',
     title: '페이지 제목(<title>)이 비어 있어요',
     bubble: '탭 제목이 비어 있어요!',
     problem: 'document.title 이 비어 있거나 없습니다.',
@@ -76,6 +95,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<title>주문 내역 - 마이 서비스</title>',
   },
   'viewport-meta': {
+    category: 'responsive',
     title: 'viewport 메타 태그가 없어요',
     bubble: '모바일에서 깨질 수 있어요!',
     problem: '<meta name="viewport"> 가 없습니다.',
@@ -84,6 +104,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<meta name="viewport" content="width=device-width, initial-scale=1" />',
   },
   'heading-order': {
+    category: 'a11y',
     title: '제목 단계를 건너뛰었어요',
     bubble: '제목 단계가 건너뛰어졌어요!',
     problem: 'h1 다음에 바로 h3 처럼 제목 단계를 건너뛴 곳이 있습니다.',
@@ -92,6 +113,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<h1>대시보드</h1>\n<h2>최근 주문</h2>\n<h3>배송 중</h3>',
   },
   'touch-target': {
+    category: 'responsive',
     title: '누를 영역이 너무 작아요',
     bubble: '손가락으로 누르기엔 너무 작아요!',
     problem: '버튼·입력칸 같은 조작 요소의 가로나 세로가 24px 보다 작습니다.',
@@ -100,6 +122,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '.icon-button {\n  min-width: 44px;\n  min-height: 44px;\n}',
   },
   'h-overflow': {
+    category: 'responsive',
     title: '화면 폭을 넘어서 가로로 스크롤돼요',
     bubble: '화면 밖으로 삐져나갔어요!',
     problem: '페이지가 브라우저 폭보다 넓어서 가로 스크롤이 생깁니다. 아래 요소가 오른쪽 끝을 넘습니다.',
@@ -108,6 +131,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: 'img { max-width: 100%; height: auto; }\n.card { width: min(100%, 480px); }',
   },
   contrast: {
+    category: 'a11y',
     title: '글자와 배경의 명암 대비가 부족해요',
     bubble: '글자가 잘 안 보여요!',
     problem: '글자색과 배경색의 명암 대비가 기준(일반 글자 4.5:1, 큰 글자 3:1)보다 낮습니다.',
@@ -116,6 +140,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '/* 대비 2.3:1 → 4.6:1 */\ncolor: #aaa;  →  color: #595959;',
   },
   'dup-id': {
+    category: 'a11y',
     title: '같은 id 가 한 페이지에 여러 번 쓰였어요',
     bubble: '같은 id 가 두 번 쓰였어요!',
     problem: '같은 id 값을 가진 요소가 한 페이지에 둘 이상 있습니다.',
@@ -124,6 +149,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '// 같은 컴포넌트를 여러 번 그릴 때\nconst id = useId();\n<label htmlFor={id}>이름</label>\n<input id={id} />',
   },
   'zoom-disabled': {
+    category: 'a11y',
     title: '화면 확대를 막아 놓았어요',
     bubble: '확대를 막아 놓았어요!',
     problem: 'viewport 메타 태그에 user-scalable=no 이거나 maximum-scale 이 1 이하입니다.',
@@ -132,6 +158,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<meta name="viewport" content="width=device-width, initial-scale=1" />\ninput { font-size: 16px; }',
   },
   'tabindex-positive': {
+    category: 'a11y',
     title: 'tabindex 에 양수를 썼어요',
     bubble: 'tabindex 가 양수예요!',
     problem: 'tabindex 가 1 이상인 요소가 있습니다.',
@@ -140,6 +167,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<!-- ✗ --> <div tabindex="5">…</div>\n<!-- ✓ --> <div tabindex="0">…</div>',
   },
   'alt-quality': {
+    category: 'a11y',
     title: 'alt 가 파일 이름이나 뜻 없는 말이에요',
     bubble: 'alt 가 파일 이름 같아요!',
     problem: 'alt 가 "hero.png", "image", "사진" 처럼 파일 이름이거나 이미지가 무엇인지 알려 주지 못하는 말입니다.',
@@ -148,6 +176,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<!-- ✗ --> <img src="hero.png" alt="hero.png">\n<!-- ✓ --> <img src="hero.png" alt="노트북으로 작업하는 개발자">',
   },
   'clickable-div': {
+    category: 'a11y',
     title: 'div 나 span 을 버튼처럼 썼어요',
     bubble: 'div 를 버튼처럼 썼어요!',
     problem: '클릭할 수 있는 모양(마우스 포인터가 손가락 모양)인데 버튼이나 링크가 아닌 div·span 등이고, role 이나 tabindex 도 없습니다.',
@@ -156,11 +185,39 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<!-- ✗ --> <div class="btn" onClick={save}>저장</div>\n<!-- ✓ --> <button type="button" class="btn" onClick={save}>저장</button>',
   },
   'table-header': {
+    category: 'a11y',
     title: '표에 제목 칸(th)이 없어요',
     bubble: '표에 제목 칸이 없어요!',
     problem: '<table> 안에 <th> 가 하나도 없습니다.',
     why: '스크린 리더는 th 로 "이 칸은 어떤 열의 값인지"를 안내합니다. td 만 쓰면 숫자들이 무엇인지 알려 줄 수 없습니다. 보이는 모양만 굵게 해서는 구조가 전달되지 않습니다.',
     fix: '제목 칸은 <th scope="col"> (행 제목이면 scope="row") 으로 쓰세요. 표가 레이아웃용일 뿐이라면 table 대신 CSS grid·flex 를 쓰는 것이 좋습니다.',
     code: '<table>\n  <tr><th scope="col">상품</th><th scope="col">가격</th></tr>\n  <tr><td>사과</td><td>1,000원</td></tr>\n</table>',
+  },
+  'meta-description': {
+    category: 'seo',
+    title: '검색 결과에 보일 설명(meta description)이 없어요',
+    bubble: '검색 결과에 보일 설명이 없어요!',
+    problem: '<meta name="description"> 이 없거나 내용이 비어 있습니다.',
+    why: '검색 결과와 링크 미리보기에 나오는 두 줄 설명이 바로 이 값입니다. 없으면 검색엔진이 본문에서 아무 문장이나 가져와 보여 줘서 클릭하고 싶은 설명이 되기 어렵습니다.',
+    fix: '페이지마다 내용을 한두 문장(120~160자 안팎)으로 요약해서 넣으세요. 페이지마다 달라야 하고, 제목을 그대로 반복하지 마세요.',
+    code: '<meta name="description" content="이번 달 주문 현황과 배송 상태를 한눈에 확인하는 대시보드입니다." />',
+  },
+  'img-oversized': {
+    category: 'perf',
+    title: '이미지가 화면에 보이는 크기보다 훨씬 커요',
+    bubble: '이미지가 너무 커요!',
+    problem: '이미지 원본 가로 폭이 화면에 그려지는 폭의 2배(고해상도 화면 배율 포함)보다 훨씬 큽니다.',
+    why: '보이지도 않는 픽셀까지 내려받아서 로딩이 느려지고 데이터를 낭비합니다. 모바일에서는 특히 눈에 띕니다. 원본 사진을 그대로 올리고 CSS 로만 줄이는 습관에서 흔히 생깁니다.',
+    fix: '보이는 크기의 2배 정도(고해상도 화면용)로 리사이즈하고, WebP·AVIF 같은 가벼운 형식을 쓰세요. 화면 크기별로는 srcset 과 sizes 로 알맞은 파일을 고르게 합니다.',
+    code: '<img\n  src="/hero-800.webp"\n  srcset="/hero-800.webp 800w, /hero-1600.webp 1600w"\n  sizes="(max-width: 800px) 100vw, 800px"\n  alt="…" />',
+  },
+  'vague-link': {
+    category: 'a11y',
+    title: '링크 글자가 "여기"처럼 뜻이 없어요',
+    bubble: '링크 이름이 "여기"예요!',
+    problem: '링크 글자가 "여기", "click here", "link" 처럼 어디로 가는지 알 수 없는 말입니다.',
+    why: '스크린 리더 사용자는 링크 목록만 따로 훑어 듣습니다. "여기, 여기, 여기"만 들리면 어느 링크가 무엇인지 알 수 없습니다. 검색엔진도 링크 글자로 대상 페이지를 이해합니다.',
+    fix: '링크 글자만 읽어도 목적지를 알 수 있게 쓰세요. 문장 속에서도 "사용 설명서 보기"처럼 구체적인 말을 링크로 만듭니다.',
+    code: '<!-- ✗ --> 설명서는 <a href="/docs">여기</a>를 눌러 보세요.\n<!-- ✓ --> <a href="/docs">사용 설명서</a>를 확인해 보세요.',
   },
 };

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'"
+    />
+    <title>검사 결과</title>
+    <link rel="stylesheet" href="./results.css" />
+  </head>
+  <body>
+    <main>
+      <h1>검사 결과</h1>
+      <p class="summary" id="summary" role="status"></p>
+      <p class="empty" id="empty" hidden></p>
+      <div id="pages"></div>
+
+      <details id="ignored-box" hidden>
+        <summary>무시한 문제 <span id="ignored-count"></span></summary>
+        <p class="hint">여기서 해제하면 그 문제를 다시 알려 줘요.</p>
+        <ul class="ignored" id="ignored"></ul>
+      </details>
+
+      <footer>
+        <button id="close" type="button">닫기</button>
+      </footer>
+    </main>
+    <script type="module" src="../dist/renderer/results.js"></script>
+  </body>
+</html>

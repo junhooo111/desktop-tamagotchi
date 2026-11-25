@@ -14,7 +14,7 @@ const flush = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
 type Card = Record<string, unknown> | null;
 
 async function open(card: Card) {
-  const api = { getCard: vi.fn(async () => card), confirm: vi.fn(), later: vi.fn() };
+  const api = { getCard: vi.fn(async () => card), confirm: vi.fn(), later: vi.fn(), ignore: vi.fn() };
   (window as unknown as { cardApi: typeof api }).cardApi = api;
   vi.resetModules();
   await import('./card.js');
@@ -101,5 +101,15 @@ describe('카드가 없을 때', () => {
     await open(null);
     expect(el('card').hidden).toBe(true);
     expect(el('empty').hidden).toBe(false);
+  });
+});
+
+describe('배움 카드: 이 문제 무시', () => {
+  it('"이 문제 무시"를 누르면 퀴즈를 풀지 않아도 무시를 요청한다(확인과 다르다)', async () => {
+    const api = await open(lessonCard);
+    el('ignore').click();
+    expect(api.ignore).toHaveBeenCalledTimes(1);
+    expect(api.confirm).not.toHaveBeenCalled();
+    expect(api.later).not.toHaveBeenCalled();
   });
 });
