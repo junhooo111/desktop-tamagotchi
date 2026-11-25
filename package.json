@@ -53,8 +53,16 @@
       "oneClick": true,
       "perMachine": false,
       "deleteAppDataOnUninstall": false,
-      "shortcutName": "Desktop Tamagotchi"
-    }
+      "shortcutName": "Desktop Tamagotchi",
+      "artifactName": "Desktop-Tamagotchi-Setup-${version}.${ext}"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "junhooo111",
+        "repo": "desktop-tamagotchi"
+      }
+    ]
   },
   "license": "MIT",
   "devDependencies": {
@@ -65,5 +73,8 @@
     "jsdom": "^31.0.1",
     "typescript": "^7.0.2",
     "vitest": "^5.1.1"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.11"
   }
 }

@@ -1,6 +1,6 @@
 /** 펫 화면: 캔버스에 픽셀 스프라이트를 그리고 마우스 입력을 메인으로 넘긴다. */
 import { resolvePose } from '../shared/animation.js';
-import { BUBBLE_GAP, STAGE_SCALE, WINDOW, petPixelSize } from '../shared/layout.js';
+import { BUBBLE_GAP, WINDOW, drawScale, petPixelSize } from '../shared/layout.js';
 import { boundsOf, orientRows } from '../shared/pixel.js';
 import { spriteSet, type FrameName, type SpriteSet } from '../shared/species.js';
 import type { NoticeBubble, NoticeMessage, PetView, TipBubble } from '../shared/view.js';
@@ -56,7 +56,7 @@ function sheetOf(v: PetView): SpriteSet {
 
 /** 펫이 서 있는 자리(창의 아래쪽 가운데). 그림이 돌아가도 같은 칸을 쓴다. */
 function petRect(v: PetView): { x: number; y: number; size: number } {
-  const size = petPixelSize(v.stage);
+  const size = petPixelSize(v.stage, v.scale);
   return { x: Math.round((WINDOW.width - size) / 2), y: WINDOW.height - size, size };
 }
 
@@ -64,7 +64,7 @@ function petRect(v: PetView): { x: number; y: number; size: number } {
 function figureTop(v: PetView): number {
   const rows = sheetOf(v).frames.idleA;
   const b = boundsOf(rows);
-  return petRect(v).y + (b ? b.y0 : 0) * STAGE_SCALE[v.stage];
+  return petRect(v).y + (b ? b.y0 : 0) * drawScale(v.stage, v.scale);
 }
 
 // 같은 자세는 매번 다시 뒤집고 돌리지 않도록 저장해 둔다.
@@ -137,7 +137,7 @@ function drawHearts(centerX: number, top: number, now: number, unit: number): vo
 function draw(now: number): void {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!view) return;
-  const scale = STAGE_SCALE[view.stage];
+  const scale = drawScale(view.stage, view.scale);
   const rect = petRect(view);
   const pose = resolvePose(view, now);
   const rows = rowsFor(view, pose.frame, pose.eyesClosed, pose.orientation.flip, pose.orientation.quarter);

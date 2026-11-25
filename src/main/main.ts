@@ -9,12 +9,14 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BrowserWindow, Menu, Tray, app, ipcMain, nativeImage, screen, shell } from 'electron';
+import electronUpdater from 'electron-updater';
 import { SnapshotFeed, mergeScans } from '../inspect/feed.js';
 import { scanLocalPages, type Finding } from '../inspect/scan.js';
 import { LESSONS } from '../shared/lessons.js';
 import { noticeOf } from '../shared/notice.js';
 import type { NoticeMessage } from '../shared/view.js';
 import { QUIZZES } from '../shared/quizzes.js';
+import { DEFAULT_SETTINGS, sanitizeSettings, tipIntervalMs, type Settings } from '../shared/settings.js';
 import { TIP_PENDING_MS, pickTip, shouldOfferTip, type Tip } from '../shared/tips.js';
 import { BUBBLE_GAP, TIP_BUBBLE, WINDOW, bubbleShift, petPixelSize } from '../shared/layout.js';
 import {
@@ -55,6 +57,8 @@ import {
 } from './behavior.js';
 import { FEED_PORT_DEFAULT, startFeedServer, type FeedServer } from './feed-server.js';
 import { petTargetFor } from './inspect-target.js';
+import { loadSettings, saveSettings } from './settings-store.js';
+import { UPDATE_EVERY_MS, UPDATE_FIRST_CHECK_MS, UpdateController, type AutoUpdaterLike } from './updater.js';
 import {
   confirm,
   detectFixes,
@@ -83,7 +87,6 @@ const CURSOR_MOVE_PX = 3;
 const CDP_PORT = Number(process.env['PET_CDP_PORT'] ?? 9222);
 /** 브라우저 확장이 검사 결과를 보내는 로컬 포트(127.0.0.1 전용). 환경 변수 PET_FEED_PORT 로 바꿀 수 있다. */
 const FEED_PORT = Number(process.env['PET_FEED_PORT'] ?? FEED_PORT_DEFAULT);
-const SCAN_MS = 10_000;
 /** 문제를 찾아 알린 뒤 다음 문제를 알리기까지 최소 간격 */
 const INSPECT_GAP_MS = 30_000;
 const STATUS_OFF = '검사: 연결 안 됨 (크롬 확장을 켜고 localhost 페이지를 여세요)';
@@ -118,6 +121,13 @@ let progressPath = '';
 /** 브라우저 확장이 보낸 검사 결과 */
 const extensionFeed = new SnapshotFeed();
 let feedServer: FeedServer | null = null;
+/** 사용자 설정(설정 창에서 바꾸면 바로 적용·저장한다) */
+let settings: Settings = { ...DEFAULT_SETTINGS };
+let settingsPath = '';
+let settingsWin: BrowserWindow | null = null;
+let scanTimer: ReturnType<typeof setInterval> | undefined;
+/** 자동 업데이트(설치본에서만 만든다) */
+let updates: UpdateController | null = null;
 let queue: Finding[] = [];
 let active: Finding | null = null;
 /** 마지막으로 알린 문제. 말풍선이 사라진 뒤에도 기억해 두었다가, 펫에 마우스를 올리면 다시 보여 준다. */
@@ -151,6 +161,7 @@ function currentView(): PetView {
     play: behavior.play,
     since: behavior.since,
     bubbleShift: tipShift,
+    scale: settings.petScale,
   };
 }
 
@@ -263,6 +274,11 @@ function persistProgress(): void {
 /** 열려 있는 로컬 페이지를 검사해서 새 문제를 대기열에 넣고, 고친 것을 찾아 보상한다. */
 async function scanOnce(): Promise<void> {
   if (scanning) return;
+  if (!settings.inspectEnabled) {
+    queue = [];
+    setScanStatus('검사: 꺼져 있어요 (설정에서 켤 수 있어요)');
+    return;
+  }
   if (stageOf(pet) === 'egg') {
     queue = [];
     setScanStatus('검사: 알이 부화하면 시작해요');
@@ -305,6 +321,95 @@ async function scanOnce(): Promise<void> {
   } finally {
     scanning = false;
   }
+}
+
+/** 검사 주기를 설정에 맞춰 다시 건다 */
+function scheduleScan(): void {
+  if (scanTimer) clearInterval(scanTimer);
+  scanTimer = setInterval(() => void scanOnce(), settings.scanSeconds * 1000);
+}
+
+/** 설정을 바꿔 저장하고 바로 적용한다. 어떤 값이 와도 sanitizeSettings 로 걸러서 항상 유효한 설정만 쓴다. */
+function applySettings(patch: unknown): Settings {
+  const before = settings;
+  const incoming = typeof patch === 'object' && patch !== null ? (patch as Record<string, unknown>) : {};
+  settings = sanitizeSettings({ ...settings, ...incoming });
+  try {
+    saveSettings(settingsPath, settings);
+  } catch (error) {
+    console.error('설정 저장 실패', error);
+  }
+  if (settings.scanSeconds !== before.scanSeconds) scheduleScan();
+  if (!settings.inspectEnabled) {
+    queue = [];
+    setNotice(null, false);
+  } else if (!before.inspectEnabled) {
+    void scanOnce();
+  }
+  updateTray();
+  sendView();
+  return settings;
+}
+
+function closeSettings(): void {
+  if (settingsWin && !settingsWin.isDestroyed()) settingsWin.close();
+  settingsWin = null;
+}
+
+function openSettings(): void {
+  if (settingsWin && !settingsWin.isDestroyed()) {
+    settingsWin.show();
+    settingsWin.focus();
+    return;
+  }
+  const area = screen.getDisplayNearestPoint({ x: Math.round(behavior.x), y: Math.round(behavior.y) }).workArea;
+  const width = 400;
+  const height = 490;
+  const w = new BrowserWindow({
+    x: area.x + Math.round((area.width - width) / 2),
+    y: area.y + Math.round((area.height - height) / 2),
+    width,
+    height,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    autoHideMenuBar: true,
+    title: 'Desktop Tamagotchi 설정',
+    backgroundColor: '#fffdf5',
+    show: false,
+    webPreferences: {
+      preload: path.join(projectRoot, 'static', 'settings-preload.cjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  w.setMenu(null);
+  w.setAlwaysOnTop(true, 'screen-saver');
+  w.once('ready-to-show', () => w.show());
+  w.on('closed', () => {
+    if (settingsWin === w) settingsWin = null;
+  });
+  void w.loadFile(path.join(projectRoot, 'static', 'settings.html'));
+  settingsWin = w;
+}
+
+/** 자동 업데이트: 설치본에서만, 시작 30초 뒤와 6시간마다 새 버전을 확인한다. */
+function setupUpdates(): void {
+  if (!app.isPackaged) return;
+  const updater = electronUpdater.autoUpdater as unknown as AutoUpdaterLike;
+  updates = new UpdateController(updater, {
+    enabled: () => settings.autoUpdate,
+    onStatus: (text) => {
+      if (settingsWin && !settingsWin.isDestroyed()) settingsWin.webContents.send('update:status', text);
+    },
+    onDownloaded: (version) => {
+      say('새 버전 ' + version + ' 이 준비됐어요! 우클릭 메뉴에서 바로 설치할 수 있어요');
+      updateTray();
+    },
+  });
+  setTimeout(() => void updates?.check(false), UPDATE_FIRST_CHECK_MS);
+  setInterval(() => void updates?.check(false), UPDATE_EVERY_MS);
 }
 
 function closeCard(): void {
@@ -468,6 +573,10 @@ function buildMenu(): Menu {
   });
   return Menu.buildFromTemplate([
     { label: '상태 보기', click: () => say(statusText(applyElapsedInPlace())) },
+    { label: '설정…', click: () => openSettings() },
+    ...(updates?.ready
+      ? [{ label: '새 버전 ' + updates.ready + ' 설치하고 다시 시작', click: () => void updates?.installNow() }]
+      : []),
     { label: scanStatus, enabled: false },
     { label: '지금 검사하기', enabled: !egg, click: () => void scanOnce() },
     {
@@ -601,7 +710,7 @@ function updateInspection(now: number, dtMs: number): void {
   // 지식 말풍선이 떠 있는 동안에는 펫이 돌아다니지 않고 그 자리에 서 있는다(확인 버튼을 누를 수 있게).
   if (pendingTip && behavior.mode === 'idle') behavior = { ...behavior, until: now + 1_500 };
   const busy = active !== null || queue.length > 0 || cardWin !== null || drag !== null || pendingTip !== null;
-  if (shouldOfferTip({ now, lastTipAt, mode: behavior.mode, stage: stageOf(pet), busy, roomAbove: roomAboveForTip() })) {
+  if (shouldOfferTip({ now, lastTipAt, mode: behavior.mode, stage: stageOf(pet), busy, roomAbove: roomAboveForTip(), everyMs: tipIntervalMs(settings) })) {
     offerTip(now);
   }
 
@@ -642,7 +751,7 @@ function tick(lastAt: number): number {
     lastCursorMoveAt = now;
   }
 
-  const size = petPixelSize(stageOf(pet));
+  const size = petPixelSize(stageOf(pet), settings.petScale);
   if (size !== petSize) {
     behavior = resize(behavior, petSize, size);
     petSize = size;
@@ -702,6 +811,11 @@ function setupIpc(): void {
     };
   });
   ipcMain.on('tip:confirm', () => confirmTip());
+  ipcMain.handle('settings:get', () => settings);
+  ipcMain.handle('settings:set', (_event, patch: unknown) => applySettings(patch));
+  ipcMain.handle('app:version', () => app.getVersion());
+  ipcMain.handle('update:check', async () => (updates ? updates.check(true) : '설치한 앱에서만 업데이트를 확인해요'));
+  ipcMain.on('settings:close', () => closeSettings());
   // 사라진 말풍선을 hover 로 다시 띄운 뒤 펫을 누르면, 그 문제의 배움 카드를 연다.
   ipcMain.on('notice:open', () => {
     if (!notice || cardWin) return;
@@ -748,13 +862,15 @@ if (!app.requestSingleInstanceLock()) {
     savePath = path.join(app.getPath('userData'), 'pet.json');
     progressPath = path.join(app.getPath('userData'), 'progress.json');
     progress = loadProgress(progressPath);
+    settingsPath = path.join(app.getPath('userData'), 'settings.json');
+    settings = loadSettings(settingsPath);
     const now = Date.now();
     lastTipAt = now;
     // 처음 실행하면 임의의 종이 든 알로 시작한다. 알은 쓰다듬으면 부화한다.
     pet = applyElapsed(loadPet(savePath) ?? createPet(randomSpecies(), now), now);
     persist();
 
-    petSize = petPixelSize(stageOf(pet));
+    petSize = petPixelSize(stageOf(pet), settings.petScale);
     const first = screen.getPrimaryDisplay().workArea;
     behavior = createBehavior(first.x + first.width - petSize - 80, first.y + first.height - petSize, now);
     lastCursor = screen.getCursorScreenPoint();
@@ -780,7 +896,8 @@ if (!app.requestSingleInstanceLock()) {
       feedServer = s;
     });
     setTimeout(() => void scanOnce(), 3_000);
-    setInterval(() => void scanOnce(), SCAN_MS);
+    scheduleScan();
+    setupUpdates();
   });
 
   app.on('before-quit', () => {

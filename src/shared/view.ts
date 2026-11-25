@@ -16,6 +16,8 @@ export interface PetView {
   since: number;
   /** 말풍선이 화면 밖으로 잘리지 않도록 옆으로 밀 거리(px) */
   bubbleShift: number;
+  /** 설정의 펫 크기 배율(1·2·3) */
+  scale: number;
 }
 
 /** 펫이 찾아 알린 문제의 말풍선. 무엇이 문제인지, 어디인지, 어떻게 고치는지를 함께 보여 준다. */

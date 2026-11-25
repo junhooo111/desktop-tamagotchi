@@ -58,3 +58,21 @@ describe('shouldOfferTip', () => {
     expect(shouldOfferTip(gate({ roomAbove: false }))).toBe(false);
   });
 });
+
+describe('shouldOfferTip 의 알림 주기 설정', () => {
+  const base = { now: 100 * 60_000, lastTipAt: 0, mode: 'idle' as const, stage: 'adult' as const, busy: false, roomAbove: true };
+
+  it('주기를 안 주면 기본(20분)을 쓴다', () => {
+    expect(shouldOfferTip({ ...base, now: 19 * 60_000 })).toBe(false);
+    expect(shouldOfferTip({ ...base, now: 20 * 60_000 })).toBe(true);
+  });
+
+  it('주기를 주면 그 간격이 지나야 알린다', () => {
+    expect(shouldOfferTip({ ...base, now: 9 * 60_000, everyMs: 10 * 60_000 })).toBe(false);
+    expect(shouldOfferTip({ ...base, now: 10 * 60_000, everyMs: 10 * 60_000 })).toBe(true);
+  });
+
+  it('Infinity 면(알림 끔) 아무리 지나도 알리지 않는다', () => {
+    expect(shouldOfferTip({ ...base, now: 10_000 * 60_000, everyMs: Infinity })).toBe(false);
+  });
+});

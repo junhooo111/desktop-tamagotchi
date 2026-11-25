@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { BUBBLE_GAP, STAGE_SCALE, TIP_BUBBLE, WINDOW, bubbleShift, petPixelSize } from './layout.js';
+import { BUBBLE_GAP, STAGE_SCALE, TIP_BUBBLE, WINDOW, bubbleShift, drawScale, petPixelSize } from './layout.js';
+import { MAX_PET_SCALE } from './settings.js';
 
 describe('petPixelSize', () => {
   it('그림 32칸에 단계별 배율을 곱한 정사각형 칸이다(모든 단계가 같은 칸을 쓰고, 마우스 커서 정도인 32px)', () => {
@@ -12,7 +13,8 @@ describe('petPixelSize', () => {
 describe('WINDOW', () => {
   it('가장 큰 말풍선(코드를 펼친 것)과 펫, 둘 사이 간격이 모두 들어간다', () => {
     expect(WINDOW.width).toBeGreaterThanOrEqual(TIP_BUBBLE.width);
-    expect(WINDOW.height).toBeGreaterThanOrEqual(TIP_BUBBLE.maxHeight + BUBBLE_GAP + petPixelSize('adult'));
+    // 가장 크게 키운 펫(3배)이 있어도 가장 큰 말풍선이 들어간다
+    expect(WINDOW.height).toBeGreaterThanOrEqual(TIP_BUBBLE.maxHeight + BUBBLE_GAP + petPixelSize('adult', MAX_PET_SCALE));
   });
 });
 
@@ -48,5 +50,21 @@ describe('bubbleShift', () => {
 
   it('말풍선이 화면보다 넓으면 밀지 않는다', () => {
     expect(bubbleShift(100, 240, 0, 200)).toBe(0);
+  });
+});
+
+describe('펫 크기 배율', () => {
+  it('설정 배율(1~3)만큼 펫 칸과 그림 한 칸이 커진다', () => {
+    expect(petPixelSize('adult', 1)).toBe(32);
+    expect(petPixelSize('adult', 2)).toBe(64);
+    expect(petPixelSize('baby', 3)).toBe(96);
+    expect(drawScale('adult', 2)).toBe(2);
+    expect(drawScale('egg')).toBe(1);
+  });
+
+  it('허용 범위 밖의 값은 1~3 으로 잘라서 쓴다(창 밖으로 커지지 않게)', () => {
+    expect(petPixelSize('adult', 0)).toBe(32);
+    expect(petPixelSize('adult', 10)).toBe(32 * MAX_PET_SCALE);
+    expect(drawScale('adult', -4)).toBe(1);
   });
 });

@@ -15,7 +15,7 @@ AI로 화면을 만들다 보면 놓치기 쉬운 FE 기본기를 펫이 짚어 
 1. [한눈에 보기](#한눈에-보기)
 2. [내려받아 설치하기](#내려받아-설치하기)
 3. [처음 시작하기](#처음-시작하기)
-4. [펫 키우기](#펫-키우기)
+4. [설정](#설정)과 [펫 키우기](#펫-키우기)
 5. [펫이 하는 행동](#펫이-하는-행동)
 6. [놓친 부분 찾기](#놓친-부분-찾기-내-페이지-검사하기)
 7. [FE 지식 알림](#fe-지식-알림)
@@ -39,7 +39,7 @@ AI로 화면을 만들다 보면 놓치기 쉬운 FE 기본기를 펫이 짚어 
 ### 1. 설치 파일 내려받기
 
 1. 이 저장소의 **[Releases 페이지](https://github.com/junhooo111/desktop-tamagotchi/releases)** 로 갑니다.
-2. 가장 위(최신) 릴리스의 **Assets** 에서 `Desktop Tamagotchi Setup <버전>.exe` 를 내려받습니다. (`.blockmap`, `latest.yml` 은 자동 업데이트용이라 받지 않아도 됩니다.)
+2. 가장 위(최신) 릴리스의 **Assets** 에서 `Desktop-Tamagotchi-Setup-<버전>.exe` 를 내려받습니다. (`.blockmap`, `latest.yml` 은 자동 업데이트용이라 직접 받을 필요가 없습니다.)
 
 > 릴리스에 파일이 없다면 아직 올리지 않은 것입니다. 아래 [직접 만들어서 설치하기](#직접-만들어서-설치하기)로 설치 파일을 만들 수 있습니다.
 
@@ -78,7 +78,7 @@ npm install
 npm run dist
 ```
 
-끝나면 `release\Desktop Tamagotchi Setup <버전>.exe` 가 생깁니다. 이후는 위 "설치하기"와 같습니다.
+끝나면 `release\Desktop-Tamagotchi-Setup-<버전>.exe` 가 생깁니다. 이후는 위 "설치하기"와 같습니다.
 설치하지 않고 실행만 해 보려면 `npm start` 를 쓰세요([개발 환경에서 실행](#개발-환경에서-실행)).
 
 ## 처음 시작하기
@@ -107,6 +107,8 @@ npm run dist
 | 메뉴 | 설명 |
 |---|---|
 | 상태 보기 | 펫 상태를 말풍선으로 보여 줍니다 |
+| 설정… | 펫 크기·검사 주기·지식 알림 주기·자동 업데이트를 바꿉니다([설정](#설정)) |
+| 새 버전 … 설치하고 다시 시작 | 새 버전을 받아 둔 뒤에만 나타납니다 |
 | (검사 상태 줄) | 검사 연결 상태. 예) `검사: 확장 연결됨 · 로컬 페이지 1개` |
 | 지금 검사하기 | 10초 주기를 기다리지 않고 바로 검사합니다 |
 | 검사 도구 ▸ 검사용 브라우저 열기 | 검사 전용 크롬 창을 엽니다(로그인 정보 없는 별도 프로필) |
@@ -118,6 +120,26 @@ npm run dist
 | 펫 종류 (테스트용) | 펫 종을 바로 바꿔 봅니다 |
 | 로그인할 때 자동 실행 | PC 를 켤 때 펫을 자동으로 띄웁니다(설치본에서만) |
 | 종료 | 앱을 끝냅니다 |
+
+## 설정
+
+펫 우클릭 → **`설정…`** 에서 바꿀 수 있고, 바꾸면 **바로 적용·저장**됩니다(저장 위치: `%APPDATA%\desktop-tamagotchi\settings.json`).
+
+| 항목 | 선택지 | 설명 |
+|---|---|---|
+| 펫 크기 | 1배(기본) / 2배 / 3배 | 1배가 마우스 커서 정도입니다. 도트가 뭉개지지 않게 정수 배율만 지원합니다 |
+| 문제 검사 | 켜기 / 끄기 | 끄면 펫은 놀기만 하고 페이지를 검사하지 않습니다 |
+| 검사 주기 | 5초 / 10초(기본) / 30초 / 60초 | 열려 있는 로컬 페이지를 얼마나 자주 살펴볼지 |
+| FE 지식 알림 | 끄기 / 10분 / 20분(기본) / 60분 | 가만히 있을 때 지식 말풍선을 띄우는 간격. 우클릭 메뉴의 `오늘의 FE 지식`은 끄더라도 쓸 수 있습니다 |
+| 자동 업데이트 | 켜기(기본) / 끄기 | 아래 [업데이트](#업데이트) 참고 |
+
+### 업데이트
+
+- **설치한 앱**은 시작 30초 뒤와 6시간마다 이 저장소의 GitHub Releases 에서 새 버전을 확인합니다. 새 버전이 있으면 받아 두고 펫이 말풍선으로 알려 줍니다.
+- 받아 둔 새 버전은 **앱을 종료할 때 자동으로 설치**됩니다. 바로 설치하려면 우클릭 메뉴의 `새 버전 … 설치하고 다시 시작`을 누르세요.
+- `설정…` → `업데이트 확인`으로 직접 확인할 수도 있습니다(자동 업데이트를 꺼 둬도 직접 확인한 새 버전은 받습니다).
+- 개발 환경(`npm start`)에서는 업데이트를 확인하지 않습니다.
+- 업데이트 기능은 **0.4.0 부터** 들어 있어서, 0.3.0 을 쓰고 있다면 한 번은 새 설치 파일을 직접 받아 설치해야 합니다.
 
 ## 펫 키우기
 
@@ -378,7 +400,7 @@ npm run chrome         # 검사용 브라우저 열기 (주소를 붙이면 그 
 npm run icon           # 앱 아이콘(build/icon.*)을 펫 도트에서 다시 만들기
 npm run build:extension # 확장의 content.js 를 앱의 검사 규칙으로 다시 만들기(npm run build 가 함께 실행)
 npm run pack           # 설치 없이 실행해 볼 수 있는 폴더 빌드(release/win-unpacked)
-npm run dist           # 설치 파일(release/Desktop Tamagotchi Setup <버전>.exe) 만들기
+npm run dist           # 설치 파일(release/Desktop-Tamagotchi-Setup-<버전>.exe) 만들기
 ```
 
 환경 변수: `PET_CDP_PORT`(크롬 디버그 포트, 기본 9222), `PET_FEED_PORT`(확장 수신 포트, 기본 47831), `PET_DEMO_PORT`(시험 페이지 포트, 기본 5199).
@@ -387,8 +409,8 @@ npm run dist           # 설치 파일(release/Desktop Tamagotchi Setup <버전>
 ### 릴리스 올리기 (메인테이너용)
 
 1. `package.json` 의 `version` 을 올립니다.
-2. `npm run dist` 로 `release/Desktop Tamagotchi Setup <버전>.exe` 를 만듭니다.
-3. GitHub 의 Releases 에서 새 릴리스를 만들고 `.exe` 를 Assets 로 올립니다.
+2. `npm run dist` 로 `release/Desktop-Tamagotchi-Setup-<버전>.exe` 를 만듭니다.
+3. GitHub 의 Releases 에서 새 릴리스(태그 `v<버전>`)를 만들고 **`.exe`, `.exe.blockmap`, `latest.yml` 세 파일을 모두** Assets 로 올립니다. 자동 업데이트는 `latest.yml` 을 보고 새 버전을 찾기 때문에 이 파일이 빠지면 업데이트가 동작하지 않습니다.
 
 ### 구조
 
@@ -408,6 +430,8 @@ npm run dist           # 설치 파일(release/Desktop Tamagotchi Setup <버전>
 | `src/inspect/feed.ts` | 확장이 보낸 검사 결과의 검증·보관·병합 |
 | `src/main/main.ts` | 창·메뉴·트레이·IPC·마우스 위치 (Electron 메인) |
 | `src/main/behavior.ts` | 행동 상태 머신(걷기·뛰기·졸기·벽 타기·놀기·매달리기·문제 알리기) |
+| `src/shared/settings.ts` · `src/main/settings-store.ts` | 사용자 설정(허용값 검증·저장). 설정 창은 `src/renderer/settings.ts` |
+| `src/main/updater.ts` | 자동 업데이트 제어(electron-updater 를 감싸서 테스트 가능) |
 | `src/main/feed-server.ts` | 확장이 결과를 보내는 127.0.0.1 전용 수신 서버(Origin·Host 검사) |
 | `src/main/progress.ts` · `store.ts` | 확인·고침·미루기 진행도, 펫 상태 저장·복원 |
 | `src/main/browser.ts` · `demo-server.ts` · `inspect-target.ts` | 검사용 브라우저 찾기·실행, 시험 페이지 서버, 문제 요소 옆 펫이 설 자리 계산 |

@@ -27,6 +27,7 @@ const view = (over: Partial<PetView> = {}): PetView => ({
   play: 'hop',
   since: 0,
   bubbleShift: 0,
+  scale: 1,
   ...over,
 });
 
@@ -164,6 +165,13 @@ describe('그림 그리기', () => {
     expect(fillStyles).toContain(palette['f']);
     expect(fillStyles).toContain(palette['k']); // 윤곽선
     expect(fillStyles).not.toContain(PINK);
+  });
+
+  it('설정한 배율만큼 그림 한 칸을 크게 그린다(2배면 한 칸이 2px)', async () => {
+    await start(view({ scale: 2 }));
+    const sizes = new Set(fillRect.mock.calls.map((c) => c[2]));
+    expect(sizes.has(2)).toBe(true);
+    expect(sizes.has(1)).toBe(false);
   });
 
   it('쓰다듬어서 좋아하는 동안에는 하트(분홍색)를 그린다', async () => {

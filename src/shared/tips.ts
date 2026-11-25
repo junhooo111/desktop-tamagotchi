@@ -157,6 +157,8 @@ export interface TipGate {
   busy: boolean;
   /** 펫 위쪽에 말풍선이 잘리지 않고 들어갈 공간이 있는지 */
   roomAbove: boolean;
+  /** 알리는 간격(ms). 없으면 기본(20분), Infinity 면 알리지 않는다. */
+  everyMs?: number;
 }
 
 /**
@@ -165,6 +167,6 @@ export interface TipGate {
  */
 export function shouldOfferTip(g: TipGate): boolean {
   return (
-    g.stage !== 'egg' && !g.busy && g.roomAbove && g.mode === 'idle' && g.now - g.lastTipAt >= TIP_EVERY_MS
+    g.stage !== 'egg' && !g.busy && g.roomAbove && g.mode === 'idle' && g.now - g.lastTipAt >= (g.everyMs ?? TIP_EVERY_MS)
   );
 }

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'"
+    />
+    <title>Desktop Tamagotchi 설정</title>
+    <link rel="stylesheet" href="./settings.css" />
+  </head>
+  <body>
+    <main>
+      <h1>설정</h1>
+
+      <section>
+        <h2>펫 크기</h2>
+        <p class="hint">1배가 마우스 커서 정도입니다. 크게 하면 도트가 선명하게 커집니다.</p>
+        <div class="choices" id="petScale" role="group" aria-label="펫 크기"></div>
+      </section>
+
+      <section>
+        <h2>문제 검사</h2>
+        <label class="check"><input id="inspectEnabled" type="checkbox" /> 열려 있는 localhost 페이지에서 놓친 부분 찾기</label>
+        <h3>검사 주기</h3>
+        <div class="choices" id="scanSeconds" role="group" aria-label="검사 주기"></div>
+      </section>
+
+      <section>
+        <h2>FE 지식 알림</h2>
+        <p class="hint">펫이 가만히 있을 때 머리 위 말풍선으로 알려 줍니다.</p>
+        <div class="choices" id="tipMinutes" role="group" aria-label="지식 알림 주기"></div>
+      </section>
+
+      <section>
+        <h2>업데이트</h2>
+        <label class="check"><input id="autoUpdate" type="checkbox" /> 새 버전이 나오면 알려 주고 받아 두기</label>
+        <div class="row">
+          <span id="version"></span>
+          <button id="check-update" type="button">업데이트 확인</button>
+        </div>
+        <p class="status" id="update-status" role="status"></p>
+      </section>
+
+      <footer>
+        <button id="close" type="button">닫기</button>
+      </footer>
+    </main>
+    <script type="module" src="../dist/renderer/settings.js"></script>
+  </body>
+</html>
