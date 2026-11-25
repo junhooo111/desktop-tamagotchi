@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { BUBBLE_GAP, STAGE_SCALE, TIP_BUBBLE, WINDOW, bubbleShift, petPixelSize } from './layout.js';
 
 describe('petPixelSize', () => {
-  it('그림 16칸에 단계별 배율을 곱한다(커서 정도의 크기)', () => {
-    expect(petPixelSize('egg')).toBe(16 * STAGE_SCALE.egg);
+  it('그림 32칸에 단계별 배율을 곱한 정사각형 칸이다(모든 단계가 같은 칸을 쓰고, 마우스 커서 정도인 32px)', () => {
+    expect(petPixelSize('egg')).toBe(32 * STAGE_SCALE.egg);
     expect(petPixelSize('baby')).toBe(32);
-    expect(petPixelSize('adult')).toBe(48);
+    expect(petPixelSize('adult')).toBe(32);
   });
 });
 

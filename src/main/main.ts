@@ -30,7 +30,7 @@ import {
   type ActionResult,
   type PetState,
 } from '../shared/pet.js';
-import { EGG, SPECIES, frameToRgba, getSpecies, type SpeciesId } from '../shared/species.js';
+import { SPECIES, frameToRgba, spriteSet, type SpeciesId } from '../shared/species.js';
 import type { PetView, TipBubble } from '../shared/view.js';
 import { debugProfileDir, findBrowser, launchArgs, type BrowserEnv } from './browser.js';
 import { startDemoServer, type DemoServer } from './demo-server.js';
@@ -41,6 +41,7 @@ import {
   drop,
   endAlert,
   goInspect,
+  react,
   resize,
   step,
   trigger,
@@ -365,7 +366,13 @@ function act(type: 'touch' | 'feed' | 'play'): ActionResult {
   const current = applyElapsed(pet, now);
   const result = type === 'touch' ? touch(current, now) : type === 'feed' ? feed(current) : play(current);
   pet = result.pet;
-  if (result.ok) behavior = wake(behavior, now);
+  if (result.ok) {
+    behavior = wake(behavior, now);
+    // 손길에 반응하는 동작: 쓰다듬으면 좋아하고, 밥을 주면 먹고, 놀아 주면 폴짝폴짝 논다.
+    if (type === 'touch') behavior = react(behavior, 'happy', now);
+    else if (type === 'feed') behavior = react(behavior, 'eat', now);
+    else behavior = trigger(behavior, 'play', stepContext(now, TICK_MS));
+  }
   say(result.message);
   updateTray();
   sendView();
@@ -484,8 +491,9 @@ function buildMenu(): Menu {
 }
 
 function trayIcon() {
-  const set = stageOf(pet) === 'egg' ? EGG : getSpecies(pet.speciesId);
-  const { width, height, data } = frameToRgba(set.frames.stand, set.palette, 2);
+  const set = spriteSet(pet.speciesId, stageOf(pet));
+  // 트레이 아이콘은 32x32 그림 그대로(배율 1)
+  const { width, height, data } = frameToRgba(set.frames.idleA, set.palette, 1);
   // Electron 의 비트맵은 BGRA 순서다.
   const bgra = Buffer.alloc(data.length);
   for (let i = 0; i < data.length; i += 4) {

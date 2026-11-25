@@ -2,7 +2,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { BUBBLE_GAP, WINDOW, petPixelSize } from '../shared/layout.js';
+import { BUBBLE_GAP, STAGE_SCALE, WINDOW, petPixelSize } from '../shared/layout.js';
+import { boundsOf } from '../shared/pixel.js';
+import { spriteSet } from '../shared/species.js';
 import type { PetView, TipBubble } from '../shared/view.js';
 
 const html = fs.readFileSync(path.join(process.cwd(), 'static', 'index.html'), 'utf8');
@@ -78,6 +80,10 @@ function placeTip(rect: { left: number; top: number; right: number; bottom: numb
   });
 }
 
+/** 캔버스에 칠한 색들과 fillRect 호출(그림이 실제로 그려졌는지 확인하는 데 쓴다) */
+const fillStyles: string[] = [];
+let fillRect = vi.fn();
+
 // document 는 테스트 사이에 이어지므로, 앞선 테스트에서 붙은 리스너가 다음 테스트에 섞이지 않게 정리한다.
 const attached: [string, EventListenerOrEventListenerObject][] = [];
 
@@ -90,7 +96,20 @@ beforeEach(() => {
   });
   document.body.innerHTML = body;
   document.documentElement.style.removeProperty('--shift');
-  const ctx = { clearRect: vi.fn(), fillRect: vi.fn(), fillStyle: '', imageSmoothingEnabled: true };
+  fillStyles.length = 0;
+  fillRect = vi.fn();
+  const ctx = {
+    clearRect: vi.fn(),
+    fillRect,
+    set fillStyle(v: string) {
+      fillStyles.push(v);
+    },
+    get fillStyle(): string {
+      return fillStyles[fillStyles.length - 1] ?? '';
+    },
+    imageSmoothingEnabled: true,
+    globalAlpha: 1,
+  };
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(ctx as unknown as CanvasRenderingContext2D);
 });
 
@@ -109,11 +128,71 @@ describe('시작', () => {
     expect(el('tip').hidden).toBe(true);
   });
 
-  it('말풍선은 펫 머리 위(펫 높이 + 간격)에 붙는다', async () => {
+  it('말풍선은 서 있는 펫의 머리 꼭대기 위(간격만큼)에 붙는다 — 새끼는 낮으니 더 아래에 붙는다', async () => {
+    const topOf = (stage: 'baby' | 'adult'): number => {
+      const y0 = boundsOf(spriteSet('cat', stage).frames.idleA)!.y0;
+      return WINDOW.height - petPixelSize(stage) + y0 * STAGE_SCALE[stage];
+    };
     await start(view({ stage: 'adult' }));
-    const petTop = WINDOW.height - petPixelSize('adult');
-    expect(el('tip').style.bottom).toBe(`${WINDOW.height - petTop + BUBBLE_GAP}px`);
+    const adultBottom = el('tip').style.bottom;
+    expect(adultBottom).toBe(`${WINDOW.height - topOf('adult') + BUBBLE_GAP}px`);
+
+    await start(view({ stage: 'baby' }));
+    expect(el('tip').style.bottom).toBe(`${WINDOW.height - topOf('baby') + BUBBLE_GAP}px`);
+    expect(topOf('baby')).toBeGreaterThan(topOf('adult')); // 새끼는 머리가 더 낮다
   });
+});
+
+describe('그림 그리기', () => {
+  const PINK = '#ff6b8b';
+
+  it('고른 종의 팔레트 색으로 몸을 칠한다', async () => {
+    await start(view({ speciesId: 'cat', stage: 'adult' }));
+    const palette = spriteSet('cat', 'adult').palette;
+    expect(fillRect).toHaveBeenCalled();
+    expect(fillStyles).toContain(palette['f']);
+    expect(fillStyles).toContain(palette['k']); // 윤곽선
+    expect(fillStyles).not.toContain(PINK);
+  });
+
+  it('쓰다듬어서 좋아하는 동안에는 하트(분홍색)를 그린다', async () => {
+    const h = await start();
+    h.emitView(view({ mode: 'happy', since: Date.now() }));
+    fillStyles.length = 0;
+    vi.advanceTimersByTime(200);
+    expect(fillStyles).toContain(PINK);
+  });
+
+  it('먹는 동안에는 먹이(빨간색)를 그린다', async () => {
+    const h = await start();
+    h.emitView(view({ mode: 'eat', since: Date.now() }));
+    fillStyles.length = 0;
+    vi.advanceTimersByTime(200);
+    expect(fillStyles).toContain('#e8504a');
+  });
+
+  it('문제를 알릴 때는 느낌표(빨간색)를, 잘 때는 z(파란색)를 띄운다', async () => {
+    const h = await start();
+    h.emitView(view({ mode: 'alert', since: Date.now() }));
+    fillStyles.length = 0;
+    vi.advanceTimersByTime(200);
+    expect(fillStyles).toContain('#e5484d');
+    h.emitView(view({ mode: 'sleep', since: Date.now() }));
+    fillStyles.length = 0;
+    vi.advanceTimersByTime(200);
+    expect(fillStyles).toContain('#5b6bbf');
+  });
+
+  it.each(['idle', 'sit', 'walk', 'run', 'doze', 'sleep', 'climb', 'slip', 'play', 'hang', 'carried', 'fall', 'alert', 'happy', 'eat'] as const)(
+    '%s 동작도 오류 없이 그린다(알·새끼·성체 모두)',
+    async (mode) => {
+      for (const stage of ['egg', 'baby', 'adult'] as const) {
+        const h = await start(view({ stage, mode, since: Date.now() }));
+        h.emitView(view({ stage, mode, surface: mode === 'climb' || mode === 'slip' ? 'wallL' : 'floor', dir: mode === 'climb' || mode === 'slip' ? 'up' : 'right', since: Date.now() }));
+        expect(() => vi.advanceTimersByTime(500)).not.toThrow();
+      }
+    },
+  );
 });
 
 describe('FE 지식 말풍선', () => {
@@ -187,6 +266,17 @@ describe('클릭 통과', () => {
     expect(h.api.setInteractive).toHaveBeenLastCalledWith(true);
     move(5, 5);
     expect(h.api.setInteractive).toHaveBeenLastCalledWith(false);
+  });
+
+  it('펫 칸(64px) 안이라도 몸이 없는 가장자리는 클릭이 통과한다(그려진 몸 영역 기준)', async () => {
+    const h = await start(view({ stage: 'baby' }));
+    const size = petPixelSize('baby');
+    const cellX = Math.round((WINDOW.width - size) / 2);
+    const cellY = WINDOW.height - size;
+    move(cellX + 1, cellY + 1); // 칸의 왼쪽 위 모서리: 새끼 몸 밖
+    expect(h.api.setInteractive).not.toHaveBeenCalledWith(true);
+    move(cellX + size / 2, cellY + size - 4); // 몸 한가운데 아래쪽
+    expect(h.api.setInteractive).toHaveBeenLastCalledWith(true);
   });
 
   it('지식 말풍선 위에서도 클릭을 받아 확인 버튼을 누를 수 있다', async () => {

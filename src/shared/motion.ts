@@ -17,7 +17,13 @@ export type Mode =
   | 'fall'
   | 'carried'
   /** 검사에서 문제를 찾아 그 자리에서 사용자를 기다린다 */
-  | 'alert';
+  | 'alert'
+  /** 앉아서 쉰다(꼬리를 흔든다) */
+  | 'sit'
+  /** 쓰다듬어 줘서 좋아한다(하트가 떠오른다) */
+  | 'happy'
+  /** 밥을 먹는다(오물오물) */
+  | 'eat';
 export type PlayKind = 'hop' | 'roll' | 'look';
 
 /** 원본 그림(오른쪽을 보고 서 있음)을 먼저 좌우로 뒤집고, 시계 방향으로 quarter 번 돌린다. */

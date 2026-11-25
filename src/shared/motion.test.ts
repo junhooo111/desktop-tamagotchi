@@ -5,8 +5,8 @@ import { SIZE, blank, orientRows, px } from './pixel.js';
 /** 머리(h)는 오른쪽 위쪽, 발(f)은 아래쪽에 하나씩 찍은 그림 */
 function marker(): string[] {
   const g = blank();
-  px(g, 12, 6, 'h'); // 머리: 오른쪽
-  px(g, 7, 13, 'f'); // 발: 아래쪽
+  px(g, Math.round(SIZE * 0.75), Math.round(SIZE * 0.375), 'h'); // 머리: 오른쪽
+  px(g, Math.round(SIZE * 0.45), Math.round(SIZE * 0.8), 'f'); // 발: 아래쪽
   return g.map((r) => r.join(''));
 }
 

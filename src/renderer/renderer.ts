@@ -1,8 +1,8 @@
 /** 펫 화면: 캔버스에 픽셀 스프라이트를 그리고 마우스 입력을 메인으로 넘긴다. */
 import { resolvePose } from '../shared/animation.js';
 import { BUBBLE_GAP, STAGE_SCALE, WINDOW, petPixelSize } from '../shared/layout.js';
-import { orientRows } from '../shared/pixel.js';
-import { EGG, getSpecies, type FrameName, type SpriteSet } from '../shared/species.js';
+import { boundsOf, orientRows } from '../shared/pixel.js';
+import { spriteSet, type FrameName, type SpriteSet } from '../shared/species.js';
 import type { PetView, TipBubble } from '../shared/view.js';
 
 interface PetApi {
@@ -25,7 +25,7 @@ declare global {
 }
 
 const CLICK_MOVE_LIMIT = 4;
-const HIT_PADDING = 3;
+const HIT_PADDING = 5;
 const BUBBLE_MS = 4_000;
 const ZZZ_COLOR = '#5b6bbf';
 const ALERT_COLOR = '#e5484d';
@@ -44,7 +44,7 @@ let view: PetView | null = null;
 let bubbleTimer: number | undefined;
 
 function sheetOf(v: PetView): SpriteSet {
-  return v.stage === 'egg' ? EGG : getSpecies(v.speciesId);
+  return spriteSet(v.speciesId, v.stage);
 }
 
 /** 펫이 서 있는 자리(창의 아래쪽 가운데). 그림이 돌아가도 같은 칸을 쓴다. */
@@ -53,19 +53,30 @@ function petRect(v: PetView): { x: number; y: number; size: number } {
   return { x: Math.round((WINDOW.width - size) / 2), y: WINDOW.height - size, size };
 }
 
+/** 서 있는 모습의 머리 꼭대기 화면 좌표. 말풍선·느낌표의 기준이라 프레임이 바뀌어도 흔들리지 않는다. */
+function figureTop(v: PetView): number {
+  const rows = sheetOf(v).frames.idleA;
+  const b = boundsOf(rows);
+  return petRect(v).y + (b ? b.y0 : 0) * STAGE_SCALE[v.stage];
+}
+
 // 같은 자세는 매번 다시 뒤집고 돌리지 않도록 저장해 둔다.
 const rowCache = new Map<string, string[]>();
 function rowsFor(v: PetView, frame: FrameName, eyesClosed: boolean, flip: boolean, quarter: number): string[] {
-  const key = `${v.stage === 'egg' ? 'egg' : v.speciesId}|${frame}|${eyesClosed}|${flip}|${quarter}`;
+  const key = `${v.stage === 'egg' ? 'egg' : v.speciesId}|${v.stage}|${frame}|${eyesClosed}|${flip}|${quarter}`;
   const cached = rowCache.get(key);
   if (cached) return cached;
   const sheet = sheetOf(v);
   let rows = sheet.frames[frame];
-  if (eyesClosed && sheet.blink) rows = rows.map((r) => r.replaceAll('e', sheet.blink));
+  // 눈 깜빡임: 눈동자와 눈 하이라이트를 몸 색으로 덮는다.
+  if (eyesClosed && sheet.skin) rows = rows.map((r) => r.replaceAll('e', sheet.skin).replaceAll('w', sheet.skin));
   const oriented = orientRows(rows, flip, quarter);
   rowCache.set(key, oriented);
   return oriented;
 }
+
+/** 지금 화면에 그려진 펫의 몸 영역(캔버스 좌표). 클릭 판정에 쓴다. */
+let figure: { x0: number; y0: number; x1: number; y1: number } | null = null;
 
 function drawZzz(rect: { x: number; y: number; size: number }, now: number): void {
   ctx.fillStyle = ZZZ_COLOR;
@@ -82,14 +93,38 @@ function drawZzz(rect: { x: number; y: number; size: number }, now: number): voi
   });
 }
 
-/** 머리 위에 빨간 느낌표를 띄운다. */
-function drawAlert(rect: { x: number; y: number; size: number }, dy: number): void {
+/** 머리 위에 빨간 느낌표를 띄운다. top 은 서 있는 펫의 머리 꼭대기 화면 좌표다. */
+function drawAlert(centerX: number, top: number, bounce: number): void {
   ctx.fillStyle = ALERT_COLOR;
-  const unit = 3;
-  const left = rect.x + Math.round(rect.size / 2 - unit / 2);
-  const top = rect.y - 7 * unit + dy * 2;
-  ctx.fillRect(left, top, unit, 4 * unit);
-  ctx.fillRect(left, top + 5 * unit, unit, unit);
+  const unit = 2;
+  const left = Math.round(centerX - unit / 2);
+  const y = top - 8 * unit + bounce;
+  ctx.fillRect(left, y, unit, 4 * unit);
+  ctx.fillRect(left, y + 5 * unit, unit, unit);
+}
+
+/** 도트로 그린 작은 그림(문자 '#' 은 color, 'G' 는 잎 색)을 (x, y)에 그린다. */
+function drawGlyph(rows: readonly string[], x: number, y: number, unit: number, color: string, alpha = 1): void {
+  ctx.globalAlpha = alpha;
+  rows.forEach((row, ry) => {
+    [...row].forEach((ch, rx) => {
+      if (ch === '.') return;
+      ctx.fillStyle = ch === 'G' ? '#4fae5a' : color;
+      ctx.fillRect(x + rx * unit, y + ry * unit, unit, unit);
+    });
+  });
+  ctx.globalAlpha = 1;
+}
+
+const HEART = ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'];
+const BERRY = ['..G..', '.###.', '#####', '#####', '.###.'];
+
+/** 좋아서 하트 두 개가 머리 위로 떠오르며 사라진다. */
+function drawHearts(centerX: number, top: number, now: number, unit: number): void {
+  [0, 0.5].forEach((offset, i) => {
+    const t = ((now / 1000 + offset) % 1 + 1) % 1;
+    drawGlyph(HEART, Math.round(centerX - 10 + i * 11 + Math.sin(t * 6) * 2), Math.round(top - 8 * unit - t * 10), unit, '#ff6b8b', 1 - t * 0.8);
+  });
 }
 
 function draw(now: number): void {
@@ -103,17 +138,33 @@ function draw(now: number): void {
 
   // 알은 걷는 대신 통통 튄다.
   const eggHop = view.stage === 'egg' && view.mode === 'walk' ? -Math.abs(Math.round(Math.sin(now / 120) * 2)) : 0;
+  const offsetX = rect.x + pose.dx * scale;
+  const offsetY = rect.y + (pose.dy + eggHop) * scale;
 
   rows.forEach((row, y) => {
     [...row].forEach((ch, x) => {
       const color = sheet.palette[ch];
       if (!color) return;
       ctx.fillStyle = color;
-      ctx.fillRect(rect.x + (x + pose.dx) * scale, rect.y + (y + pose.dy) * scale + eggHop * scale, scale, scale);
+      ctx.fillRect(offsetX + x * scale, offsetY + y * scale, scale, scale);
     });
   });
-  if (pose.zzz) drawZzz(rect, now);
-  if (pose.alert) drawAlert(rect, pose.dy);
+
+  const b = boundsOf(rows);
+  figure = b
+    ? { x0: offsetX + b.x0 * scale, y0: offsetY + b.y0 * scale, x1: offsetX + (b.x1 + 1) * scale, y1: offsetY + (b.y1 + 1) * scale }
+    : null;
+
+  const centerX = rect.x + rect.size / 2 + pose.dx * scale;
+  const top = figureTop(view);
+  if (pose.zzz) drawZzz({ x: rect.x, y: top, size: rect.size }, now);
+  if (pose.alert) drawAlert(centerX, top, Math.floor(now / 300) % 2 === 0 ? 0 : -2);
+  if (pose.hearts) drawHearts(centerX, top, now, scale);
+  if (pose.food && figure) {
+    // 먹이는 바라보는 쪽(앞) 바닥에 놓는다.
+    const front = pose.orientation.flip ? figure.x0 - 5 * scale - 1 : figure.x1 + 1;
+    drawGlyph(BERRY, Math.round(front), Math.round(rect.y + rect.size - 5 * scale - 1), scale, '#e8504a');
+  }
 }
 
 function showBubble(text: string): void {
@@ -131,7 +182,7 @@ function showBubble(text: string): void {
  */
 function anchorBubbles(): void {
   if (!view) return;
-  const petTop = petRect(view).y;
+  const petTop = figureTop(view);
   const base = WINDOW.height - petTop + BUBBLE_GAP;
   tipEl.style.bottom = `${base}px`;
   const above = tipEl.hidden ? base : WINDOW.height - tipEl.getBoundingClientRect().top + 8;
@@ -172,12 +223,14 @@ function acceptsInput(v: PetView): boolean {
 
 function insidePet(x: number, y: number): boolean {
   if (!view || !acceptsInput(view)) return false;
+  // 그려진 몸 영역(없으면 펫 칸 전체)을 기준으로 한다. 그래야 몸 둘레의 빈 곳은 클릭이 통과한다.
   const r = petRect(view);
+  const box = figure ?? { x0: r.x, y0: r.y, x1: r.x + r.size, y1: r.y + r.size };
   return (
-    x >= r.x - HIT_PADDING &&
-    x <= r.x + r.size + HIT_PADDING &&
-    y >= r.y - HIT_PADDING &&
-    y <= r.y + r.size + HIT_PADDING
+    x >= box.x0 - HIT_PADDING &&
+    x <= box.x1 + HIT_PADDING &&
+    y >= box.y0 - HIT_PADDING &&
+    y <= box.y1 + HIT_PADDING
   );
 }
 

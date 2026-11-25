@@ -57,7 +57,7 @@ export interface StepContext {
 }
 
 /** 초당 이동 픽셀 */
-export const SPEED = { walk: 50, run: 150, climb: 40, slip: 140, roll: 45 } as const;
+export const SPEED = { walk: 35, run: 100, climb: 28, slip: 100, roll: 32 } as const;
 export const GRAVITY = 1800;
 /** 마우스를 이 시간 이상 가만히 두면 펫이 매달리러 온다 */
 export const HANG_AFTER_MS = 10_000;
@@ -255,7 +255,20 @@ export function clampToAreas(
 /** 검사하러 갈 수 있는 상태인지: 알이 아니고, 자거나 벽을 타거나 다른 일을 하는 중이 아니어야 한다. */
 export function canInspect(s: BehaviorState, stage: Stage): boolean {
   if (stage === 'egg' || s.then !== 'none') return false;
-  return s.mode === 'idle' || s.mode === 'walk' || s.mode === 'run' || s.mode === 'play';
+  return s.mode === 'idle' || s.mode === 'walk' || s.mode === 'run' || s.mode === 'play' || s.mode === 'sit';
+}
+
+/** 반응 동작이 이어지는 시간(ms) */
+export const REACT_MS = { happy: 1_600, eat: 2_400 } as const;
+const REACTABLE: readonly Mode[] = ['idle', 'walk', 'run', 'doze', 'sleep', 'sit', 'play', 'happy', 'eat'];
+
+/**
+ * 사용자의 손길에 반응한다: 쓰다듬으면 좋아하고(happy), 밥을 주면 먹는다(eat).
+ * 벽을 타거나 매달리거나 문제를 알리러 가는 중처럼 끊으면 안 되는 동작은 그대로 둔다.
+ */
+export function react(s: BehaviorState, kind: 'happy' | 'eat', now: number): BehaviorState {
+  if (!REACTABLE.includes(s.mode) || s.then !== 'none') return s;
+  return { ...s, mode: kind, surface: 'floor', dir: horizontal(s.dir), since: now, until: now + REACT_MS[kind], then: 'none' };
 }
 
 /** 문제 자리로 달려가서, 도착하면 알림(alert) 상태로 기다린다. */
@@ -287,7 +300,7 @@ export function trigger(s: BehaviorState, what: Trigger, ctx: StepContext): Beha
 
 // ---- 한 틱 진행 ----
 
-const HANGABLE: readonly Mode[] = ['idle', 'walk', 'run', 'doze', 'play'];
+const HANGABLE: readonly Mode[] = ['idle', 'walk', 'run', 'doze', 'play', 'sit'];
 
 export function step(s: BehaviorState, ctx: StepContext): BehaviorState {
   if (s.mode === 'carried') return s;
@@ -329,6 +342,15 @@ export function step(s: BehaviorState, ctx: StepContext): BehaviorState {
       return stepFall(s, ctx);
     case 'alert':
       return ctx.now < s.until ? s : toIdle(s, ctx, 1_000, 3_000);
+    case 'sit':
+      if (ctx.now < s.until) return s;
+      // 한참 앉아 있다가 졸기도 한다
+      return ctx.rng() < 0.4
+        ? { ...s, mode: 'doze', since: ctx.now, until: ctx.now + rand(ctx.rng, 3_000, 7_000) }
+        : toIdle(s, ctx, 1_000, 3_000);
+    case 'happy':
+    case 'eat':
+      return ctx.now < s.until ? s : toIdle(s, ctx, 1_000, 3_000);
     default:
       return s;
   }
@@ -342,11 +364,12 @@ function stepIdle(s: BehaviorState, ctx: StepContext): BehaviorState {
     if (r < 0.8) return startPlay(s, ctx, 'hop');
     return toIdle(s, ctx, 2_000, 6_000);
   }
-  if (r < 0.35) return startRoute(s, ctx, 'walk');
-  if (r < 0.47) return startRoute(s, ctx, 'run');
-  if (r < 0.57) return { ...s, mode: 'doze', surface: 'floor', since: ctx.now, until: ctx.now + rand(ctx.rng, 3_000, 7_000) };
+  if (r < 0.3) return startRoute(s, ctx, 'walk');
+  if (r < 0.4) return startRoute(s, ctx, 'run');
+  if (r < 0.5) return { ...s, mode: 'sit', surface: 'floor', since: ctx.now, until: ctx.now + rand(ctx.rng, 4_000, 9_000) };
+  if (r < 0.58) return { ...s, mode: 'doze', surface: 'floor', since: ctx.now, until: ctx.now + rand(ctx.rng, 3_000, 7_000) };
   if (r < 0.72) return startPlay(s, ctx, randomPlay(ctx.rng, false));
-  if (r < 0.87) return startWallRoute(s, ctx);
+  if (r < 0.85) return startWallRoute(s, ctx);
   return toIdle(s, ctx, 2_000, 6_000);
 }
 

@@ -12,6 +12,8 @@ import {
   endAlert,
   goInspect,
   pickSpot,
+  react,
+  REACT_MS,
   resize,
   step,
   trigger,
@@ -73,9 +75,10 @@ describe('가만히 → 다음 행동', () => {
 
   it.each([
     [0.1, 'walk'],
-    [0.4, 'run'],
-    [0.5, 'doze'],
-    [0.6, 'play'],
+    [0.35, 'run'],
+    [0.45, 'sit'],
+    [0.55, 'doze'],
+    [0.65, 'play'],
     [0.8, 'walk'], // 벽까지 걸어간다
     [0.95, 'idle'],
   ])('난수 %s 이면 %s 를 시작한다', (r, mode) => {
@@ -106,6 +109,54 @@ describe('걷기·뛰기', () => {
     const r = step(travel('walk', { x: 399 }), ctxOf({ dtMs: 1000 }));
     expect(r).toMatchObject({ mode: 'idle', x: 400, y: 200 });
     expect(r.until).toBeGreaterThan(10_000);
+  });
+});
+
+describe('앉기', () => {
+  const sitting = base({ mode: 'sit', until: 30_000 });
+
+  it('앉아 있는 동안은 그대로이고, 시간이 지나면 가끔 졸고 대개는 일어선다', () => {
+    expect(step(sitting, ctxOf({ now: 29_999 }))).toBe(sitting);
+    expect(step(sitting, ctxOf({ now: 30_000, rng: () => 0.1 })).mode).toBe('doze');
+    expect(step(sitting, ctxOf({ now: 30_000, rng: () => 0.9 })).mode).toBe('idle');
+  });
+
+  it('앉은 채로도 마우스를 오래 두면 매달리러 가고, 문제를 알리러 갈 수도 있다', () => {
+    expect(step(sitting, ctxOf({ cursorIdleMs: HANG_AFTER_MS })).then).toBe('hang');
+    expect(canInspect(sitting, 'adult')).toBe(true);
+  });
+});
+
+describe('반응: 쓰다듬으면 좋아하고 밥을 주면 먹는다', () => {
+  it('react 는 좋아하기(happy)·먹기(eat) 동작을 일정 시간 한 뒤 가만히 서는 상태로 돌아온다', () => {
+    const happy = react(base({ mode: 'walk' }), 'happy', 1_000);
+    expect(happy).toMatchObject({ mode: 'happy', since: 1_000, until: 1_000 + REACT_MS.happy, then: 'none' });
+    const eat = react(base(), 'eat', 1_000);
+    expect(eat).toMatchObject({ mode: 'eat', until: 1_000 + REACT_MS.eat });
+
+    expect(step(happy, ctxOf({ now: happy.until - 1 }))).toBe(happy);
+    expect(step(happy, ctxOf({ now: happy.until })).mode).toBe('idle');
+    expect(step(eat, ctxOf({ now: eat.until })).mode).toBe('idle');
+  });
+
+  it('자거나 조는 중이어도 반응하고(깨어난다), 앉아 있어도 반응한다', () => {
+    expect(react(base({ mode: 'sleep' }), 'happy', 5).mode).toBe('happy');
+    expect(react(base({ mode: 'doze' }), 'eat', 5).mode).toBe('eat');
+    expect(react(base({ mode: 'sit' }), 'happy', 5).mode).toBe('happy');
+  });
+
+  it('벽을 타거나 매달리거나 떨어지는 중, 문제를 알리러 가는 중에는 끊지 않는다', () => {
+    for (const s of [
+      base({ mode: 'climb', surface: 'wallL' }),
+      base({ mode: 'hang' }),
+      base({ mode: 'fall' }),
+      base({ mode: 'carried' }),
+      base({ mode: 'alert' }),
+      base({ mode: 'run', then: 'alert' }),
+      base({ mode: 'run', then: 'hang' }),
+    ]) {
+      expect(react(s, 'happy', 5), `${s.mode}/${s.then}`).toBe(s);
+    }
   });
 });
 

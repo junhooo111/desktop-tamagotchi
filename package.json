@@ -26,6 +26,7 @@
     },
     "files": [
       "dist/**/*",
+      "!dist/shared/art/dev-preview.js",
       "static/**/*",
       "test-pages/**/*",
       "package.json"
