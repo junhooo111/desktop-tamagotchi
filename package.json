@@ -16,7 +16,8 @@
     "icon": "npm run build && node scripts/make-icon.mjs",
     "pack": "npm run build && electron-builder --win --dir",
     "dist": "npm run build && electron-builder --win --publish never",
-    "build:extension": "node scripts/build-extension.mjs"
+    "build:extension": "node scripts/build-extension.mjs",
+    "card": "npm run build && node scripts/export-card.mjs"
   },
   "build": {
     "appId": "com.desktop-tamagotchi.app",

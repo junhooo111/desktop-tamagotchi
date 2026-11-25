@@ -8,10 +8,11 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { BrowserWindow, Menu, Tray, app, ipcMain, nativeImage, screen, shell } from 'electron';
+import { BrowserWindow, Menu, Tray, app, dialog, ipcMain, nativeImage, screen, shell } from 'electron';
 import electronUpdater from 'electron-updater';
 import { SnapshotFeed, mergeScans } from '../inspect/feed.js';
 import { scanLocalPages, type Finding } from '../inspect/scan.js';
+import { renderProfileCard } from '../shared/card.js';
 import { applyEvent, buildCodex, emptyGrowth, type Growth, type GrowthEvent } from '../shared/growth.js';
 import { LESSONS, RULE_IDS, type RuleId } from '../shared/lessons.js';
 import { noticeOf } from '../shared/notice.js';
@@ -547,6 +548,31 @@ function openWardrobe(): void {
   wardrobeWin = w;
 }
 
+/** 지금 펫의 프로필 카드(SVG)를 파일로 저장한다. GitHub 프로필 README 에 걸 수 있다. */
+async function exportCard(): Promise<void> {
+  const svg = renderProfileCard({
+    pet: applyElapsedInPlace(),
+    growth,
+    style: { variant: settings.variant, accessory: settings.accessory },
+    tipsSeen: progress.tipsSeen.length,
+    now: Date.now(),
+  });
+  const result = await dialog.showSaveDialog({
+    title: '프로필 카드 저장',
+    defaultPath: path.join(app.getPath('documents'), 'pet-card.svg'),
+    filters: [{ name: 'SVG 이미지', extensions: ['svg'] }],
+  });
+  if (result.canceled || !result.filePath) return;
+  try {
+    fs.writeFileSync(result.filePath, svg + '\n', 'utf8');
+    say('프로필 카드를 저장했어요! 프로필 저장소의 assets 폴더에 올리면 돼요');
+    shell.showItemInFolder(result.filePath);
+  } catch (error) {
+    console.error('프로필 카드 저장 실패', error);
+    say('프로필 카드를 저장하지 못했어요');
+  }
+}
+
 function closeCodex(): void {
   if (codexWin && !codexWin.isDestroyed()) codexWin.close();
   codexWin = null;
@@ -822,6 +848,7 @@ function buildMenu(): Menu {
     { label: '상태 보기', click: () => say(statusText(applyElapsedInPlace())) },
     { label: '검사 결과…', click: () => openResults() },
     { label: '도감·기록…', click: () => openCodex() },
+    { label: '프로필 카드 내보내기…', click: () => void exportCard() },
     { label: '설정…', click: () => openSettings() },
     ...(updates?.ready
       ? [{ label: '새 버전 ' + updates.ready + ' 설치하고 다시 시작', click: () => void updates?.installNow() }]
