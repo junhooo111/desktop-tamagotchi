@@ -12,7 +12,8 @@ import { BrowserWindow, Menu, Tray, app, ipcMain, nativeImage, screen, shell } f
 import electronUpdater from 'electron-updater';
 import { SnapshotFeed, mergeScans } from '../inspect/feed.js';
 import { scanLocalPages, type Finding } from '../inspect/scan.js';
-import { LESSONS } from '../shared/lessons.js';
+import { applyEvent, buildCodex, emptyGrowth, type Growth, type GrowthEvent } from '../shared/growth.js';
+import { LESSONS, RULE_IDS, type RuleId } from '../shared/lessons.js';
 import { noticeOf } from '../shared/notice.js';
 import type { NoticeMessage } from '../shared/view.js';
 import { QUIZZES } from '../shared/quizzes.js';
@@ -25,6 +26,7 @@ import {
   applyElapsed,
   createPet,
   feed,
+  gainXp,
   learn,
   levelOf,
   moodOf,
@@ -57,6 +59,7 @@ import {
 } from './behavior.js';
 import { FEED_PORT_DEFAULT, startFeedServer, type FeedServer } from './feed-server.js';
 import { petTargetFor } from './inspect-target.js';
+import { loadGrowth, saveGrowth } from './growth-store.js';
 import { loadSettings, saveSettings } from './settings-store.js';
 import { UPDATE_EVERY_MS, UPDATE_FIRST_CHECK_MS, UpdateController, type AutoUpdaterLike } from './updater.js';
 import {
@@ -128,6 +131,10 @@ let settingsWin: BrowserWindow | null = null;
 let scanTimer: ReturnType<typeof setInterval> | undefined;
 /** 자동 업데이트(설치본에서만 만든다) */
 let updates: UpdateController | null = null;
+/** 성장 기록: 연속 사용·업적·도감 */
+let growth: Growth = emptyGrowth();
+let growthPath = '';
+let codexWin: BrowserWindow | null = null;
 let queue: Finding[] = [];
 let active: Finding | null = null;
 /** 마지막으로 알린 문제. 말풍선이 사라진 뒤에도 기억해 두었다가, 펫에 마우스를 올리면 다시 보여 준다. */
@@ -189,7 +196,8 @@ function offerTip(now: number, requested = false): void {
 function confirmTip(): void {
   const current = pendingTip;
   if (!current) return;
-  if (!progress.tipsSeen.includes(current.tip.id)) {
+  const firstRead = !progress.tipsSeen.includes(current.tip.id);
+  if (firstRead) {
     const result = learn(applyElapsedInPlace(), 'tip');
     pet = result.pet;
     say(result.message);
@@ -198,6 +206,7 @@ function confirmTip(): void {
   }
   progress = markTipSeen(progress, current.tip.id);
   persistProgress();
+  if (firstRead) recordGrowth({ kind: 'tip' });
   pendingTip = null;
   sendTip();
 }
@@ -307,6 +316,10 @@ async function scanOnce(): Promise<void> {
         message = r.message;
       }
       say(fixed.length === 1 ? message : `${fixed.length}개나 고쳤네요! 경험치 +${fixed.length * LEARN_XP.fixed}`);
+      for (const key of fixed) {
+        const ruleId = ruleIdOfKey(key);
+        if (ruleId) recordGrowth({ kind: 'fix', ruleId });
+      }
       updateTray();
       sendView();
       persist();
@@ -349,6 +362,83 @@ function applySettings(patch: unknown): Settings {
   updateTray();
   sendView();
   return settings;
+}
+
+/** 문제 키(주소|규칙|요소 경로)에서 규칙 id 를 꺼낸다. 모르는 규칙이면 null. */
+function ruleIdOfKey(key: string): RuleId | null {
+  const id = key.split('|')[1];
+  return (RULE_IDS as readonly string[]).includes(id ?? '') ? (id as RuleId) : null;
+}
+
+/** 한 일을 성장 기록에 남기고, 새로 달성한 업적이 있으면 경험치를 주고 펫이 알린다. */
+function recordGrowth(event: GrowthEvent): void {
+  const result = applyEvent(growth, event, Date.now(), { tipsSeen: progress.tipsSeen.length });
+  growth = result.growth;
+  try {
+    saveGrowth(growthPath, growth);
+  } catch (error) {
+    console.error('성장 기록 저장 실패', error);
+  }
+  if (codexWin && !codexWin.isDestroyed()) codexWin.webContents.send('codex:refresh');
+  if (result.unlocked.length === 0) return;
+
+  let xp = 0;
+  let note = '';
+  for (const a of result.unlocked) {
+    const gained = gainXp(applyElapsedInPlace(), a.xp);
+    pet = gained.pet;
+    xp += a.xp;
+    note += gained.note;
+  }
+  persist();
+  updateTray();
+  sendView();
+  // 방금 한 일의 말풍선이 지나간 뒤에 알린다.
+  const names = result.unlocked.map((a) => a.name).join(', ');
+  setTimeout(() => say('업적 달성: ' + names + '! 경험치 +' + xp + note), 2_500);
+}
+
+function closeCodex(): void {
+  if (codexWin && !codexWin.isDestroyed()) codexWin.close();
+  codexWin = null;
+}
+
+function openCodex(): void {
+  if (codexWin && !codexWin.isDestroyed()) {
+    codexWin.show();
+    codexWin.focus();
+    return;
+  }
+  const area = screen.getDisplayNearestPoint({ x: Math.round(behavior.x), y: Math.round(behavior.y) }).workArea;
+  const width = 440;
+  const height = Math.min(680, area.height - 40);
+  const w = new BrowserWindow({
+    x: area.x + Math.round((area.width - width) / 2),
+    y: area.y + Math.round((area.height - height) / 2),
+    width,
+    height,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    autoHideMenuBar: true,
+    title: '도감·기록',
+    backgroundColor: '#fffdf5',
+    show: false,
+    webPreferences: {
+      preload: path.join(projectRoot, 'static', 'codex-preload.cjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  w.setMenu(null);
+  w.setAlwaysOnTop(true, 'screen-saver');
+  w.once('ready-to-show', () => w.show());
+  w.on('closed', () => {
+    if (codexWin === w) codexWin = null;
+  });
+  void w.loadFile(path.join(projectRoot, 'static', 'codex.html'));
+  codexWin = w;
 }
 
 function closeSettings(): void {
@@ -467,6 +557,7 @@ function finishCard(kind: 'confirm' | 'later', choice: number | null = null): vo
       if (choice === null || choice < 0 || choice > 2) return;
       const correct = choice === QUIZZES[finding.ruleId].answer;
       progress = confirm(progress, finding.key, now);
+      recordGrowth({ kind: 'confirm', ruleId: finding.ruleId, correct });
       if (notice?.key === finding.key) setNotice(null, false);
       const result = learn(applyElapsedInPlace(), 'confirm', correct ? QUIZ_BONUS : 0);
       pet = result.pet;
@@ -505,7 +596,10 @@ function act(type: 'touch' | 'feed' | 'play'): ActionResult {
   say(result.message);
   updateTray();
   sendView();
-  if (result.ok) persist();
+  if (result.ok) {
+    persist();
+    recordGrowth({ kind: 'care', care: type });
+  }
   return result;
 }
 
@@ -573,6 +667,7 @@ function buildMenu(): Menu {
   });
   return Menu.buildFromTemplate([
     { label: '상태 보기', click: () => say(statusText(applyElapsedInPlace())) },
+    { label: '도감·기록…', click: () => openCodex() },
     { label: '설정…', click: () => openSettings() },
     ...(updates?.ready
       ? [{ label: '새 버전 ' + updates.ready + ' 설치하고 다시 시작', click: () => void updates?.installNow() }]
@@ -811,6 +906,8 @@ function setupIpc(): void {
     };
   });
   ipcMain.on('tip:confirm', () => confirmTip());
+  ipcMain.handle('codex:get', () => buildCodex(growth, { tipsSeen: progress.tipsSeen.length }, Date.now()));
+  ipcMain.on('codex:close', () => closeCodex());
   ipcMain.handle('settings:get', () => settings);
   ipcMain.handle('settings:set', (_event, patch: unknown) => applySettings(patch));
   ipcMain.handle('app:version', () => app.getVersion());
@@ -864,6 +961,8 @@ if (!app.requestSingleInstanceLock()) {
     progress = loadProgress(progressPath);
     settingsPath = path.join(app.getPath('userData'), 'settings.json');
     settings = loadSettings(settingsPath);
+    growthPath = path.join(app.getPath('userData'), 'growth.json');
+    growth = loadGrowth(growthPath);
     const now = Date.now();
     lastTipAt = now;
     // 처음 실행하면 임의의 종이 든 알로 시작한다. 알은 쓰다듬으면 부화한다.

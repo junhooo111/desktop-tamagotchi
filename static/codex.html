@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'"
+    />
+    <title>도감·기록</title>
+    <link rel="stylesheet" href="./codex.css" />
+  </head>
+  <body>
+    <main>
+      <h1>도감·기록</h1>
+
+      <section>
+        <h2>기록</h2>
+        <div class="tiles" id="records"></div>
+      </section>
+
+      <section>
+        <h2>도감 <span class="count" id="rules-count"></span></h2>
+        <p class="hint">배움 카드를 확인하면 그 문제 종류가 도감에 채워져요. 고치면 한 단계 더 빛나요.</p>
+        <ul class="rules" id="rules"></ul>
+      </section>
+
+      <section>
+        <h2>업적 <span class="count" id="ach-count"></span></h2>
+        <ul class="achievements" id="achievements"></ul>
+      </section>
+
+      <footer>
+        <button id="close" type="button">닫기</button>
+      </footer>
+    </main>
+    <script type="module" src="../dist/renderer/codex.js"></script>
+  </body>
+</html>

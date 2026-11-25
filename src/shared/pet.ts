@@ -70,7 +70,8 @@ export function applyElapsed(pet: PetState, now: number): PetState {
   };
 }
 
-function gainXp(pet: PetState, amount: number): { pet: PetState; note: string } {
+/** 경험치를 더한다(부화·레벨업이면 note 에 문구가 담긴다). 업적 보상 같은 곳에서도 쓴다. */
+export function gainXp(pet: PetState, amount: number): { pet: PetState; note: string } {
   const before = pet.xp;
   const after = before + amount;
   const next = { ...pet, xp: after };
