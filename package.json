@@ -1,24 +1,59 @@
 {
   "name": "desktop-tamagotchi",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "바탕화면에 띄워 두고 키우는 다마고치형 데스크톱 펫",
   "private": true,
   "type": "module",
   "main": "dist/main/main.js",
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "node scripts/clean-dist.mjs && tsc -p tsconfig.json",
     "start": "npm run build && electron .",
     "smoke": "npm run build && electron . --smoke",
     "test": "vitest run",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "chrome": "node scripts/open-chrome.mjs",
-    "demo": "node scripts/demo-server.mjs"
+    "chrome": "npm run build && node scripts/open-chrome.mjs",
+    "demo": "npm run build && node scripts/demo-server.mjs",
+    "icon": "npm run build && node scripts/make-icon.mjs",
+    "pack": "npm run build && electron-builder --win --dir",
+    "dist": "npm run build && electron-builder --win --publish never"
+  },
+  "build": {
+    "appId": "com.desktop-tamagotchi.app",
+    "productName": "Desktop Tamagotchi",
+    "directories": {
+      "output": "release",
+      "buildResources": "build"
+    },
+    "files": [
+      "dist/**/*",
+      "static/**/*",
+      "test-pages/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "deleteAppDataOnUninstall": false,
+      "shortcutName": "Desktop Tamagotchi"
+    }
   },
   "license": "MIT",
   "devDependencies": {
     "@electric-sql/pglite": "^0.6.0",
     "@types/node": "^26.6.6",
     "electron": "^45.4.1",
+    "electron-builder": "^26.18.0",
     "jsdom": "^31.0.1",
     "typescript": "^7.0.2",
     "vitest": "^5.1.1"

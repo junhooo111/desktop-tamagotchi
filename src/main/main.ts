@@ -3,6 +3,7 @@
  * 투명한 창 하나에 펫을 띄우고, 창을 움직여 화면을 돌아다니게 한다.
  * 규칙(성장·행동·저장)은 순수 모듈에 있고, 여기서는 창·메뉴·IPC·마우스 위치만 다룬다.
  */
+import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -31,6 +32,8 @@ import {
 } from '../shared/pet.js';
 import { EGG, SPECIES, frameToRgba, getSpecies, type SpeciesId } from '../shared/species.js';
 import type { PetView, TipBubble } from '../shared/view.js';
+import { debugProfileDir, findBrowser, launchArgs, type BrowserEnv } from './browser.js';
+import { startDemoServer, type DemoServer } from './demo-server.js';
 import {
   canInspect,
   carry,
@@ -76,16 +79,22 @@ const CDP_PORT = Number(process.env['PET_CDP_PORT'] ?? 9222);
 const SCAN_MS = 10_000;
 /** 문제를 찾아 알린 뒤 다음 문제를 알리기까지 최소 간격 */
 const INSPECT_GAP_MS = 30_000;
-const STATUS_OFF = '검사: 크롬이 연결되지 않았어요 (npm run chrome)';
+const STATUS_OFF = '검사: 연결 안 됨 (메뉴 ▸ 검사 도구 ▸ 검사용 브라우저 열기)';
 const CARD_SIZE = { width: 380, height: 600 } as const;
+/** 검사 체험용 시험 페이지 서버 포트 */
+const DEMO_PORT = Number(process.env['PET_DEMO_PORT'] ?? 5199);
 
 if (SMOKE) {
   // 스모크 실행은 사용자의 실제 저장 파일을 건드리지 않는다.
   app.setPath('userData', fs.mkdtempSync(path.join(os.tmpdir(), 'pet-smoke-')));
+} else {
+  // 개발 실행과 설치본이 같은 저장 폴더를 쓰도록 이름을 고정한다(설치본의 표시 이름이 달라도 저장이 갈라지지 않게).
+  app.setPath('userData', path.join(app.getPath('appData'), 'desktop-tamagotchi'));
 }
 
 let win: BrowserWindow | null = null;
 let tray: Tray | null = null;
+let demoServer: DemoServer | null = null;
 let pet: PetState;
 let behavior: BehaviorState;
 let petSize = 0;
@@ -376,6 +385,32 @@ function applyElapsedInPlace(): PetState {
   return pet;
 }
 
+/** 원격 디버깅 포트가 열린 별도 프로필의 크롬/엣지를 연다. 브라우저를 못 찾으면 false. */
+function openInspectBrowser(url: string): boolean {
+  const env = process.env as BrowserEnv;
+  const exe = findBrowser(env);
+  if (!exe) {
+    say('크롬이나 엣지를 찾지 못했어요');
+    return false;
+  }
+  const profile = debugProfileDir(env);
+  fs.mkdirSync(profile, { recursive: true });
+  spawn(exe, launchArgs({ port: CDP_PORT, profile, url }), { detached: true, stdio: 'ignore' }).unref();
+  return true;
+}
+
+/** 시험 페이지(문제를 일부러 넣어 둔 페이지)를 열어서 검사를 체험해 본다. */
+async function openDemo(): Promise<void> {
+  let url = `http://localhost:${DEMO_PORT}/`;
+  try {
+    demoServer ??= await startDemoServer(path.join(projectRoot, 'test-pages'), DEMO_PORT);
+    url = demoServer.url;
+  } catch {
+    // 포트가 이미 쓰이는 중이다(예: npm run demo 가 떠 있음). 그 서버를 그대로 연다.
+  }
+  if (openInspectBrowser(url)) say('시험 페이지를 열었어요. 곧 문제를 찾아볼게요!');
+}
+
 function buildMenu(): Menu {
   const egg = stageOf(pet) === 'egg';
   const demo = (label: string, what: Trigger) => ({
@@ -391,6 +426,20 @@ function buildMenu(): Menu {
     { label: '상태 보기', click: () => say(statusText(applyElapsedInPlace())) },
     { label: scanStatus, enabled: false },
     { label: '지금 검사하기', enabled: !egg, click: () => void scanOnce() },
+    {
+      label: '검사 도구',
+      submenu: [
+        {
+          label: '검사용 브라우저 열기',
+          click: () => {
+            if (openInspectBrowser('about:blank')) say('여기서 localhost 주소를 열면 제가 살펴볼게요');
+          },
+        },
+        { label: '검사 체험 (시험 페이지 열기)', click: () => void openDemo() },
+        { type: 'separator' },
+        { label: `연결 포트 ${CDP_PORT} · localhost 페이지만 검사`, enabled: false },
+      ],
+    },
     {
       label: '오늘의 FE 지식',
       enabled: !egg,
@@ -421,6 +470,15 @@ function buildMenu(): Menu {
       })),
     },
     { type: 'separator' },
+    {
+      // 설치본에서만 동작한다(개발 실행에서 켜면 electron.exe 가 로그인 항목에 등록되기 때문).
+      label: app.isPackaged ? '로그인할 때 자동 실행' : '로그인할 때 자동 실행 (설치본에서만)',
+      type: 'checkbox',
+      enabled: app.isPackaged,
+      checked: app.isPackaged && app.getLoginItemSettings().openAtLogin,
+      click: (item) => app.setLoginItemSettings({ openAtLogin: item.checked }),
+    },
+    { label: `버전 ${app.getVersion()}`, enabled: false },
     { label: '종료', click: () => app.quit() },
   ]);
 }
@@ -669,6 +727,7 @@ if (!app.requestSingleInstanceLock()) {
 
   app.on('before-quit', () => {
     if (savePath && pet) persist();
+    void demoServer?.close();
   });
   // 창이 하나뿐이고 트레이로 끝낼 수 있으므로, 창이 닫혀도 앱은 유지한다.
   app.on('window-all-closed', () => {});

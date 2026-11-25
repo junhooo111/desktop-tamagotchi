@@ -1,0 +1,24 @@
+// 앱 아이콘(build/icon.png, build/icon.ico)을 펫 도트에서 만든다. 도트를 바꾸면 다시 실행한다.
+// 사용: npm run icon   (먼저 빌드되어 있어야 한다)
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { encodeIco, encodePng } from './lib/image.mjs';
+
+const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
+const { getSpecies, frameToRgba } = await import(pathToFileURL(path.join(root, 'dist', 'shared', 'species.js')).href);
+
+const species = getSpecies('chick');
+const png = (scale) => {
+  const { width, height, data } = frameToRgba(species.frames.stand, species.palette, scale);
+  return { size: width, png: encodePng(width, height, data) };
+};
+
+const out = path.join(root, 'build');
+fs.mkdirSync(out, { recursive: true });
+
+// 도트 한 칸을 정수 픽셀로 키워서 흐려지지 않게 한다: 16 → 256, 8 → 128, 4 → 64, 3 → 48, 2 → 32, 1 → 16
+const sizes = [16, 8, 4, 3, 2, 1].map(png);
+fs.writeFileSync(path.join(out, 'icon.ico'), encodeIco(sizes));
+fs.writeFileSync(path.join(out, 'icon.png'), png(32).png); // 512x512 (electron-builder 의 기본 아이콘)
+console.log('아이콘을 만들었습니다:', path.join(out, 'icon.ico'), '+ icon.png');
