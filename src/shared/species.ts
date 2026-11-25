@@ -9,19 +9,24 @@
  * 프레임은 처음 쓸 때 만들어서 기억해 둔다(앱이 뜰 때 전부 그리지 않는다).
  */
 import { chunky } from './art/chunky.js';
+import { accessoryPalette, DEFAULT_STYLE, tintLook, type PetStyle } from './art/style.js';
 import { birdFrames } from './art/bird-plan.js';
-import { CHICK, DUCK } from './art/bird-species.js';
+import { type BirdSpec } from './art/bird.js';
+import { CHICK, DUCK, PENGUIN } from './art/bird-species.js';
 import { EGG_LOOK, eggFrames } from './art/egg.js';
 import { type Frames } from './art/frames.js';
-import { quadFrames } from './art/quad-plan.js';
-import { CAT, DOG, RABBIT, TURTLE } from './art/quad-species.js';
+import { quadFrames, type Gait } from './art/quad-plan.js';
+import { type QuadSpec } from './art/quadruped.js';
+import { CAT, DOG, FOX, HAMSTER, RABBIT, TURTLE } from './art/quad-species.js';
 import { paletteOf, type Look } from './art/types.js';
 import { SIZE } from './pixel.js';
 
 export { FRAME_NAMES, type FrameName, type Frames } from './art/frames.js';
+export { ACCESSORIES, type Accessory } from './art/accessory.js';
+export { DEFAULT_STYLE, VARIANTS, isAccessory, isVariant, type PetStyle, type Variant } from './art/style.js';
 export { SIZE as SPRITE_SIZE };
 
-export type SpeciesId = 'rabbit' | 'cat' | 'dog' | 'turtle' | 'chick' | 'duck';
+export type SpeciesId = 'rabbit' | 'cat' | 'dog' | 'turtle' | 'chick' | 'duck' | 'fox' | 'hamster' | 'penguin';
 export type SpriteStage = 'egg' | 'baby' | 'adult';
 
 export interface SpriteSet {
@@ -37,19 +42,20 @@ export interface Species {
   readonly name: string;
 }
 
-interface Design {
-  look: Look;
-  skin: string;
-  make(stage: 'baby' | 'adult'): Frames;
-}
+type Design =
+  | { kind: 'quad'; spec: QuadSpec; gait: Gait; skin: string }
+  | { kind: 'bird'; spec: BirdSpec; skin: string };
 
 const DESIGNS: Record<SpeciesId, Design> = {
-  rabbit: { look: RABBIT.look, skin: 'f', make: (s) => quadFrames(RABBIT, s, 'hop') },
-  cat: { look: CAT.look, skin: 'f', make: (s) => quadFrames(CAT, s, 'trot') },
-  dog: { look: DOG.look, skin: 'f', make: (s) => quadFrames(DOG, s, 'trot') },
-  turtle: { look: TURTLE.look, skin: 'f', make: (s) => quadFrames(TURTLE, s, 'trot') },
-  chick: { look: CHICK.look, skin: 'f', make: (s) => birdFrames(CHICK, s) },
-  duck: { look: DUCK.look, skin: 'g', make: (s) => birdFrames(DUCK, s) },
+  rabbit: { kind: 'quad', spec: RABBIT, gait: 'hop', skin: 'f' },
+  cat: { kind: 'quad', spec: CAT, gait: 'trot', skin: 'f' },
+  dog: { kind: 'quad', spec: DOG, gait: 'trot', skin: 'f' },
+  turtle: { kind: 'quad', spec: TURTLE, gait: 'trot', skin: 'f' },
+  chick: { kind: 'bird', spec: CHICK, skin: 'f' },
+  duck: { kind: 'bird', spec: DUCK, skin: 'g' },
+  fox: { kind: 'quad', spec: FOX, gait: 'trot', skin: 'f' },
+  hamster: { kind: 'quad', spec: HAMSTER, gait: 'trot', skin: 'f' },
+  penguin: { kind: 'bird', spec: PENGUIN, skin: 'f' },
 };
 
 export const SPECIES: readonly Species[] = [
@@ -59,6 +65,9 @@ export const SPECIES: readonly Species[] = [
   { id: 'turtle', name: '거북이' },
   { id: 'chick', name: '병아리' },
   { id: 'duck', name: '오리' },
+  { id: 'fox', name: '여우' },
+  { id: 'hamster', name: '햄스터' },
+  { id: 'penguin', name: '펭귄' },
 ];
 
 /** 모든 프레임을 16칸 굵기로 뭉친다(art/chunky.ts) */
@@ -68,15 +77,20 @@ function chunkAll(frames: Frames): Frames {
 
 const cache = new Map<string, SpriteSet>();
 
-/** 종과 단계에 맞는 스프라이트. 알 단계는 종과 상관없이 같은 알이다. */
-export function spriteSet(id: SpeciesId, stage: SpriteStage): SpriteSet {
-  const key = stage === 'egg' ? 'egg' : `${id}/${stage}`;
+/** 종·단계·스타일에 맞는 스프라이트. 알 단계는 종·스타일과 상관없이 같은 알이다. */
+export function spriteSet(id: SpeciesId, stage: SpriteStage, style: PetStyle = DEFAULT_STYLE): SpriteSet {
+  const key = stage === 'egg' ? 'egg' : [id, stage, style.variant, style.accessory].join('/');
   const cached = cache.get(key);
   if (cached) return cached;
-  const made: SpriteSet =
-    stage === 'egg'
-      ? { palette: paletteOf(EGG_LOOK), frames: chunkAll(eggFrames()), skin: '' }
-      : { palette: paletteOf(DESIGNS[id].look), frames: chunkAll(DESIGNS[id].make(stage)), skin: DESIGNS[id].skin };
+  let made: SpriteSet;
+  if (stage === 'egg') {
+    made = { palette: paletteOf(EGG_LOOK), frames: chunkAll(eggFrames()), skin: '' };
+  } else {
+    const d = DESIGNS[id];
+    const look = tintLook(d.spec.look, style.variant);
+    const frames = d.kind === 'quad' ? quadFrames({ ...d.spec, look, accessory: style.accessory }, stage, d.gait) : birdFrames({ ...d.spec, look, accessory: style.accessory }, stage);
+    made = { palette: { ...paletteOf(look), ...accessoryPalette(style.accessory) }, frames: chunkAll(frames), skin: d.skin };
+  }
   cache.set(key, made);
   return made;
 }

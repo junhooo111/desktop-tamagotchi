@@ -38,7 +38,8 @@ import {
   type ActionResult,
   type PetState,
 } from '../shared/pet.js';
-import { SPECIES, frameToRgba, spriteSet, type SpeciesId } from '../shared/species.js';
+import { SPECIES, frameToRgba, isAccessory, isSpeciesId, isVariant, spriteSet, type SpeciesId } from '../shared/species.js';
+import { ACCESSORY_NAMES, SPECIES_UNLOCK, allowedPatch, buildWardrobe, rewardText, rewardsFor, type WardrobePatch } from '../shared/wardrobe.js';
 import type { PetView, TipBubble } from '../shared/view.js';
 import { debugProfileDir, findBrowser, launchArgs, type BrowserEnv } from './browser.js';
 import { startDemoServer, type DemoServer } from './demo-server.js';
@@ -140,6 +141,7 @@ let codexWin: BrowserWindow | null = null;
 let lastFindings: Finding[] = [];
 let lastConnected = false;
 let resultsWin: BrowserWindow | null = null;
+let wardrobeWin: BrowserWindow | null = null;
 let queue: Finding[] = [];
 let active: Finding | null = null;
 /** 마지막으로 알린 문제. 말풍선이 사라진 뒤에도 기억해 두었다가, 펫에 마우스를 올리면 다시 보여 준다. */
@@ -157,7 +159,8 @@ let lastTipAt = Date.now();
 let tipShift = 0;
 
 const randomSpecies = (): SpeciesId => {
-  const pick = SPECIES[Math.floor(Math.random() * SPECIES.length)];
+  const base = SPECIES.filter((sp) => SPECIES_UNLOCK[sp.id] === undefined);
+  const pick = base[Math.floor(Math.random() * base.length)];
   return (pick ?? SPECIES[0]!).id;
 };
 
@@ -174,6 +177,8 @@ function currentView(): PetView {
     since: behavior.since,
     bubbleShift: tipShift,
     scale: settings.petScale,
+    variant: settings.variant,
+    accessory: settings.accessory,
   };
 }
 
@@ -406,7 +411,17 @@ function recordGrowth(event: GrowthEvent): void {
   sendView();
   // 방금 한 일의 말풍선이 지나간 뒤에 알린다.
   const names = result.unlocked.map((a) => a.name).join(', ');
-  setTimeout(() => say('업적 달성: ' + names + '! 경험치 +' + xp + note), 2_500);
+  const rewards = rewardsFor(result.unlocked.map((a) => a.id));
+  let text = '업적 달성: ' + names + '! 경험치 +' + xp + note;
+  const reward = rewardText(rewards);
+  if (reward) text += '\n' + reward;
+  const firstAccessory = rewards.accessories[0];
+  if (firstAccessory && settings.accessory === 'none') {
+    applySettings({ accessory: firstAccessory });
+    text += '\n' + ACCESSORY_NAMES[firstAccessory] + ' 을(를) 바로 달아 줬어요!';
+  }
+  refreshWardrobe();
+  setTimeout(() => say(text), 2_500);
 }
 
 function refreshResults(): void {
@@ -458,6 +473,79 @@ function openResults(): void {
 
 /** IPC 로 받은 문제 키가 쓸 만한 문자열인지 */
 const isKey = (v: unknown): v is string => typeof v === 'string' && v !== '' && v.length <= 600;
+
+/** 꾸미기 창에 보여 줄 값. 알이면 새끼 모습으로 미리 보여 준다. */
+function wardrobeData() {
+  return {
+    ...buildWardrobe(growth, { speciesId: pet.speciesId, variant: settings.variant, accessory: settings.accessory }),
+    stage: stageOf(pet) === 'adult' ? ('adult' as const) : ('baby' as const),
+  };
+}
+
+/** 꾸미기를 바꾼다. 요청이 어떤 값이든 아는 값만 받고, 업적으로 아직 안 열린 것은 버린다. */
+function applyWardrobe(raw: unknown) {
+  const r = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
+  const wanted: WardrobePatch = {};
+  if (isSpeciesId(r['speciesId'])) wanted.speciesId = r['speciesId'];
+  if (isVariant(r['variant'])) wanted.variant = r['variant'];
+  if (isAccessory(r['accessory'])) wanted.accessory = r['accessory'];
+  const ok = allowedPatch(growth, wanted);
+  if (ok.speciesId) changeSpecies(ok.speciesId);
+  if (ok.variant !== undefined || ok.accessory !== undefined) {
+    applySettings({
+      ...(ok.variant !== undefined ? { variant: ok.variant } : {}),
+      ...(ok.accessory !== undefined ? { accessory: ok.accessory } : {}),
+    });
+  }
+  return wardrobeData();
+}
+
+function refreshWardrobe(): void {
+  if (wardrobeWin && !wardrobeWin.isDestroyed()) wardrobeWin.webContents.send('wardrobe:refresh');
+}
+
+function closeWardrobe(): void {
+  if (wardrobeWin && !wardrobeWin.isDestroyed()) wardrobeWin.close();
+  wardrobeWin = null;
+}
+
+function openWardrobe(): void {
+  if (wardrobeWin && !wardrobeWin.isDestroyed()) {
+    wardrobeWin.show();
+    wardrobeWin.focus();
+    return;
+  }
+  const area = screen.getDisplayNearestPoint({ x: Math.round(behavior.x), y: Math.round(behavior.y) }).workArea;
+  const width = 420;
+  const height = Math.min(640, area.height - 40);
+  const w = new BrowserWindow({
+    x: area.x + Math.round((area.width - width) / 2),
+    y: area.y + Math.round((area.height - height) / 2),
+    width,
+    height,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    autoHideMenuBar: true,
+    title: '꾸미기',
+    backgroundColor: '#fffdf5',
+    show: false,
+    webPreferences: {
+      preload: path.join(projectRoot, 'static', 'wardrobe-preload.cjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  w.setMenu(null);
+  w.setAlwaysOnTop(true, 'screen-saver');
+  w.once('ready-to-show', () => w.show());
+  w.on('closed', () => {
+    if (wardrobeWin === w) wardrobeWin = null;
+  });
+  void w.loadFile(path.join(projectRoot, 'static', 'wardrobe.html'));
+  wardrobeWin = w;
+}
 
 function closeCodex(): void {
   if (codexWin && !codexWin.isDestroyed()) codexWin.close();
@@ -669,6 +757,7 @@ function act(type: 'touch' | 'feed' | 'play'): ActionResult {
 
 function changeSpecies(id: SpeciesId): void {
   pet = { ...pet, speciesId: id };
+  refreshWardrobe();
   updateTray();
   sendView();
   persist();
@@ -774,15 +863,7 @@ function buildMenu(): Menu {
         { label: '마우스에 매달리기: 마우스를 10초 가만히 두세요', enabled: false },
       ],
     },
-    {
-      label: '펫 종류 (테스트용)',
-      submenu: SPECIES.map((s) => ({
-        label: s.name,
-        type: 'radio' as const,
-        checked: s.id === pet.speciesId,
-        click: () => changeSpecies(s.id),
-      })),
-    },
+    { label: '꾸미기…', click: () => openWardrobe() },
     { type: 'separator' },
     {
       // 설치본에서만 동작한다(개발 실행에서 켜면 electron.exe 가 로그인 항목에 등록되기 때문).
@@ -972,6 +1053,9 @@ function setupIpc(): void {
   });
   ipcMain.on('tip:confirm', () => confirmTip());
   ipcMain.on('card:ignore', () => finishCard('ignore'));
+  ipcMain.handle('wardrobe:get', () => wardrobeData());
+  ipcMain.handle('wardrobe:set', (_event, patch: unknown) => applyWardrobe(patch));
+  ipcMain.on('wardrobe:close', () => closeWardrobe());
   ipcMain.handle('results:get', () =>
     buildResults(lastFindings, {
       connected: lastConnected,

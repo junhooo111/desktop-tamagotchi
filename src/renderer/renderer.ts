@@ -51,7 +51,7 @@ let view: PetView | null = null;
 let bubbleTimer: number | undefined;
 
 function sheetOf(v: PetView): SpriteSet {
-  return spriteSet(v.speciesId, v.stage);
+  return spriteSet(v.speciesId, v.stage, { variant: v.variant ?? 'default', accessory: v.accessory ?? 'none' });
 }
 
 /** 펫이 서 있는 자리(창의 아래쪽 가운데). 그림이 돌아가도 같은 칸을 쓴다. */

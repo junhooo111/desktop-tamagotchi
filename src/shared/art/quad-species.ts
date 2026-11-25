@@ -93,3 +93,54 @@ export const TURTLE: QuadSpec = {
   head: { cx: 25.2, cy: 22, rx: 4.8, ry: 4.4 },
   bodyScale: { rx: 1.06, ry: 1.12 },
 };
+
+/** 여우: 뾰족한 귀와 긴 주둥이, 풍성한 꼬리 */
+export const FOX: QuadSpec = {
+  look: makeLook({
+    fur: '#e8743b',
+    outline: '#3b2f2f',
+    belly: tone('#fff4e6'),
+    accent: tone('#5a3426'),
+    inner: tone('#f4a6b8'),
+    nose: '#3b2f2f',
+    eye: '#3b2f2f',
+  }),
+  ears: 'cat',
+  tail: 'cat',
+  snout: true,
+  whiskers: false,
+  stripes: false,
+  patch: false,
+  shell: false,
+  haunch: false,
+  socks: false,
+  head: { cx: 20.6, cy: 13.6, rx: 7, ry: 6.2 },
+  bodyScale: { rx: 0.95, ry: 0.92 },
+};
+
+/** 햄스터: 공처럼 동그란 몸에 짧은 다리, 빵빵한 볼, 큰 동그란 귀, 등의 갈색 무늬, 꼬리는 거의 없다 */
+export const HAMSTER: QuadSpec = {
+  look: makeLook({
+    fur: '#eac690',
+    outline: '#3b2f2f',
+    belly: tone('#fff5e0'),
+    accent: tone('#c98a4b'),
+    inner: tone('#f4a6b8'),
+    nose: '#f08aa0',
+    eye: '#3b2f2f',
+  }),
+  ears: 'round',
+  tail: 'none',
+  snout: false,
+  whiskers: false,
+  stripes: false,
+  patch: true,
+  shell: false,
+  haunch: false,
+  socks: false,
+  cheeks: true,
+  legScale: 0.42,
+  head: { cx: 18.8, cy: 16.2, rx: 7.8, ry: 6.6 },
+  eyeAt: 0.1,
+  bodyScale: { rx: 0.98, ry: 1.3 },
+};

@@ -1,7 +1,7 @@
 /** 메인 프로세스가 렌더러(펫 화면)에 넘기는 값. 타입만 있어서 브라우저에서도 안전하다. */
 import type { Dir, Mode, PlayKind, Surface } from './motion.js';
 import type { Mood, Stage } from './pet.js';
-import type { SpeciesId } from './species.js';
+import type { Accessory, SpeciesId, Variant } from './species.js';
 
 export interface PetView {
   speciesId: SpeciesId;
@@ -18,6 +18,9 @@ export interface PetView {
   bubbleShift: number;
   /** 설정의 펫 크기 배율(1·2·3) */
   scale: number;
+  /** 꾸미기: 색 변형과 장식 */
+  variant: Variant;
+  accessory: Accessory;
 }
 
 /** 펫이 찾아 알린 문제의 말풍선. 무엇이 문제인지, 어디인지, 어떻게 고치는지를 함께 보여 준다. */

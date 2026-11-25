@@ -1,10 +1,17 @@
 /** 개발용: 그림을 눈으로 확인하기 위한 미리보기 데이터(앱에서는 쓰지 않는다). */
 import { FRAME_NAMES } from './frames.js';
-import { spriteSet, type SpeciesId, type SpriteStage } from '../species.js';
+import { isAccessory, isVariant, spriteSet, DEFAULT_STYLE, type PetStyle, type SpeciesId, type SpriteStage } from '../species.js';
+
+/** 환경 변수 PREVIEW_VARIANT / PREVIEW_ACCESSORY 로 꾸미기를 바꿔서 본다. */
+function styleFromEnv(): PetStyle {
+  const v = process.env['PREVIEW_VARIANT'];
+  const a = process.env['PREVIEW_ACCESSORY'];
+  return { variant: isVariant(v) ? v : DEFAULT_STYLE.variant, accessory: isAccessory(a) ? a : DEFAULT_STYLE.accessory };
+}
 
 /** 한 종·단계의 프레임들(only 는 쉼표로 구분한 이름들, 비우면 전부) */
 export function sheet(id: string, stage: string, only?: string) {
-  const set = spriteSet(id as SpeciesId, stage as SpriteStage);
+  const set = spriteSet(id as SpeciesId, stage as SpriteStage, styleFromEnv());
   const picked = only ? only.split(',') : [];
   const names = (picked.length > 0 ? picked : [...FRAME_NAMES]) as (typeof FRAME_NAMES)[number][];
   return names.map((name) => ({ label: `${id} ${stage} ${name}`, rows: set.frames[name], palette: set.palette }));
@@ -18,10 +25,10 @@ export function both(id: string, only?: string) {
 /** 모든 종의 한 프레임을 한 장에 모아 본다. */
 export function overview(frame: string) {
   const out: { label: string; rows: string[]; palette: Record<string, string> }[] = [];
-  const ids = ['rabbit', 'cat', 'dog', 'turtle', 'chick', 'duck'];
+  const ids = ['rabbit', 'cat', 'dog', 'turtle', 'chick', 'duck', 'fox', 'hamster', 'penguin'];
   for (const stage of ['adult', 'baby'] as const) {
     for (const id of ids) {
-      const set = spriteSet(id as SpeciesId, stage);
+      const set = spriteSet(id as SpeciesId, stage, styleFromEnv());
       out.push({ label: `${id} ${stage}`, rows: set.frames[frame as (typeof FRAME_NAMES)[number]], palette: { ...set.palette } });
     }
   }

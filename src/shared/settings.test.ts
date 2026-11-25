@@ -10,7 +10,7 @@ describe('sanitizeSettings', () => {
   });
 
   it('유효한 값은 그대로 받는다', () => {
-    const s = { petScale: 2, inspectEnabled: false, scanSeconds: 30, tipMinutes: 0, autoUpdate: false, disabledRules: ['contrast'], ignored: ['http://localhost:3000/|img-alt|img'] };
+    const s = { petScale: 2, inspectEnabled: false, scanSeconds: 30, tipMinutes: 0, autoUpdate: false, disabledRules: ['contrast'], ignored: ['http://localhost:3000/|img-alt|img'], variant: 'pastel', accessory: 'crown' };
     expect(sanitizeSettings(s)).toEqual(s);
   });
 
@@ -72,5 +72,13 @@ describe('규칙 끄기·무시 목록', () => {
   it('기본값은 모든 규칙을 켜고 무시 목록은 비어 있다', () => {
     expect(DEFAULT_SETTINGS.disabledRules).toEqual([]);
     expect(DEFAULT_SETTINGS.ignored).toEqual([]);
+  });
+});
+
+describe('꾸미기 설정', () => {
+  it('색 변형과 장식은 아는 값만 받고, 모르면 기본값이다', () => {
+    expect(sanitizeSettings({ variant: 'deep', accessory: 'wings' })).toMatchObject({ variant: 'deep', accessory: 'wings' });
+    expect(sanitizeSettings({ variant: 'neon', accessory: 'laser' })).toMatchObject({ variant: 'default', accessory: 'none' });
+    expect(sanitizeSettings({ variant: 3, accessory: null })).toMatchObject({ variant: 'default', accessory: 'none' });
   });
 });

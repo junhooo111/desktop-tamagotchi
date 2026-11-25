@@ -2,6 +2,8 @@
  * 사용자 설정. 설정 창에서 바꾸고 settings.json 에 저장한다.
  * 파일이 깨졌거나 허용하지 않는 값이 들어 있어도 앱이 죽지 않도록, 읽을 때마다 sanitizeSettings 로 걸러 낸다.
  */
+import type { Accessory } from './art/accessory.js';
+import { isAccessory, isVariant, type Variant } from './art/style.js';
 import { RULE_IDS, type RuleId } from './lessons.js';
 
 export const MAX_IGNORED_KEYS = 500;
@@ -22,6 +24,9 @@ export interface Settings {
   disabledRules: RuleId[];
   /** 무시한 문제의 키(주소|규칙|요소 경로). 다시 알리지 않는다. */
   ignored: string[];
+  /** 꾸미기: 색 변형과 장식(업적으로 연 것만 고를 수 있다. 검증은 메인에서) */
+  variant: Variant;
+  accessory: Accessory;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -32,6 +37,8 @@ export const DEFAULT_SETTINGS: Settings = {
   autoUpdate: true,
   disabledRules: [],
   ignored: [],
+  variant: 'default',
+  accessory: 'none',
 };
 
 /** 설정 창이 보여 주는 선택지(허용하는 값과 같다) */
@@ -71,6 +78,8 @@ export function sanitizeSettings(raw: unknown): Settings {
     autoUpdate: bool(r['autoUpdate'], DEFAULT_SETTINGS.autoUpdate),
     disabledRules: ruleList(r['disabledRules']),
     ignored: keyList(r['ignored']),
+    variant: isVariant(r['variant']) ? r['variant'] : DEFAULT_SETTINGS.variant,
+    accessory: isAccessory(r['accessory']) ? r['accessory'] : DEFAULT_SETTINGS.accessory,
   };
 }
 

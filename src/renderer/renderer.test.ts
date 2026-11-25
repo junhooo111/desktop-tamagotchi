@@ -28,6 +28,8 @@ const view = (over: Partial<PetView> = {}): PetView => ({
   since: 0,
   bubbleShift: 0,
   scale: 1,
+  variant: 'default',
+  accessory: 'none',
   ...over,
 });
 

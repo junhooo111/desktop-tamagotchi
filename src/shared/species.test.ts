@@ -19,8 +19,8 @@ const cases: [string, SpeciesId, SpriteStage][] = IDS.flatMap((id) =>
 const all: [string, SpeciesId, SpriteStage][] = [...cases, ['egg', 'cat', 'egg']];
 
 describe('종 목록', () => {
-  it('사용자가 고른 6종이 모두 있다', () => {
-    expect(SPECIES.map((s) => s.name)).toEqual(['토끼', '고양이', '강아지', '거북이', '병아리', '오리']);
+  it('처음 6종과 업적으로 여는 3종이 모두 있다', () => {
+    expect(SPECIES.map((s) => s.name)).toEqual(['토끼', '고양이', '강아지', '거북이', '병아리', '오리', '여우', '햄스터', '펭귄']);
   });
 
   it('동작별 프레임이 34개 있다', () => {
@@ -70,11 +70,9 @@ describe('스프라이트 데이터', () => {
     const f = spriteSet(id, stage).frames;
     expect(new Set([f.walk1, f.walk2, f.walk3, f.walk4].map((r) => r.join('\n'))).size).toBe(4);
     expect(new Set([f.run1, f.run2, f.run3, f.run4].map((r) => r.join('\n'))).size).toBe(4);
-    // 거북이 새끼의 숨쉬기·앉아서 숨쉬기는 1칸 차이라 16칸 굵기로 뭉치면 사라진다(그 한 경우만 예외)
-    if (!(id === 'turtle' && stage === 'baby')) {
-      expect(f.idleA).not.toEqual(f.idleB);
-      expect(f.sitA).not.toEqual(f.sitB);
-    }
+    // 거북이·햄스터 새끼의 앉아서 숨쉬기(거북이는 서서 숨쉬기도)는 1칸 차이라 16칸 굵기로 뭉치면 사라진다(그 한 경우만 예외)
+    if (!(id === 'turtle' && stage === 'baby')) expect(f.idleA).not.toEqual(f.idleB);
+    if (!(stage === 'baby' && (id === 'turtle' || id === 'hamster'))) expect(f.sitA).not.toEqual(f.sitB);
     expect(f.sleepA).not.toEqual(f.sleepB);
     expect(f.hangA).not.toEqual(f.hangB);
     for (const other of ['walk1', 'run2', 'sitA', 'sleepA', 'dozeA', 'jumpPeak', 'curl', 'climbA', 'slipA', 'hangA', 'fall', 'alertA', 'happyA', 'eatA'] as const) {
@@ -170,5 +168,72 @@ describe('getSpecies / isSpeciesId', () => {
     expect(isSpeciesId('cat')).toBe(true);
     expect(isSpeciesId('dragon')).toBe(false);
     expect(isSpeciesId(3)).toBe(false);
+  });
+});
+
+describe('꾸미기 스타일(색 변형·장식)', () => {
+  const frame = (rows: readonly string[]): string => rows.join('');
+
+  it('스타일을 안 주면 기본(변형 없음, 장식 없음)과 같다', () => {
+    expect(spriteSet('cat', 'adult')).toBe(spriteSet('cat', 'adult', { variant: 'default', accessory: 'none' }));
+  });
+
+  it('같은 종·단계·스타일은 같은 그림을 기억해서 다시 쓴다', () => {
+    const style = { variant: 'pastel', accessory: 'crown' } as const;
+    expect(spriteSet('fox', 'baby', style)).toBe(spriteSet('fox', 'baby', style));
+  });
+
+  it('색 변형은 몸 색만 바꾸고 윤곽선·눈은 그대로다(그림 모양은 같다)', () => {
+    const base = spriteSet('cat', 'adult');
+    for (const variant of ['pastel', 'deep', 'mono'] as const) {
+      const v = spriteSet('cat', 'adult', { variant, accessory: 'none' });
+      expect(v.palette['f'], variant).not.toBe(base.palette['f']);
+      expect(v.palette['k'], variant).toBe(base.palette['k']);
+      expect(v.palette['e'], variant).toBe(base.palette['e']);
+      expect(frame(v.frames.idleA), variant).toBe(frame(base.frames.idleA));
+    }
+  });
+
+  it('흑백은 거의 회색이고, 파스텔은 더 밝고, 진하게는 더 어둡다', () => {
+    const lum = (hex: string): number => {
+      const n = parseInt(hex.slice(1), 16);
+      return 0.3 * ((n >> 16) & 255) + 0.59 * ((n >> 8) & 255) + 0.11 * (n & 255);
+    };
+    const f = (v: 'default' | 'pastel' | 'deep' | 'mono'): string => spriteSet('cat', 'adult', { variant: v, accessory: 'none' }).palette['f']!;
+    expect(lum(f('pastel'))).toBeGreaterThan(lum(f('default')));
+    expect(lum(f('deep'))).toBeLessThan(lum(f('default')));
+    const n = parseInt(f('mono').slice(1), 16);
+    expect(Math.max((n >> 16) & 255, (n >> 8) & 255, n & 255) - Math.min((n >> 16) & 255, (n >> 8) & 255, n & 255)).toBeLessThan(40);
+  });
+
+  const stylable: [string, SpeciesId][] = IDS.map((id) => [id, id]);
+
+  it.each(stylable)('%s: 장식마다 그림이 달라지고(장식 색이 팔레트에 있다) 칸 밖으로 나가지 않는다', (_n, id) => {
+    const base = spriteSet(id, 'adult');
+    for (const accessory of ['ribbon', 'glasses', 'crown', 'wings'] as const) {
+      const set = spriteSet(id, 'adult', { variant: 'default', accessory });
+      expect(frame(set.frames.idleA), accessory).not.toBe(frame(base.frames.idleA));
+      expect(set.palette['X'], accessory).toBeDefined();
+      expect(set.palette['Y'], accessory).toBeDefined();
+      for (const name of ['idleA', 'walk1', 'sitA', 'sleepA'] as const) {
+        const b = boundsOf(set.frames[name]);
+        expect(b, name).not.toBeNull();
+        expect(b!.x0).toBeGreaterThanOrEqual(0);
+        expect(b!.y0).toBeGreaterThanOrEqual(0);
+        expect(b!.x1).toBeLessThanOrEqual(SIZE - 1);
+        expect(b!.y1).toBeLessThanOrEqual(SIZE - 1);
+      }
+    }
+  });
+
+  it('왕관·리본·선글라스는 눈을 감은 자는 그림에도 따라간다(머리를 따라다닌다)', () => {
+    for (const accessory of ['crown', 'ribbon', 'glasses'] as const) {
+      const set = spriteSet('cat', 'adult', { variant: 'default', accessory });
+      expect(frame(set.frames.sleepA), accessory).toContain(accessory === 'glasses' ? 'Y' : 'X');
+    }
+  });
+
+  it('알은 스타일과 상관없이 같은 알이다', () => {
+    expect(spriteSet('cat', 'egg', { variant: 'mono', accessory: 'crown' })).toBe(spriteSet('dog', 'egg'));
   });
 });

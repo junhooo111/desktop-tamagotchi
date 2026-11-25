@@ -27,3 +27,17 @@ export const DUCK: BirdSpec = {
     eye: '#3b2f2f',
   }),
 };
+
+/** 펭귄: 병아리 뼈대에 어두운 등과 하얀 배, 솜털 없음 */
+export const PENGUIN: BirdSpec = {
+  kind: 'chick',
+  tuft: false,
+  look: makeLook({
+    fur: '#34405e',
+    outline: '#141a2b',
+    belly: tone('#ffffff'),
+    accent: tone('#232c42'),
+    beak: tone('#ff9a2e'),
+    eye: '#ffffff',
+  }),
+};

@@ -8,6 +8,7 @@
  * 자세(shape): stand 서기 · sit 앉기 · lie 엎드리기 · curl 공처럼 말기 · hang 정면으로 매달리기
  */
 import { blank, ellipse, line, markEllipse, part, px, rect, shift, toRows, triangle, type Grid } from '../pixel.js';
+import { drawBackWings, drawHeadAccessory, type Accessory } from './accessory.js';
 import { drawHangArms } from './hang-arms.js';
 import { SHADE, type ArtStage, type EyePose, type Look, type MouthPose, type Pose } from './types.js';
 
@@ -20,8 +21,8 @@ export interface HeadDims {
 
 export interface QuadSpec {
   look: Look;
-  ears: 'cat' | 'dog' | 'rabbit' | 'none';
-  tail: 'cat' | 'dog' | 'rabbit' | 'turtle';
+  ears: 'cat' | 'dog' | 'rabbit' | 'round' | 'none';
+  tail: 'cat' | 'dog' | 'rabbit' | 'turtle' | 'none';
   /** 강아지의 긴 주둥이 */
   snout: boolean;
   whiskers: boolean;
@@ -40,6 +41,12 @@ export interface QuadSpec {
   eyeAt?: number;
   /** 몸 크기 보정(거북이는 넓고 납작하다) */
   bodyScale?: { rx: number; ry: number };
+  /** 꾸미기 장식(리본·안경·왕관·날개) */
+  accessory?: Accessory;
+  /** 볼이 빵빵한 얼굴(햄스터) */
+  cheeks?: boolean;
+  /** 다리 길이 배율(기본 1, 거북이 0.62). 작을수록 짧은 다리 */
+  legScale?: number;
 }
 
 const GROUND = 30;
@@ -90,7 +97,7 @@ function drawLeg(
   far: boolean,
   crouch: number,
 ): void {
-  const stub = r.spec.shell ? 0.62 : 1;
+  const stub = r.spec.legScale ?? (r.spec.shell ? 0.62 : 1);
   const left = Math.round(r.X(x) + l.dx * r.size);
   const top = Math.round(GROUND - (GROUND - r.Y(topY) - crouch * r.size) * r.legMod * stub);
   const bottom = GROUND - Math.round(l.lift * r.size);
@@ -99,8 +106,9 @@ function drawLeg(
   part(
     g,
     (t) => {
-      rect(t, left, top, width, h, far ? 'F' : 'f');
-      rect(t, left + width, bottom, 1, 1, far ? 'F' : 'f'); // 발끝이 앞으로 살짝 나온다
+      const shade = far && r.spec.legScale === undefined;
+      rect(t, left, top, width, h, shade ? 'F' : 'f');
+      rect(t, left + width, bottom, 1, 1, shade ? 'F' : 'f'); // 발끝이 앞으로 살짝 나온다
       if (r.spec.socks && h > 3) rect(t, left, bottom - 1, width + 1, 2, far ? 'B' : 'b'); // 양말
     },
     { outline: 'k', shade: far ? undefined : SHADE },
@@ -110,6 +118,7 @@ function drawLeg(
 /** 꼬리: 뿌리에서 시작해 세 마디로 휜다. */
 function drawTail(g: Grid, r: Rig, pose: Pose, root: { x: number; y: number }): void {
   const { tail } = r.spec;
+  if (tail === 'none') return;
   const rx = r.X(root.x);
   const ry = r.Y(root.y);
   if (tail === 'rabbit') {
@@ -148,6 +157,16 @@ function drawEars(g: Grid, r: Rig, pose: Pose, head: HeadDims): void {
   if (ears === 'none' || ears === 'dog') return;
   const top = head.cy - head.ry;
   const k = r.size * r.headMod;
+
+  if (ears === 'round') {
+    // 햄스터: 머리 위에 작고 동그란 귀 둘
+    const e = head.rx / 6.6;
+    const lift = pose.ears === 'back' ? 1.4 : 0;
+    for (const dx of [-4.4 * e, 3.4 * e]) {
+      part(g, (t) => ellipse(t, head.cx + dx, top + 1.6 * e + lift, 3.2 * e, 3.2 * e, 'a'), { outline: 'k', shade: SHADE });
+    }
+    return;
+  }
 
   if (ears === 'cat') {
     const e = head.rx / 6.6; // 머리가 클수록 귀도 같이 커진다
@@ -274,6 +293,8 @@ function drawHead(g: Grid, r: Rig, pose: Pose, hc: HeadDims): void {
     g,
     (t) => {
       ellipse(t, head.cx, head.cy, head.rx, head.ry, 'f');
+      // 햄스터: 아래쪽 양옆이 불룩한 볼
+      if (spec.cheeks) ellipse(t, head.cx + head.rx * 0.1, head.cy + head.ry * 0.5, head.rx * 1.02, head.ry * 0.62, 'f');
       if (spec.snout) ellipse(t, head.cx + head.rx * 0.78, head.cy + head.ry * 0.3, head.rx * 0.52, head.ry * 0.42, 'f');
       markEllipse(t, head.cx + head.rx * 0.5, head.cy + head.ry * 0.55, head.rx * 0.5, head.ry * 0.4, 'b');
     },
@@ -289,6 +310,7 @@ function drawHead(g: Grid, r: Rig, pose: Pose, hc: HeadDims): void {
   drawEye(g, eyeX, eyeY, pose.eyes, small);
   rect(g, noseX - 1, noseY, 2, 2, 'n');
   drawMouth(g, noseX, noseY, pose.mouth);
+  drawHeadAccessory(g, spec.accessory, head, [{ x: eyeX, y: eyeY }]);
 
   if (spec.whiskers) {
     // 짧은 수염 두 가닥(코를 가리지 않게 코보다 뒤쪽 볼에서 시작)
@@ -340,6 +362,7 @@ function standing(r: Rig, pose: Pose): Grid {
   drawLeg(g, r, 10.2 - s * 1.2, legTop, 3, pose.legs.bf, true, c);
   drawTail(g, rb, pose, { x: BODY.cx - BODY.rx * m.rx + 1 - s * 1.2, y: BODY.cy - 1.5 });
   drawBody(g, rb, pose);
+  drawBackWings(g, spec.accessory, r.X(BODY.cx - s * 1.2) - 1, rb.Y(BODY.cy) - BODY.ry * m.ry * r.size + 1, r.size);
   if (spec.haunch) {
     part(
       g,
@@ -380,6 +403,7 @@ function sitting(r: Rig, pose: Pose): Grid {
     },
     { outline: 'k', shade: SHADE },
   );
+  drawBackWings(g, spec.accessory, r.X(11), r.Y(21.5) - 8 * r.size + 3, r.size);
   part(g, (t) => ellipse(t, r.X(10.6), r.Y(26.4), 5 * r.size, 3.6 * r.size, 'f'), { outline: 'k', shade: SHADE });
   part(g, (t) => ellipse(t, r.X(16.4), r.Y(29.2), 3.2 * r.size, 1.5 * r.size, 'f'), { outline: 'k', shade: SHADE });
   part(g, (t) => rect(t, r.X(18.2), r.Y(21.5), Math.max(2, 3 * r.size), GROUND - r.Y(21.5), 'f'), { outline: 'k', shade: SHADE });
@@ -418,6 +442,7 @@ function lying(r: Rig, pose: Pose): Grid {
     },
     { outline: 'k', shade: SHADE },
   );
+  drawBackWings(g, spec.accessory, r.X(11), r.Y(25.2) - 4.8 * r.size + 1, r.size);
   part(g, (t) => ellipse(t, r.X(22.5), r.Y(28.2), 5 * r.size, 2.2 * r.size, 'f'), { outline: 'k', shade: SHADE });
   const h = headOf(spec);
   drawHead(g, r, { ...pose, headDx: 0, headDy: 0 }, { cx: 21.2, cy: 22.4, rx: h.rx - 0.2, ry: h.ry - 0.6 });
@@ -443,6 +468,7 @@ function curled(r: Rig, pose: Pose): Grid {
     },
     { outline: 'k', shade: SHADE },
   );
+  drawBackWings(g, spec.accessory, r.X(12), r.Y(21.6) - 8.6 * r.size + 2, r.size);
   const h = spec.shell ? { cx: 23, cy: 24, rx: 4, ry: 3.6 } : { ...headOf(spec), cx: 19.6, cy: 16.6, rx: 6.2, ry: 5.7 };
   drawHead(g, r, { ...pose, eyes: pose.eyes, headDx: 0, headDy: 0 }, h);
   return g;
@@ -498,6 +524,10 @@ function hanging(r: Rig, pose: Pose): Grid {
         { outline: 'k', shade: SHADE },
       );
     }
+  } else if (spec.ears === 'round') {
+    for (const sx of [-1, 1]) {
+      part(g, (t) => ellipse(t, hx + sx * 4.8 * k, top + 1.6 * k, 2.6 * k, 2.6 * k, 'a'), { outline: 'k', shade: SHADE });
+    }
   } else if (spec.ears === 'rabbit') {
     for (const sx of [-1, 1]) {
       part(
@@ -515,6 +545,7 @@ function hanging(r: Rig, pose: Pose): Grid {
     g,
     (t) => {
       ellipse(t, hx, hy, hrx, hry, 'f');
+      if (spec.cheeks) ellipse(t, hx, hy + hry * 0.5, hrx * 1.08, hry * 0.62, 'f');
       markEllipse(t, hx, hy + hry * 0.55, hrx * 0.5, hry * 0.4, 'b');
       if (spec.stripes) for (let i = -1; i <= 1; i++) rect(t, hx + i * 2.4 - 0, Math.round(top + 0.5), 1, 2, 'a');
     },
@@ -532,6 +563,11 @@ function hanging(r: Rig, pose: Pose): Grid {
   drawEye(g, Math.round(hx + 1.6 * k * (small ? 0.7 : 1)), ey, pose.eyes, small);
   rect(g, hx - 1, Math.round(hy + hry * 0.18), 2, 2, 'n');
   drawMouth(g, hx + 1, Math.round(hy + hry * 0.18), pose.mouth);
+  const eyeScale = small ? 0.7 : 1;
+  drawHeadAccessory(g, spec.accessory, { cx: hx, cy: hy, rx: hrx, ry: hry }, [
+    { x: Math.round(hx - 4.2 * k * eyeScale - 1), y: ey },
+    { x: Math.round(hx + 1.6 * k * eyeScale), y: ey },
+  ]);
   return g;
 }
 
