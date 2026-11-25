@@ -129,3 +129,108 @@ describe('collectorExpression', () => {
     expect(typeof result.visible).toBe('boolean');
   });
 });
+
+describe('collectPage 규칙: 추가 6종', () => {
+  it('dup-id: 같은 id 가 반복되면 두 번째부터 찾는다(처음 하나는 정상)', () => {
+    const found = run('<div id="a"></div><div id="a"></div><div id="a"></div><div id="b"></div>');
+    expect(found.map((f) => [f.ruleId, f.detail])).toEqual([
+      ['dup-id', 'id="a" 가 3번 쓰임'],
+      ['dup-id', 'id="a" 가 3번 쓰임'],
+    ]);
+  });
+
+  it('dup-id: 서로 다른 id 와 빈 id 는 통과한다', () => {
+    expect(run('<div id="a"></div><div id="b"></div><div id=""></div><div id=""></div>')).toEqual([]);
+  });
+
+  it('zoom-disabled: user-scalable=no·maximum-scale 1 이하를 찾는다', () => {
+    const noScale = run('<p>글</p>', '<title>t</title><meta name="viewport" content="width=device-width, user-scalable=no">');
+    expect(rules(noScale)).toEqual(['zoom-disabled']);
+    const max1 = run('<p>글</p>', '<title>t</title><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1.0">');
+    expect(rules(max1)).toEqual(['zoom-disabled']);
+    const zero = run('<p>글</p>', '<title>t</title><meta name="viewport" content="width=device-width,user-scalable=0">');
+    expect(rules(zero)).toEqual(['zoom-disabled']);
+  });
+
+  it('zoom-disabled: 확대를 허용하는 viewport 는 통과한다(maximum-scale 5 포함)', () => {
+    expect(run('<p>글</p>', '<title>t</title><meta name="viewport" content="width=device-width, initial-scale=1">')).toEqual([]);
+    expect(run('<p>글</p>', '<title>t</title><meta name="viewport" content="width=device-width, maximum-scale=5, user-scalable=yes">')).toEqual([]);
+  });
+
+  it('tabindex-positive: 1 이상만 찾고 0·-1 은 통과한다', () => {
+    const found = run('<div tabindex="3">a</div><div tabindex="0">b</div><div tabindex="-1">c</div><button tabindex="1">d</button>');
+    expect(found.map((f) => [f.ruleId, f.detail])).toEqual([
+      ['tabindex-positive', 'tabindex="3"'],
+      ['tabindex-positive', 'tabindex="1"'],
+    ]);
+  });
+
+  it('alt-quality: 파일 이름·"image"·"사진" 같은 alt 를 찾는다', () => {
+    const found = run(
+      `<img src="/1.png" alt="hero.png"><img src="/2.png" alt="image">
+       <img src="/3.png" alt="사진 3"><img src="/4.png" alt="IMG_2034">
+       <img src="/5.png" alt="Photo">`,
+    );
+    expect(rules(found)).toEqual(['alt-quality', 'alt-quality', 'alt-quality']); // 규칙당 최대 3개
+    expect(found[0]?.detail).toBe('alt="hero.png"');
+  });
+
+  it('alt-quality: 설명이 있는 alt 와 빈 alt 는 통과한다("이미지 편집기" 같은 문장 포함)', () => {
+    const found = run(
+      `<img src="/a.png" alt="노트북으로 일하는 개발자"><img src="/b.png" alt="">
+       <img src="/c.png" alt="이미지 편집기 화면"><img src="/d.png" alt="PNG 와 JPG 비교 표">`,
+    );
+    expect(found).toEqual([]);
+  });
+
+  it('clickable-div: 손가락 모양(cursor: pointer)·onclick 인 div·span 을 찾는다', () => {
+    const found = run(
+      `<div id="save" style="cursor:pointer">저장</div>
+       <span onclick="go()">이동</span>`,
+    );
+    expect(found.map((f) => [f.ruleId, f.selector, f.detail])).toEqual([
+      ['clickable-div', 'div#save', '<div> "저장"'],
+      ['clickable-div', 'body > span', '<span> "이동"'],
+    ]);
+  });
+
+  it('clickable-div: 진짜 버튼·링크, role·tabindex 가 있는 것, 그 안의 자식은 통과한다', () => {
+    const found = run(
+      `<button style="cursor:pointer"><span style="cursor:pointer">안쪽</span></button>
+       <a href="/x" style="cursor:pointer"><div style="cursor:pointer">링크 안</div></a>
+       <div role="button" tabindex="0" style="cursor:pointer">접근 가능</div>
+       <div tabindex="0" style="cursor:pointer">포커스 가능</div>
+       <label style="cursor:pointer">라벨</label>
+       <div style="cursor:default">그냥 글</div>`,
+    );
+    expect(found).toEqual([]);
+  });
+
+  it('clickable-div: 상속된 손가락 모양은 가장 바깥 요소만 알리고, 안에 링크·버튼이 있는 카드는 통과한다', () => {
+    const outer = run('<div id="card" style="cursor:pointer"><span>제목</span><span>내용</span></div>');
+    expect(outer.map((f) => f.selector)).toEqual(['div#card']);
+    const cardWithLink = run('<div style="cursor:pointer"><a href="/detail">자세히</a></div>');
+    expect(cardWithLink).toEqual([]);
+  });
+
+  it('table-header: th 없이 td 만 있는 표를 찾는다(th 가 있거나 role=presentation 은 통과)', () => {
+    const found = run(
+      `<table id="bad"><tr><td>상품</td><td>가격</td></tr></table>
+       <table><tr><th>상품</th></tr><tr><td>사과</td></tr></table>
+       <table role="presentation"><tr><td>배치용</td></tr></table>
+       <table></table>`,
+    );
+    expect(found.map((f) => [f.ruleId, f.selector])).toEqual([['table-header', 'table#bad']]);
+  });
+
+  it('깨끗한 페이지: 위 6종 어느 것도 오탐하지 않는다', () => {
+    const found = run(
+      `<h1>제목</h1>
+       <button type="button" style="cursor:pointer">저장</button>
+       <img src="/a.png" alt="분기별 매출 막대 그래프">
+       <table><thead><tr><th scope="col">월</th><th scope="col">매출</th></tr></thead><tbody><tr><td>1월</td><td>10</td></tr></tbody></table>
+       <div id="one" tabindex="0">포커스</div><div id="two"></div>`,
+    );
+    expect(found).toEqual([]);
+  });
+});

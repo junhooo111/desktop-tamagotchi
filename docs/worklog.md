@@ -153,3 +153,11 @@
 - 설치본에 `extension/` 폴더를 `resources/extension` 으로 넣고(`extraResources`), 우클릭 메뉴 `검사 도구 ▸ 크롬 확장 폴더 열기` 로 탐색기에서 바로 열게 했다. 그래야 설치한 사람이 저장소 없이 크롬에 확장을 로드할 수 있다. `npm run pack` 으로 폴더가 들어가는 것을 확인했다.
 - `docs/images/pets.png`(펫 6종 성체·새끼·알) 추가.
 - 아직 하지 않은 것: 현재 `release/` 의 설치 파일은 이 변경 전에 만든 것이라 다시 만들어야 하고, GitHub Releases 에는 아무것도 올리지 않았다(README 의 다운로드 안내는 릴리스를 올린 뒤에 완성된다).
+
+## 2026-11-25 — 검사 규칙 10종 → 16종
+
+- 새 규칙 6개: `dup-id`(같은 id 중복), `zoom-disabled`(확대 막음), `tabindex-positive`, `alt-quality`(alt 가 파일 이름·"image"·"사진"), `clickable-div`(div·span 을 버튼처럼), `table-header`(th 없는 표). 각각 배움 카드·퀴즈·수집기 감지·테스트를 갖춘다.
+- 고른 기준: 페이지 DOM 만으로 판별할 수 있고 오탐이 적으며, AI가 만든 화면에서 자주 나오는 것. 일부러 뺀 것: `h1 없음`(조각 화면에서 오탐이 많다), 이미지 크기 미지정(Tailwind 처럼 CSS 로 잡는 경우가 많아 노이즈).
+- `clickable-div` 는 cursor: pointer·onclick 으로 짐작한다. cursor 는 자식에게 상속되므로 가장 바깥 요소만 알리고, role·tabindex 가 있거나 안에 링크·버튼이 있으면 넘어간다(오탐 방지 테스트 포함).
+- 확장의 `content.js` 가 새 규칙을 담고 있는지 테스트가 확인한다(처음에 실패해서 빌드로 다시 만들어야 한다는 걸 잡아 줬다). 실제 브라우저에서 시험 페이지로 5개 규칙이 잡히는 것을 확인했다(확대 막음은 단위 테스트로 확인).
+- 시험 페이지(`test-pages/sample.html`)에 새 문제를 추가했다.

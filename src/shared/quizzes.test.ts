@@ -15,7 +15,7 @@ describe('확인 퀴즈', () => {
 
   it('정답 위치가 한쪽으로만 쏠려 있지 않다', () => {
     const counts = [0, 1, 2].map((n) => RULE_IDS.filter((id) => QUIZZES[id].answer === n).length);
-    expect(Math.max(...counts)).toBeLessThanOrEqual(5);
+    expect(Math.max(...counts)).toBeLessThanOrEqual(Math.ceil(RULE_IDS.length / 3) + 1);
     expect(Math.min(...counts)).toBeGreaterThanOrEqual(1);
   });
 });

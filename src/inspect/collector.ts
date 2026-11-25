@@ -237,6 +237,70 @@ export function collectPage(opts: { requireLayout: boolean }): PageSnapshot {
     if (ratio < need) add('contrast', el, `대비 ${ratio.toFixed(1)}:1 (기준 ${need}:1)`);
   }
 
+  // 11. 같은 id 중복
+  const byId = new Map<string, Element[]>();
+  doc.querySelectorAll('[id]').forEach((el) => {
+    const id = el.getAttribute('id') ?? '';
+    if (id === '') return;
+    byId.set(id, [...(byId.get(id) ?? []), el]);
+  });
+  byId.forEach((els, id) => {
+    // 첫 번째는 정상으로 보고, 뒤따르는 중복 요소를 문제로 알린다.
+    els.slice(1).forEach((el) => {
+      if (isShown(el)) add('dup-id', el, `id="${id}" 가 ${els.length}번 쓰임`);
+    });
+  });
+
+  // 12. 확대 막음 (viewport 메타)
+  const viewport = doc.querySelector('meta[name="viewport"]');
+  const viewportContent = (viewport?.getAttribute('content') ?? '').toLowerCase().replace(/\s+/g, '');
+  if (viewportContent !== '') {
+    const noScale = /user-scalable=(no|0)/.test(viewportContent);
+    const maxScale = /maximum-scale=([0-9.]+)/.exec(viewportContent);
+    if (noScale || (maxScale && Number(maxScale[1]) <= 1)) add('zoom-disabled', null, viewportContent.slice(0, 60));
+  }
+
+  // 13. 양수 tabindex
+  doc.querySelectorAll('[tabindex]').forEach((el) => {
+    const n = Number(el.getAttribute('tabindex'));
+    if (Number.isFinite(n) && n > 0 && isShown(el)) add('tabindex-positive', el, `tabindex="${n}"`);
+  });
+
+  // 14. alt 가 파일 이름이거나 뜻 없는 말
+  const fileLike = /\.(png|jpe?g|gif|svg|webp|avif|bmp)$/i;
+  const generic = /^(image|img|photo|picture|pic|이미지|사진|그림)[\s_-]*\d*$/i;
+  const cameraName = /^(img|dsc|screenshot|image)[_-]?\d{2,}/i;
+  doc.querySelectorAll('img[alt]').forEach((img) => {
+    const alt = (img.getAttribute('alt') ?? '').trim();
+    if (alt === '' || !isShown(img)) return;
+    if (fileLike.test(alt) || generic.test(alt) || cameraName.test(alt)) add('alt-quality', img, `alt="${alt.slice(0, 40)}"`);
+  });
+
+  // 15. div·span 을 버튼처럼 쓴 곳 (클릭 모양인데 키보드·보조 기술로 접근할 수 없다)
+  const interactiveSelector = 'a[href], button, input, select, textarea, summary, label, [role], [tabindex]';
+  const clickableTags = ['div', 'span', 'li', 'img', 'svg', 'section', 'article'];
+  for (const el of Array.from(doc.body ? doc.body.querySelectorAll('div, span, li, img, svg, section, article') : []).slice(0, 2500)) {
+    if (full('clickable-div')) break;
+    if (!clickableTags.includes(el.tagName.toLowerCase()) || !isShown(el)) continue;
+    if (el.closest(interactiveSelector) !== null) continue;
+    const pointer = getComputedStyle(el).cursor === 'pointer';
+    const parent = el.parentElement;
+    // cursor 는 자식에게 상속되므로, 부모도 손가락 모양이면 가장 바깥 요소만 문제로 본다.
+    if (!pointer && !el.hasAttribute('onclick')) continue;
+    if (pointer && parent && getComputedStyle(parent).cursor === 'pointer') continue;
+    // 안에 진짜 링크·버튼이 있으면 그쪽으로 접근할 수 있으므로 넘어간다(카드 전체를 누르는 흔한 패턴).
+    if (el.querySelector('a[href], button, [role="button"], [role="link"]') !== null) continue;
+    const label = (el.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 20);
+    add('clickable-div', el, `<${el.tagName.toLowerCase()}>${label !== '' ? ' "' + label + '"' : ''}`);
+  }
+
+  // 16. 표에 제목 칸(th)이 없음
+  doc.querySelectorAll('table').forEach((table) => {
+    const role = (table.getAttribute('role') ?? '').toLowerCase();
+    if (role === 'presentation' || role === 'none' || !isShown(table)) return;
+    if (table.querySelector('th') === null && table.querySelector('td') !== null) add('table-header', table, 'th 없음');
+  });
+
   return {
     url: location.href,
     title: doc.title,
