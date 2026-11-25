@@ -54,3 +54,12 @@ describe('확장 background.js', () => {
     expect(new Set(urls)).toEqual(new Set(['http://127.0.0.1:47831']));
   });
 });
+
+describe('설치본에 확장 폴더 포함', () => {
+  it('electron-builder 가 extension 폴더를 resources/extension 으로 넣는다(설치한 사람이 크롬에 로드할 수 있게)', () => {
+    const pkg = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf8')) as {
+      build: { extraResources: { from: string; to: string }[] };
+    };
+    expect(pkg.build.extraResources).toContainEqual({ from: 'extension', to: 'extension' });
+  });
+});

@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { BrowserWindow, Menu, Tray, app, ipcMain, nativeImage, screen } from 'electron';
+import { BrowserWindow, Menu, Tray, app, ipcMain, nativeImage, screen, shell } from 'electron';
 import { SnapshotFeed, mergeScans } from '../inspect/feed.js';
 import { scanLocalPages, type Finding } from '../inspect/scan.js';
 import { LESSONS } from '../shared/lessons.js';
@@ -416,6 +416,19 @@ function applyElapsedInPlace(): PetState {
   return pet;
 }
 
+/** 크롬 확장이 들어 있는 폴더. 설치본은 resources/extension, 개발 중에는 저장소의 extension 폴더다. */
+function extensionDir(): string {
+  return app.isPackaged ? path.join(process.resourcesPath, 'extension') : path.join(projectRoot, 'extension');
+}
+
+/** 탐색기로 확장 폴더를 연다. 크롬의 "압축해제된 확장 프로그램을 로드합니다"에서 이 폴더를 고르면 된다. */
+function openExtensionFolder(): void {
+  void shell.openPath(extensionDir()).then((error) => {
+    if (error) say('확장 폴더를 열지 못했어요');
+    else say('크롬 주소창에 chrome://extensions → 개발자 모드 → 이 폴더를 로드하세요');
+  });
+}
+
 /** 원격 디버깅 포트가 열린 별도 프로필의 크롬/엣지를 연다. 브라우저를 못 찾으면 false. */
 function openInspectBrowser(url: string): boolean {
   const env = process.env as BrowserEnv;
@@ -467,6 +480,7 @@ function buildMenu(): Menu {
           },
         },
         { label: '검사 체험 (시험 페이지 열기)', click: () => void openDemo() },
+        { label: '크롬 확장 폴더 열기 (평소 쓰는 크롬에서 검사)', click: () => openExtensionFolder() },
         { type: 'separator' },
         { label: `확장 수신 포트 ${FEED_PORT} · 디버그 포트 ${CDP_PORT} · localhost 페이지만 검사`, enabled: false },
       ],

@@ -25,6 +25,12 @@
       "output": "release",
       "buildResources": "build"
     },
+    "extraResources": [
+      {
+        "from": "extension",
+        "to": "extension"
+      }
+    ],
     "files": [
       "dist/**/*",
       "!dist/shared/art/dev-preview.js",
