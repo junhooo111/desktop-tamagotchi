@@ -3,7 +3,7 @@ import { resolvePose } from '../shared/animation.js';
 import { BUBBLE_GAP, STAGE_SCALE, WINDOW, petPixelSize } from '../shared/layout.js';
 import { boundsOf, orientRows } from '../shared/pixel.js';
 import { spriteSet, type FrameName, type SpriteSet } from '../shared/species.js';
-import type { PetView, TipBubble } from '../shared/view.js';
+import type { NoticeBubble, NoticeMessage, PetView, TipBubble } from '../shared/view.js';
 
 interface PetApi {
   getView(): Promise<PetView>;
@@ -12,6 +12,8 @@ interface PetApi {
   drag(phase: 'start' | 'end'): void;
   contextMenu(): void;
   tipConfirm(): void;
+  openNotice(): void;
+  onNotice(callback: (message: NoticeMessage) => void): void;
   onView(callback: (view: PetView) => void): void;
   onSay(callback: (text: string) => void): void;
   onTip(callback: (tip: TipBubble | null) => void): void;
@@ -27,6 +29,10 @@ declare global {
 const CLICK_MOVE_LIMIT = 4;
 const HIT_PADDING = 5;
 const BUBBLE_MS = 4_000;
+/** 문제를 찾았을 때 말풍선이 떠 있는 시간 */
+const NOTICE_MS = 12_000;
+/** 펫에서 마우스가 벗어난 뒤 말풍선을 거두기까지의 시간 */
+const NOTICE_LEAVE_MS = 500;
 const ZZZ_COLOR = '#5b6bbf';
 const ALERT_COLOR = '#e5484d';
 /** 'Z' 모양 4x4 도트 */
@@ -35,6 +41,7 @@ const Z_GLYPH = ['###.', '..#.', '.#..', '###.'];
 const canvas = document.getElementById('pet') as HTMLCanvasElement;
 const bubble = document.getElementById('bubble') as HTMLDivElement;
 const tipEl = document.getElementById('tip') as HTMLElement;
+const noticeEl = document.getElementById('notice') as HTMLElement;
 canvas.width = WINDOW.width;
 canvas.height = WINDOW.height;
 const ctx = canvas.getContext('2d') as CanvasRenderingContext2D;
@@ -185,12 +192,55 @@ function anchorBubbles(): void {
   const petTop = figureTop(view);
   const base = WINDOW.height - petTop + BUBBLE_GAP;
   tipEl.style.bottom = `${base}px`;
-  const above = tipEl.hidden ? base : WINDOW.height - tipEl.getBoundingClientRect().top + 8;
+  noticeEl.style.bottom = `${base}px`;
+  const lower = !tipEl.hidden ? tipEl : !noticeEl.hidden ? noticeEl : null;
+  const above = lower ? WINDOW.height - lower.getBoundingClientRect().top + 8 : base;
   bubble.style.bottom = `${above}px`;
   document.documentElement.style.setProperty('--shift', `${view.bubbleShift}px`);
 }
 
+// ---- 찾은 문제 말풍선: 알릴 때 떠 있다가 사라지고, 펫에 마우스를 올리면 다시 나온다 ----
+let notice: NoticeBubble | null = null;
+let noticeTimer: number | undefined;
+let hovering = false;
+
+function hideNotice(): void {
+  window.clearTimeout(noticeTimer);
+  noticeEl.hidden = true;
+  anchorBubbles();
+}
+
+/** 기억하는 문제가 있으면 말풍선을 띄운다. ms 가 있으면 그 시간 뒤에 거둔다. FE 지식 말풍선이 떠 있으면 양보한다. */
+function showNotice(ms?: number): void {
+  window.clearTimeout(noticeTimer);
+  if (!notice || !tipEl.hidden) return;
+  noticeEl.hidden = false;
+  anchorBubbles();
+  if (ms !== undefined) noticeTimer = window.setTimeout(hideNotice, ms);
+}
+
+function onNotice(message: NoticeMessage): void {
+  notice = message.notice;
+  if (!notice) {
+    hideNotice();
+    return;
+  }
+  // 글자는 textContent 로만 넣는다(HTML 로 해석하지 않는다).
+  (document.getElementById('notice-title') as HTMLElement).textContent = notice.title;
+  (document.getElementById('notice-where') as HTMLElement).textContent = notice.where;
+  (document.getElementById('notice-fix') as HTMLElement).textContent = notice.fix;
+  if (message.show) showNotice(hovering ? undefined : NOTICE_MS);
+}
+
+function hoverPet(on: boolean): void {
+  if (on === hovering) return;
+  hovering = on;
+  if (on) showNotice(); // 마우스가 올라가 있는 동안은 계속 보여 준다
+  else if (!noticeEl.hidden) showNotice(NOTICE_LEAVE_MS);
+}
+
 function showTip(tip: TipBubble | null): void {
+  if (tip) hideNotice(); // 지식 말풍선이 우선이다
   if (!tip) {
     tipEl.hidden = true;
   } else {
@@ -246,7 +296,9 @@ function setInteractive(value: boolean): void {
 
 document.addEventListener('mousemove', (e) => {
   // 펫이나 지식 말풍선(확인 버튼) 위에서만 클릭을 받는다.
-  if (!pointer) setInteractive(insidePet(e.clientX, e.clientY) || insideTip(e.clientX, e.clientY));
+  const onPet = insidePet(e.clientX, e.clientY);
+  hoverPet(onPet);
+  if (!pointer) setInteractive(onPet || insideTip(e.clientX, e.clientY));
 });
 
 (document.getElementById('tip-toggle') as HTMLElement).addEventListener('click', (e) => {
@@ -274,7 +326,15 @@ function endPointer(e: PointerEvent): void {
   const moved = Math.hypot(e.screenX - pointer.startX, e.screenY - pointer.startY);
   pointer = null;
   window.petApi.drag('end');
-  if (moved < CLICK_MOVE_LIMIT) void window.petApi.act('touch');
+  if (moved < CLICK_MOVE_LIMIT) {
+    // 찾은 문제 말풍선이 떠 있을 때 펫을 누르면 쓰다듬기 대신 배움 카드가 열린다.
+    if (!noticeEl.hidden) {
+      window.petApi.openNotice();
+      hideNotice();
+    } else {
+      void window.petApi.act('touch');
+    }
+  }
 }
 canvas.addEventListener('pointerup', endPointer);
 canvas.addEventListener('pointercancel', endPointer);
@@ -297,6 +357,7 @@ window.petApi.onSay((text) => {
   anchorBubbles();
 });
 window.petApi.onTip(showTip);
+window.petApi.onNotice(onNotice);
 
 void window.petApi.getView().then((initial) => {
   view = initial;

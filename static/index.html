@@ -12,6 +12,13 @@
   <body>
     <canvas id="pet" width="460" height="400"></canvas>
     <div id="bubble" hidden></div>
+    <section id="notice" hidden aria-live="polite">
+      <span class="tag">문제 발견</span>
+      <strong id="notice-title"></strong>
+      <p id="notice-where"></p>
+      <p class="fix"><b>이렇게 고쳐요</b><span id="notice-fix"></span></p>
+      <p class="hint">펫을 누르면 자세히 알려 줄게요</p>
+    </section>
     <section id="tip" hidden aria-live="polite">
       <span class="tag">FE 지식</span>
       <strong id="tip-title"></strong>

@@ -12,6 +12,8 @@ import { BrowserWindow, Menu, Tray, app, ipcMain, nativeImage, screen } from 'el
 import { SnapshotFeed, mergeScans } from '../inspect/feed.js';
 import { scanLocalPages, type Finding } from '../inspect/scan.js';
 import { LESSONS } from '../shared/lessons.js';
+import { noticeOf } from '../shared/notice.js';
+import type { NoticeMessage } from '../shared/view.js';
 import { QUIZZES } from '../shared/quizzes.js';
 import { TIP_PENDING_MS, pickTip, shouldOfferTip, type Tip } from '../shared/tips.js';
 import { BUBBLE_GAP, TIP_BUBBLE, WINDOW, bubbleShift, petPixelSize } from '../shared/layout.js';
@@ -118,6 +120,8 @@ const extensionFeed = new SnapshotFeed();
 let feedServer: FeedServer | null = null;
 let queue: Finding[] = [];
 let active: Finding | null = null;
+/** 마지막으로 알린 문제. 말풍선이 사라진 뒤에도 기억해 두었다가, 펫에 마우스를 올리면 다시 보여 준다. */
+let notice: Finding | null = null;
 let announcedKey = '';
 let lastInspectAt = 0;
 let scanning = false;
@@ -208,6 +212,14 @@ function sendView(force = false): void {
   win.webContents.send('pet:view', view);
 }
 
+/** 렌더러에 기억할 문제를 알린다. show 면 바로 띄우고, 아니면 hover 때만 나온다. null 이면 지운다. */
+function setNotice(finding: Finding | null, show: boolean): void {
+  notice = finding;
+  if (!win || win.isDestroyed()) return;
+  const message: NoticeMessage = { notice: finding ? noticeOf(finding) : null, show };
+  win.webContents.send('pet:notice', message);
+}
+
 function say(text: string): void {
   if (text && win && !win.isDestroyed()) win.webContents.send('pet:say', text);
 }
@@ -263,6 +275,7 @@ async function scanOnce(): Promise<void> {
     const result = mergeScans(await scanLocalPages(CDP_PORT), fromExtension);
     if (!result.reachable) {
       queue = [];
+      if (notice) setNotice(null, false);
       setScanStatus(STATUS_OFF);
       return;
     }
@@ -283,6 +296,8 @@ async function scanOnce(): Promise<void> {
       persist();
     }
 
+    // 고쳐서 사라진 문제는 더 알리지 않는다.
+    if (notice && !result.findings.some((f) => f.key === notice?.key)) setNotice(null, false);
     progress = prune(progress, now);
     // 화면에 위치가 있는 문제를 먼저 알린다.
     queue = pendingFindings(result.findings, progress, now).sort((a, b) => Number(b.rect !== null) - Number(a.rect !== null));
@@ -347,6 +362,7 @@ function finishCard(kind: 'confirm' | 'later', choice: number | null = null): vo
       if (choice === null || choice < 0 || choice > 2) return;
       const correct = choice === QUIZZES[finding.ruleId].answer;
       progress = confirm(progress, finding.key, now);
+      if (notice?.key === finding.key) setNotice(null, false);
       const result = learn(applyElapsedInPlace(), 'confirm', correct ? QUIZ_BONUS : 0);
       pet = result.pet;
       say(result.message);
@@ -580,7 +596,7 @@ function updateInspection(now: number, dtMs: number): void {
     if (behavior.mode === 'alert') {
       if (announcedKey !== active.key) {
         announcedKey = active.key;
-        say(LESSONS[active.ruleId].bubble);
+        setNotice(active, true);
       }
     } else if (!traveling && !cardWin) {
       progress = snooze(progress, active.key, now);
@@ -672,6 +688,15 @@ function setupIpc(): void {
     };
   });
   ipcMain.on('tip:confirm', () => confirmTip());
+  // 사라진 말풍선을 hover 로 다시 띄운 뒤 펫을 누르면, 그 문제의 배움 카드를 연다.
+  ipcMain.on('notice:open', () => {
+    if (!notice || cardWin) return;
+    if (active?.key !== notice.key) {
+      queue = queue.filter((f) => f.key !== notice?.key);
+      active = notice;
+    }
+    openCard();
+  });
   ipcMain.on('card:confirm', (_event, choice: unknown) =>
     finishCard('confirm', typeof choice === 'number' ? choice : null),
   );

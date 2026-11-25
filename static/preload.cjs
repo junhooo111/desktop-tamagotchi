@@ -10,5 +10,7 @@ contextBridge.exposeInMainWorld('petApi', {
   tipConfirm: () => ipcRenderer.send('tip:confirm'),
   onView: (callback) => ipcRenderer.on('pet:view', (_event, view) => callback(view)),
   onSay: (callback) => ipcRenderer.on('pet:say', (_event, text) => callback(text)),
+  openNotice: () => ipcRenderer.send('notice:open'),
+  onNotice: (callback) => ipcRenderer.on('pet:notice', (_event, message) => callback(message)),
   onTip: (callback) => ipcRenderer.on('pet:tip', (_event, tip) => callback(tip)),
 });

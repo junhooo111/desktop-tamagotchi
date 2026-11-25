@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BUBBLE_GAP, STAGE_SCALE, WINDOW, petPixelSize } from '../shared/layout.js';
 import { boundsOf } from '../shared/pixel.js';
 import { spriteSet } from '../shared/species.js';
-import type { PetView, TipBubble } from '../shared/view.js';
+import type { NoticeBubble, NoticeMessage, PetView, TipBubble } from '../shared/view.js';
 
 const html = fs.readFileSync(path.join(process.cwd(), 'static', 'index.html'), 'utf8');
 const body = /<body>([\s\S]*)<\/body>/.exec(html)?.[1]?.replace(/<script[\s\S]*?<\/script>/g, '') ?? '';
@@ -30,6 +30,12 @@ const view = (over: Partial<PetView> = {}): PetView => ({
   ...over,
 });
 
+const notice: NoticeBubble = {
+  title: '손가락으로 누르기엔 너무 작아요!',
+  where: 'button#save (20x18px)',
+  fix: '누르는 영역을 24px 이상으로 키우세요.',
+};
+
 const tip: TipBubble = { title: '지식 제목', body: '지식 본문', code: 'const a = 1;', xp: 2 };
 
 interface Harness {
@@ -40,16 +46,19 @@ interface Harness {
     drag: ReturnType<typeof vi.fn>;
     contextMenu: ReturnType<typeof vi.fn>;
     tipConfirm: ReturnType<typeof vi.fn>;
+    openNotice: ReturnType<typeof vi.fn>;
   };
   emitView: (v: PetView) => void;
   emitSay: (t: string) => void;
   emitTip: (t: TipBubble | null) => void;
+  emitNotice: (n: NoticeBubble | null, show: boolean) => void;
 }
 
 async function start(initial: PetView = view()): Promise<Harness> {
   let onView: (v: PetView) => void = () => {};
   let onSay: (t: string) => void = () => {};
   let onTip: (t: TipBubble | null) => void = () => {};
+  let onNotice: (m: NoticeMessage) => void = () => {};
   const api = {
     getView: vi.fn(async () => initial),
     act: vi.fn(async () => true),
@@ -57,6 +66,8 @@ async function start(initial: PetView = view()): Promise<Harness> {
     drag: vi.fn(),
     contextMenu: vi.fn(),
     tipConfirm: vi.fn(),
+    openNotice: vi.fn(),
+    onNotice: (cb: (m: NoticeMessage) => void) => (onNotice = cb),
     onView: (cb: (v: PetView) => void) => (onView = cb),
     onSay: (cb: (t: string) => void) => (onSay = cb),
     onTip: (cb: (t: TipBubble | null) => void) => (onTip = cb),
@@ -65,7 +76,7 @@ async function start(initial: PetView = view()): Promise<Harness> {
   vi.resetModules();
   await import('./renderer.js');
   await flush();
-  return { api, emitView: (v) => onView(v), emitSay: (t) => onSay(t), emitTip: (t) => onTip(t) };
+  return { api, emitView: (v) => onView(v), emitSay: (t) => onSay(t), emitTip: (t) => onTip(t), emitNotice: (n, show) => onNotice({ notice: n, show }) };
 }
 
 /** 지식 말풍선의 화면 위치를 흉내 낸다(jsdom 은 레이아웃을 계산하지 않는다). */
@@ -302,5 +313,113 @@ describe('클릭 통과', () => {
     const h = await start(view({ mode: 'hang' }));
     move(petX, petY);
     expect(h.api.setInteractive).not.toHaveBeenCalledWith(true);
+  });
+});
+
+describe('찾은 문제 말풍선', () => {
+  const move = (x: number, y: number): void => {
+    document.dispatchEvent(new MouseEvent('mousemove', { clientX: x, clientY: y, bubbles: true }));
+  };
+  const petX = Math.round(WINDOW.width / 2);
+  const petY = WINDOW.height - 10;
+  const click = (x: number, y: number): void => {
+    const canvas = el('pet') as HTMLCanvasElement;
+    (canvas as unknown as { setPointerCapture: () => void }).setPointerCapture = () => {};
+    const ev = (type: string): Event =>
+      Object.assign(new MouseEvent(type, { clientX: x, clientY: y, screenX: 10, screenY: 10, button: 0, bubbles: true }), { pointerId: 1 });
+    canvas.dispatchEvent(ev('pointerdown'));
+    canvas.dispatchEvent(ev('pointerup'));
+  };
+
+  it('문제를 찾으면 무엇이 문제인지·어디인지·어떻게 고치는지를 함께 보여 준다', async () => {
+    const h = await start();
+    h.emitNotice(notice, true);
+    expect(el('notice').hidden).toBe(false);
+    expect(el('notice-title').textContent).toBe('손가락으로 누르기엔 너무 작아요!');
+    expect(el('notice-where').textContent).toBe('button#save (20x18px)');
+    expect(el('notice-fix').textContent).toBe('누르는 영역을 24px 이상으로 키우세요.');
+  });
+
+  it('시간이 지나면 사라진다', async () => {
+    const h = await start();
+    h.emitNotice(notice, true);
+    vi.advanceTimersByTime(11_000);
+    expect(el('notice').hidden).toBe(false);
+    vi.advanceTimersByTime(2_000);
+    expect(el('notice').hidden).toBe(true);
+  });
+
+  it('사라진 뒤 펫에 마우스를 올리면 다시 나오고, 벗어나면 잠시 뒤 사라진다', async () => {
+    const h = await start();
+    h.emitNotice(notice, true);
+    vi.advanceTimersByTime(13_000);
+    expect(el('notice').hidden).toBe(true);
+    move(petX, petY);
+    expect(el('notice').hidden).toBe(false);
+    vi.advanceTimersByTime(60_000); // 올려 둔 동안은 계속 보인다
+    expect(el('notice').hidden).toBe(false);
+    move(5, 5);
+    vi.advanceTimersByTime(600);
+    expect(el('notice').hidden).toBe(true);
+  });
+
+  it('기억만 해 둔 문제(show=false)는 처음엔 안 보이고, hover 하면 나온다', async () => {
+    const h = await start();
+    h.emitNotice(notice, false);
+    expect(el('notice').hidden).toBe(true);
+    move(petX, petY);
+    expect(el('notice').hidden).toBe(false);
+  });
+
+  it('기억하는 문제가 없으면 hover 해도 아무것도 나오지 않는다', async () => {
+    await start();
+    move(petX, petY);
+    expect(el('notice').hidden).toBe(true);
+  });
+
+  it('고치거나 확인해서 문제가 지워지면(null) 말풍선도 사라지고 hover 해도 안 나온다', async () => {
+    const h = await start();
+    h.emitNotice(notice, true);
+    h.emitNotice(null, false);
+    expect(el('notice').hidden).toBe(true);
+    move(5, 5);
+    move(petX, petY);
+    expect(el('notice').hidden).toBe(true);
+  });
+
+  it('말풍선이 떠 있을 때 펫을 누르면 쓰다듬기 대신 배움 카드를 연다', async () => {
+    const h = await start();
+    h.emitNotice(notice, true);
+    click(petX, petY);
+    expect(h.api.openNotice).toHaveBeenCalledTimes(1);
+    expect(h.api.act).not.toHaveBeenCalled();
+    expect(el('notice').hidden).toBe(true);
+  });
+
+  it('말풍선이 없을 때는 평소처럼 쓰다듬는다', async () => {
+    const h = await start();
+    click(petX, petY);
+    expect(h.api.act).toHaveBeenCalledWith('touch');
+    expect(h.api.openNotice).not.toHaveBeenCalled();
+  });
+
+  it('FE 지식 말풍선이 떠 있으면 양보하고, 글자를 HTML 로 해석하지 않는다', async () => {
+    const h = await start();
+    h.emitNotice({ ...notice, title: '<img src=x onerror=alert(1)>' }, true);
+    expect(el('notice').querySelector('img')).toBeNull();
+    h.emitTip(tip);
+    expect(el('notice').hidden).toBe(true);
+    move(petX, petY);
+    expect(el('notice').hidden).toBe(true);
+  });
+
+  it('지식·문제 말풍선 중 보이는 것의 위에 한마디 말풍선이 선다', async () => {
+    const h = await start();
+    vi.spyOn(el('notice'), 'getBoundingClientRect').mockReturnValue({
+      left: 20, top: 80, right: 260, bottom: 240, x: 20, y: 80, width: 240, height: 160, toJSON: () => ({}),
+    });
+    h.emitNotice(notice, true);
+    h.emitSay('안녕!');
+    expect(el('bubble').style.bottom).toBe(String(WINDOW.height - 80 + 8) + 'px');
   });
 });
