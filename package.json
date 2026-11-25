@@ -6,7 +6,7 @@
   "type": "module",
   "main": "dist/main/main.js",
   "scripts": {
-    "build": "node scripts/clean-dist.mjs && tsc -p tsconfig.json",
+    "build": "node scripts/clean-dist.mjs && tsc -p tsconfig.json && node scripts/build-extension.mjs",
     "start": "npm run build && electron .",
     "smoke": "npm run build && electron . --smoke",
     "test": "vitest run",
@@ -15,7 +15,8 @@
     "demo": "npm run build && node scripts/demo-server.mjs",
     "icon": "npm run build && node scripts/make-icon.mjs",
     "pack": "npm run build && electron-builder --win --dir",
-    "dist": "npm run build && electron-builder --win --publish never"
+    "dist": "npm run build && electron-builder --win --publish never",
+    "build:extension": "node scripts/build-extension.mjs"
   },
   "build": {
     "appId": "com.desktop-tamagotchi.app",

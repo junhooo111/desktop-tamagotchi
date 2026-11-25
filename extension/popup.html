@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>Desktop Tamagotchi</title>
+    <style>
+      body { width: 260px; margin: 0; padding: 14px; font: 13px/1.5 system-ui, 'Malgun Gothic', sans-serif; color: #222; }
+      h1 { margin: 0 0 8px; font-size: 14px; }
+      .row { display: flex; align-items: center; gap: 8px; }
+      .dot { width: 10px; height: 10px; border-radius: 50%; background: #999; }
+      .dot.on { background: #2e9e4f; }
+      .dot.off { background: #c0392b; }
+      p { margin: 8px 0 0; color: #555; }
+    </style>
+  </head>
+  <body>
+    <h1>Desktop Tamagotchi 검사 도우미</h1>
+    <div class="row"><span id="dot" class="dot"></span><span id="state">확인 중…</span></div>
+    <p>localhost 페이지만 살펴봅니다. 그 밖의 사이트는 읽지도 보내지도 않아요.</p>
+    <script src="popup.js"></script>
+  </body>
+</html>

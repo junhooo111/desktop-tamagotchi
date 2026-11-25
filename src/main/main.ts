@@ -9,6 +9,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BrowserWindow, Menu, Tray, app, ipcMain, nativeImage, screen } from 'electron';
+import { SnapshotFeed, mergeScans } from '../inspect/feed.js';
 import { scanLocalPages, type Finding } from '../inspect/scan.js';
 import { LESSONS } from '../shared/lessons.js';
 import { QUIZZES } from '../shared/quizzes.js';
@@ -50,6 +51,7 @@ import {
   type StepContext,
   type Trigger,
 } from './behavior.js';
+import { FEED_PORT_DEFAULT, startFeedServer, type FeedServer } from './feed-server.js';
 import { petTargetFor } from './inspect-target.js';
 import {
   confirm,
@@ -77,10 +79,12 @@ const HUNGRY_NOTICE_MS = 5 * 60_000;
 const CURSOR_MOVE_PX = 3;
 /** 크롬 원격 디버깅 포트. 환경 변수 PET_CDP_PORT 로 바꿀 수 있다. */
 const CDP_PORT = Number(process.env['PET_CDP_PORT'] ?? 9222);
+/** 브라우저 확장이 검사 결과를 보내는 로컬 포트(127.0.0.1 전용). 환경 변수 PET_FEED_PORT 로 바꿀 수 있다. */
+const FEED_PORT = Number(process.env['PET_FEED_PORT'] ?? FEED_PORT_DEFAULT);
 const SCAN_MS = 10_000;
 /** 문제를 찾아 알린 뒤 다음 문제를 알리기까지 최소 간격 */
 const INSPECT_GAP_MS = 30_000;
-const STATUS_OFF = '검사: 연결 안 됨 (메뉴 ▸ 검사 도구 ▸ 검사용 브라우저 열기)';
+const STATUS_OFF = '검사: 연결 안 됨 (크롬 확장을 켜고 localhost 페이지를 여세요)';
 const CARD_SIZE = { width: 380, height: 600 } as const;
 /** 검사 체험용 시험 페이지 서버 포트 */
 const DEMO_PORT = Number(process.env['PET_DEMO_PORT'] ?? 5199);
@@ -109,6 +113,9 @@ let savePath = '';
 // 검사 상태: 찾은 문제 대기열, 지금 알리는 문제, 학습 진행도
 let progress: Progress = emptyProgress();
 let progressPath = '';
+/** 브라우저 확장이 보낸 검사 결과 */
+const extensionFeed = new SnapshotFeed();
+let feedServer: FeedServer | null = null;
 let queue: Finding[] = [];
 let active: Finding | null = null;
 let announcedKey = '';
@@ -251,14 +258,15 @@ async function scanOnce(): Promise<void> {
   }
   scanning = true;
   try {
-    const result = await scanLocalPages(CDP_PORT);
     const now = Date.now();
+    const fromExtension = extensionFeed.scan(now);
+    const result = mergeScans(await scanLocalPages(CDP_PORT), fromExtension);
     if (!result.reachable) {
       queue = [];
       setScanStatus(STATUS_OFF);
       return;
     }
-    setScanStatus(`검사: 연결됨 · 로컬 페이지 ${result.scannedUrls.length}개`);
+    setScanStatus(`검사: ${fromExtension.reachable ? '확장 연결됨' : '연결됨'} · 로컬 페이지 ${result.scannedUrls.length}개`);
 
     const fixed = detectFixes(progress, result.scannedUrls, new Set(result.findings.map((f) => f.key)));
     if (fixed.length > 0) {
@@ -444,7 +452,7 @@ function buildMenu(): Menu {
         },
         { label: '검사 체험 (시험 페이지 열기)', click: () => void openDemo() },
         { type: 'separator' },
-        { label: `연결 포트 ${CDP_PORT} · localhost 페이지만 검사`, enabled: false },
+        { label: `확장 수신 포트 ${FEED_PORT} · 디버그 포트 ${CDP_PORT} · localhost 페이지만 검사`, enabled: false },
       ],
     },
     {
@@ -729,6 +737,9 @@ if (!app.requestSingleInstanceLock()) {
       persist();
     }, SAVE_MS);
 
+    void startFeedServer(extensionFeed, FEED_PORT, Date.now, (e) => console.error('확장 수신 서버를 열지 못했습니다', e.message)).then((s) => {
+      feedServer = s;
+    });
     setTimeout(() => void scanOnce(), 3_000);
     setInterval(() => void scanOnce(), SCAN_MS);
   });
@@ -736,6 +747,7 @@ if (!app.requestSingleInstanceLock()) {
   app.on('before-quit', () => {
     if (savePath && pet) persist();
     void demoServer?.close();
+    feedServer?.close();
   });
   // 창이 하나뿐이고 트레이로 끝낼 수 있으므로, 창이 닫혀도 앱은 유지한다.
   app.on('window-all-closed', () => {});

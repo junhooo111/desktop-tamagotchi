@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "Desktop Tamagotchi 검사 도우미",
+  "version": "0.1.0",
+  "description": "내가 개발 중인 localhost 페이지에서 놓친 부분(이미지 alt, 버튼 이름, 입력칸 라벨, 명암 대비 등)을 찾아 데스크톱 펫에게 알려 줍니다.",
+  "icons": { "128": "icon.png" },
+  "host_permissions": ["http://127.0.0.1:47831/*"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_title": "Desktop Tamagotchi", "default_popup": "popup.html" },
+  "content_scripts": [
+    {
+      "matches": [
+        "http://localhost/*",
+        "http://127.0.0.1/*",
+        "http://*.localhost/*",
+        "http://[::1]/*",
+        "https://localhost/*",
+        "https://127.0.0.1/*",
+        "https://*.localhost/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
