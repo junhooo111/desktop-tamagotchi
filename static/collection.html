@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'"
+    />
+    <title>뽑기·컬렉션</title>
+    <link rel="stylesheet" href="./collection.css" />
+  </head>
+  <body>
+    <main>
+      <h1>뽑기·컬렉션</h1>
+      <div class="wallet">
+        <strong id="tickets"></strong>
+        <span id="owned-count"></span>
+      </div>
+
+      <section class="gacha">
+        <div class="buttons">
+          <button id="pull-species" type="button"></button>
+          <button id="pull-cosmetic" type="button"></button>
+        </div>
+        <p class="hint" id="chances"></p>
+        <p class="hint" id="pity"></p>
+      </section>
+
+      <section id="result" class="result" hidden>
+        <canvas id="result-canvas" width="128" height="128" aria-label="뽑은 결과"></canvas>
+        <p id="result-text" role="status"></p>
+      </section>
+
+      <section>
+        <h2>가진 동물</h2>
+        <p class="hint">한 번에 한 마리만 꺼내서 키울 수 있어요. 꺼내 두지 않은 동물은 시간이 멈춰 있어요.</p>
+        <div id="grid" class="grid"></div>
+      </section>
+
+      <p class="hint earn">
+        뽑기권은 이렇게 받아요: 매일 처음 켜면 1장 · 돌봐 주기 25번마다 1장 · 레벨 5의 배수(5·10·15…)에 2장, 8·13·18…에 1장. 병을 고치지 않고 돌보기만 해도 모여요.
+      </p>
+
+      <footer>
+        <button id="close" type="button">닫기</button>
+      </footer>
+    </main>
+    <script type="module" src="../dist/renderer/collection.js"></script>
+  </body>
+</html>

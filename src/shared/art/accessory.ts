@@ -19,7 +19,7 @@ export const ACCESSORY_COLORS: Record<Accessory, { X: string; Y: string }> = {
   ribbon: { X: '#ff6b8b', Y: '#c2385a' },
   glasses: { X: '#ffffff', Y: '#2b3a55' },
   crown: { X: '#ffd84a', Y: '#e5484d' },
-  wings: { X: '#fff1b8', Y: '#ffd04a' },
+  wings: { X: '#a8dcff', Y: '#4a9fe0' },
   sprout: { X: '#6fcf6f', Y: '#2f9a45' },
   flower: { X: '#ff9ecb', Y: '#ffd04a' },
   partyhat: { X: '#5ab8ff', Y: '#ff6b8b' },
@@ -35,105 +35,58 @@ export interface HeadGeom {
 
 const even = (n: number): number => Math.round(n / 2) * 2;
 
+/** 문자 그림(한 글자 = 2x2 픽셀)을 (x, y)에 그린다. X·Y 는 장식 색, '.' 은 비운다. */
+function cells(t: Grid, x: number, y: number, rows: readonly string[]): void {
+  rows.forEach((row, ry) => {
+    [...row].forEach((ch, rx) => {
+      if (ch !== '.' && ch !== ' ') rect(t, x + rx * 2, y + ry * 2, 2, 2, ch);
+    });
+  });
+}
+
 /** 머리에 쓰는 장식: 리본·왕관은 머리 위에, 안경은 눈 둘레에 그린다. eyes 는 눈(2x2)의 왼쪽 위 칸이다. */
 export function drawHeadAccessory(g: Grid, acc: Accessory | undefined, head: HeadGeom, eyes: readonly { x: number; y: number }[]): void {
   switch (acc) {
     case 'crown': {
-      // 3칸 x 2칸: 뾰족한 끝 둘과 가운데 보석
-      const x = even(head.cx) - 3;
-      const y = Math.max(0, even(head.cy - head.ry) - 3);
-      part(
-        g,
-        (t) => {
-          rect(t, x, y, 2, 2, 'X');
-          rect(t, x + 4, y, 2, 2, 'X');
-          rect(t, x, y + 2, 2, 2, 'X');
-          rect(t, x + 2, y + 2, 2, 2, 'Y');
-          rect(t, x + 4, y + 2, 2, 2, 'X');
-        },
-        { outline: 'k' },
-      );
+      // 왕관: 뾰족한 끝 셋과 가운데 보석 (10x6)
+      const x = even(head.cx) - 5;
+      const y = Math.max(2, even(head.cy - head.ry) - 4);
+      part(g, (t) => cells(t, x, y, ['X.X.X', 'XXXXX', 'XXYXX']), { outline: 'k' });
       break;
     }
     case 'ribbon': {
-      // 머리 위쪽 뒤편에 단 큰 리본: 좌우 고리(4x6)와 가운데 매듭(4x2), 매듭 위아래는 비어 나비 모양이 된다 (12x6)
+      // 머리 위쪽 뒤편에 단 큰 리본: 좌우 고리와 가운데 매듭, 매듭 위아래는 비어 나비 모양이 된다 (12x6)
       const x = even(head.cx - head.rx * 0.35) - 6;
-      const y = Math.max(0, even(head.cy - head.ry) - 4);
-      part(
-        g,
-        (t) => {
-          rect(t, x, y, 4, 6, 'X');
-          rect(t, x + 8, y, 4, 6, 'X');
-          rect(t, x + 4, y + 2, 4, 2, 'Y');
-        },
-        { outline: 'k' },
-      );
+      const y = Math.max(2, even(head.cy - head.ry) - 4);
+      part(g, (t) => cells(t, x, y, ['XX..XX', 'XXYYXX', 'XX..XX']), { outline: 'k' });
       break;
     }
     case 'sprout': {
-      // 머리 위에 돋은 새싹: 줄기 하나와 양쪽 잎 (6x6)
-      const x = even(head.cx) - 3;
-      const y = Math.max(0, even(head.cy - head.ry) - 5);
-      part(
-        g,
-        (t) => {
-          rect(t, x, y, 2, 2, 'X');
-          rect(t, x + 4, y, 2, 2, 'X');
-          rect(t, x + 2, y + 2, 2, 2, 'Y');
-          rect(t, x, y + 2, 2, 2, 'X');
-          rect(t, x + 4, y + 2, 2, 2, 'X');
-          rect(t, x + 2, y + 4, 2, 2, 'Y');
-        },
-        { outline: 'k' },
-      );
+      // 새싹: 가는 줄기 위로 잎 둘이 V 자로 갈라져 돋는다 (14x10)
+      const x = even(head.cx) - 7;
+      const y = Math.max(2, even(head.cy - head.ry) - 8);
+      part(g, (t) => cells(t, x, y, ['XX...XX', 'XXX.XXX', '.XXYXX.', '...Y...', '...Y...']), { outline: 'k' });
       break;
     }
     case 'flower': {
-      // 머리 위쪽 뒤편의 꽃: 꽃잎 넷과 노란 가운데 (6x6)
-      const x = even(head.cx - head.rx * 0.35) - 3;
-      const y = Math.max(0, even(head.cy - head.ry) - 4);
-      part(
-        g,
-        (t) => {
-          rect(t, x + 2, y, 2, 2, 'X');
-          rect(t, x, y + 2, 2, 2, 'X');
-          rect(t, x + 2, y + 2, 2, 2, 'Y');
-          rect(t, x + 4, y + 2, 2, 2, 'X');
-          rect(t, x + 2, y + 4, 2, 2, 'X');
-        },
-        { outline: 'k' },
-      );
+      // 머리 위쪽 뒤편의 꽃: 꽃잎 다섯과 노란 가운데 (10x10)
+      const x = even(head.cx - head.rx * 0.35) - 5;
+      const y = Math.max(2, even(head.cy - head.ry) - 8);
+      part(g, (t) => cells(t, x, y, ['.X.X.', 'XXXXX', 'XXYXX', 'XXXXX', '.X.X.']), { outline: 'k' });
       break;
     }
     case 'partyhat': {
-      // 뾰족한 파티 모자: 끝에 방울, 아래로 갈수록 넓어진다 (8x8)
-      const x = even(head.cx) - 4;
-      const y = Math.max(0, even(head.cy - head.ry) - 6);
-      part(
-        g,
-        (t) => {
-          rect(t, x + 3, y, 2, 2, 'Y');
-          rect(t, x + 2, y + 2, 4, 2, 'X');
-          rect(t, x + 2, y + 4, 4, 2, 'Y');
-          rect(t, x, y + 6, 8, 2, 'X');
-        },
-        { outline: 'k' },
-      );
+      // 뾰족한 파티 모자: 끝에 방울, 줄무늬, 아래로 갈수록 넓어진다 (10x10)
+      const x = even(head.cx) - 5;
+      const y = Math.max(2, even(head.cy - head.ry) - 8);
+      part(g, (t) => cells(t, x, y, ['..Y..', '..X..', '.XYX.', '.XXX.', 'XYXYX']), { outline: 'k' });
       break;
     }
     case 'halo': {
-      // 머리 위에 떠 있는 고리 (8x4)
-      const x = even(head.cx) - 4;
-      const y = Math.max(0, even(head.cy - head.ry) - 6);
-      part(
-        g,
-        (t) => {
-          rect(t, x + 2, y, 4, 2, 'X');
-          rect(t, x, y + 2, 2, 2, 'Y');
-          rect(t, x + 6, y + 2, 2, 2, 'Y');
-        },
-        { outline: 'k' },
-      );
+      // 머리 위에 떠 있는 금빛 고리 (12x6)
+      const x = even(head.cx) - 6;
+      const y = Math.max(2, even(head.cy - head.ry) - 8);
+      part(g, (t) => cells(t, x, y, ['.YXXY.', 'X....X', '.YXXY.']), { outline: 'k' });
       break;
     }
     case 'glasses': {
@@ -159,24 +112,60 @@ export function drawHeadAccessory(g: Grid, acc: Accessory | undefined, head: Hea
   }
 }
 
+/** 날개를 그리는 방식: 꾸미기 장식(wings: X·Y 색)이거나, 용·전설 단계처럼 몸에 달린 날개(natural: p·P 색, 종마다 다른 금빛) */
+export type WingKind = Accessory | 'natural';
+
+/** 뿔 모양: pair 는 곧은 뿔 한 쌍(용), ossicones 는 끝이 둥근 짧은 뿔, antler 는 갈라진 뿔 한 쌍(청룡), single 은 길고 곧은 외뿔(기린) */
+export type Horns = 'pair' | 'ossicones' | 'antler' | 'single';
+
+/** 종의 설계(장식·몸 날개 여부)에서 어떤 날개를 그릴지 정한다. 꾸미기 날개가 있으면 그것이 우선이다. */
+export function wingKind(spec: { accessory?: Accessory; bodyWings?: boolean }): WingKind | undefined {
+  if (spec.accessory === 'wings') return 'wings';
+  return spec.bodyWings ? 'natural' : spec.accessory;
+}
+
+/** 머리 위의 뿔. 윤곽선과 함께 p(뿔)·a(끝 장식) 색으로 그린다. */
+export function drawHorns(g: Grid, kind: Horns | undefined, head: HeadGeom): void {
+  if (!kind) return;
+  const x = even(head.cx - head.rx * 0.35);
+  const rowsOf: Record<Horns, readonly string[]> = {
+    pair: ['p', 'p', 'p'],
+    ossicones: ['a', 'p', 'p'],
+    antler: ['p.p', 'ppp', '.p.'],
+    single: ['p', 'p', 'p', 'p'],
+  };
+  const rows = rowsOf[kind];
+  const y = Math.max(2, even(head.cy - head.ry) - (rows.length * 2 - 2));
+  const at = kind === 'antler' ? [x - 2, x + 8] : kind === 'single' ? [x + 4] : [x, x + 6];
+  part(
+    g,
+    (t) => {
+      for (const hx of at) cells(t, hx, y, rows);
+    },
+    { outline: 'k' },
+  );
+}
+
 /** 등에 다는 날개: (x, y)는 날개가 붙는 등 위쪽 자리. size 는 새끼 비율(0.6~1). */
-export function drawBackWings(g: Grid, acc: Accessory | undefined, x: number, y: number, size: number): void {
-  if (acc !== 'wings') return;
-  const s = Math.max(0.7, size) * 0.72; // 날개는 작게(등을 다 덮지 않게)
+export function drawBackWings(g: Grid, acc: WingKind | undefined, x: number, y: number, size: number): void {
+  if (acc !== 'wings' && acc !== 'natural') return;
+  const X = acc === 'wings' ? 'X' : 'p';
+  const Y = acc === 'wings' ? 'Y' : 'P';
+  const s = Math.max(0.7, size) * 1.05; // 작은 화면에서도 보이게 크게
   const bx = even(x);
   const by = even(y);
   part(
     g,
     (t) => {
       // 깃털 세 갈래가 위·뒤로 부채처럼 펼쳐진다
-      line(t, bx, by, bx - 9 * s, by - 3 * s, 'X', 3 * s);
-      line(t, bx, by, bx - 7 * s, by - 8 * s, 'X', 3 * s);
-      line(t, bx, by, bx - 2 * s, by - 11 * s, 'X', 3 * s);
+      line(t, bx, by, bx - 9 * s, by - 3 * s, X, 3 * s);
+      line(t, bx, by, bx - 7 * s, by - 8 * s, X, 3 * s);
+      line(t, bx, by, bx - 2 * s, by - 11 * s, X, 3 * s);
       // 깃털 끝
-      px(t, Math.round(bx - 9 * s), Math.round(by - 3 * s), 'Y');
-      px(t, Math.round(bx - 7 * s), Math.round(by - 8 * s), 'Y');
-      px(t, Math.round(bx - 2 * s), Math.round(by - 11 * s), 'Y');
-      triangle(t, bx + 1, by + 1, bx - 4 * s, by + 1, bx - 1, by - 3 * s, 'X');
+      px(t, Math.round(bx - 9 * s), Math.round(by - 3 * s), Y);
+      px(t, Math.round(bx - 7 * s), Math.round(by - 8 * s), Y);
+      px(t, Math.round(bx - 2 * s), Math.round(by - 11 * s), Y);
+      triangle(t, bx + 1, by + 1, bx - 4 * s, by + 1, bx - 1, by - 3 * s, X);
     },
     { outline: 'k' },
   );

@@ -34,7 +34,7 @@ describe('store', () => {
 
   it('모르는 종이나 숫자가 아닌 값이 있으면 null', () => {
     const file = path.join(dir, 'bad.json');
-    fs.writeFileSync(file, JSON.stringify({ ...createPet('cat', 1), speciesId: 'dragon' }));
+    fs.writeFileSync(file, JSON.stringify({ ...createPet('cat', 1), speciesId: 'unicorn' }));
     expect(loadPet(file)).toBeNull();
     fs.writeFileSync(file, JSON.stringify({ ...createPet('cat', 1), xp: 'many' }));
     expect(loadPet(file)).toBeNull();

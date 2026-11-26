@@ -166,3 +166,14 @@ describe('renderProfileCard: 마을을 돌아다니는 카드', () => {
     expect(renderProfileCard(input())).toBe(renderProfileCard(input()));
   });
 });
+
+describe('보여 줄 모습', () => {
+  it('stage 를 주면 그 단계의 모습으로 그리고 단계 이름도 따라간다(레벨은 그대로)', () => {
+    const adult = renderProfileCard(input());
+    const baby = renderProfileCard(input({ stage: 'baby' }));
+    expect(adult).toContain('>ADULT<');
+    expect(baby).toContain('>BABY<');
+    expect(baby).toContain('>LV 6<');
+    expect(baby).not.toBe(adult);
+  });
+});

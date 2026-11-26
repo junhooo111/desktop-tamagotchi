@@ -3,12 +3,13 @@
  * 업적으로 아직 안 열린 것은 점선으로 보이고, 눌러도 바뀌지 않고 여는 방법을 알려 준다.
  * 실제로 적용할 수 있는지는 메인이 다시 검증한다.
  */
+import type { DisplayStage } from '../shared/pet.js';
 import { spriteSet, type Accessory, type SpeciesId, type Variant } from '../shared/species.js';
 import type { WardrobeEntry, WardrobePatch, WardrobeView } from '../shared/wardrobe.js';
 
 /** 메인이 stage(미리보기에 쓸 단계)를 덧붙여 준다. 알이면 새끼 모습으로 보여 준다. */
 export interface WardrobeData extends WardrobeView {
-  stage: 'baby' | 'adult';
+  stage: 'baby' | 'adult' | 'legend';
 }
 
 interface WardrobeApi {
@@ -68,7 +69,7 @@ function group<T extends string>(boxId: string, entries: readonly WardrobeEntry<
 }
 
 function render(): void {
-  group<SpeciesId>('species', data.species, data.current.speciesId, (id) => ({ speciesId: id }));
+  group<DisplayStage>('stages', data.stages, data.current.displayStage, (id) => ({ displayStage: id }));
   group<Variant>('variants', data.variants, data.current.variant, (id) => ({ variant: id }));
   group<Accessory>('accessories', data.accessories, data.current.accessory, (id) => ({ accessory: id }));
   const cardEntries: WardrobeEntry<SpeciesId | 'current'>[] = [{ id: 'current', name: '지금 키우는 펫', unlocked: true, hint: '' }, ...data.species];

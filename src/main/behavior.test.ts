@@ -282,8 +282,12 @@ describe('마우스 매달리기', () => {
     expect(next.vy).toBeCloseTo((GRAVITY * 100) / 1000);
     expect(next.y).toBeGreaterThan(300);
 
+    // 높이가 낮은(300px 미만) 데서 떨어지면 기절하지 않고 그냥 내려앉는다.
+    const short = step({ ...falling, fallFrom: 800 - SIZE - 100, y: 800 - SIZE - 1, vy: 2_000 }, ctxOf({ dtMs: 100 }));
+    expect(short).toMatchObject({ mode: 'idle', y: 800 - SIZE, surface: 'floor' });
+    // 높은 데서 떨어졌으면(여기서는 y=300 에서 시작) 바닥에서 기절한다.
     const landed = step({ ...falling, y: 800 - SIZE - 1, vy: 2_000 }, ctxOf({ dtMs: 100 }));
-    expect(landed).toMatchObject({ mode: 'idle', y: 800 - SIZE, surface: 'floor' });
+    expect(landed).toMatchObject({ mode: 'dizzy', y: 800 - SIZE, surface: 'floor' });
   });
 });
 

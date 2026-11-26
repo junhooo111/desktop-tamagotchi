@@ -2,9 +2,9 @@
  * 펫의 상태와 성장 규칙(순수 로직, 화면·파일과 무관).
  * 모든 함수는 새 객체를 돌려주고 원본을 바꾸지 않는다.
  */
-import { getSpecies, type SpeciesId } from './species.js';
+import { getSpecies, isHiddenSpecies, type SpeciesId } from './species.js';
 
-export type Stage = 'egg' | 'baby' | 'adult';
+export type Stage = 'egg' | 'baby' | 'adult' | 'legend';
 export type Mood = 'happy' | 'normal' | 'hungry' | 'sad';
 
 export interface PetState {
@@ -18,6 +18,8 @@ export interface PetState {
   lastTickAt: number;
   /** 마지막으로 쓰다듬은 시각(ms) */
   lastTouchAt: number;
+  /** 0(더러움) ~ 100(깨끗함). 시간이 지나거나 산책·응가를 하면 줄고, 씻기면 100 이 된다. */
+  clean: number;
 }
 
 export interface ActionResult {
@@ -29,10 +31,16 @@ export interface ActionResult {
 
 export const HATCH_XP = 20;
 export const ADULT_LEVEL = 5;
+/** 히든 동물이 성체에서 전설 단계로 진화하는 레벨 */
+export const LEGEND_LEVEL = 10;
 /** 배고픔이 1 줄어드는 데 걸리는 분 */
 export const HUNGER_MINUTES = 6;
 /** 기분이 1 줄어드는 데 걸리는 분 */
 export const HAPPINESS_MINUTES = 10;
+/** 청결이 1 줄어드는 데 걸리는 분 */
+export const CLEAN_MINUTES = 12;
+/** 청결이 이 값보다 낮으면 더러운 펫이다(냄새 표시) */
+export const DIRTY_BELOW = 30;
 
 const EGG_TOUCH_COOLDOWN_MS = 5_000;
 const TOUCH_COOLDOWN_MS = 30_000;
@@ -45,7 +53,32 @@ export function levelOf(xp: number): number {
 
 export function stageOf(pet: PetState): Stage {
   if (pet.xp < HATCH_XP) return 'egg';
-  return levelOf(pet.xp) >= ADULT_LEVEL ? 'adult' : 'baby';
+  const level = levelOf(pet.xp);
+  if (level >= LEGEND_LEVEL && isHiddenSpecies(pet.speciesId)) return 'legend';
+  return level >= ADULT_LEVEL ? 'adult' : 'baby';
+}
+
+export const isDirty = (pet: PetState): boolean => pet.clean < DIRTY_BELOW;
+
+/** 꾸미기에서 고르는 모습: auto 는 지금 단계 그대로, 나머지는 이미 지나온 단계로 되돌린 모습 */
+export type DisplayStage = 'auto' | 'baby' | 'adult' | 'legend';
+export const DISPLAY_STAGES: readonly DisplayStage[] = ['auto', 'baby', 'adult', 'legend'];
+export const isDisplayStage = (v: unknown): v is DisplayStage => typeof v === 'string' && (DISPLAY_STAGES as readonly string[]).includes(v);
+
+const STAGE_RANK: Record<Stage, number> = { egg: 0, baby: 1, adult: 2, legend: 3 };
+
+/** 지금 단계까지 지나온 단계들(알은 모습으로 고를 수 없으니 뺀다). 알이면 없다. */
+export function reachedStages(actual: Stage): Exclude<Stage, 'egg'>[] {
+  return (['baby', 'adult', 'legend'] as const).filter((s) => STAGE_RANK[s] <= STAGE_RANK[actual]);
+}
+
+/**
+ * 화면에 보여 줄 단계. 고른 모습이 아직 안 지나온 단계이거나 알이면 지금 단계 그대로다.
+ * (경험치·레벨·돌봄은 늘 진짜 단계 기준이고, 모습만 바뀐다.)
+ */
+export function effectiveStage(actual: Stage, chosen: DisplayStage): Stage {
+  if (chosen === 'auto' || actual === 'egg') return actual;
+  return STAGE_RANK[chosen] <= STAGE_RANK[actual] ? chosen : actual;
 }
 
 export function moodOf(pet: PetState): Mood {
@@ -56,7 +89,7 @@ export function moodOf(pet: PetState): Mood {
 }
 
 export function createPet(speciesId: SpeciesId, now: number): PetState {
-  return { speciesId, xp: 0, hunger: 80, happiness: 80, lastTickAt: now, lastTouchAt: 0 };
+  return { speciesId, xp: 0, hunger: 80, happiness: 80, lastTickAt: now, lastTouchAt: 0, clean: 100 };
 }
 
 /** 앱이 꺼져 있던 시간까지 포함해, 흐른 시간만큼 배고픔·기분을 줄인다. */
@@ -66,6 +99,7 @@ export function applyElapsed(pet: PetState, now: number): PetState {
     ...pet,
     hunger: clamp(pet.hunger - minutes / HUNGER_MINUTES),
     happiness: clamp(pet.happiness - minutes / HAPPINESS_MINUTES),
+    clean: clamp(pet.clean - minutes / CLEAN_MINUTES),
     lastTickAt: Math.max(now, pet.lastTickAt),
   };
 }
@@ -79,7 +113,10 @@ export function gainXp(pet: PetState, amount: number): { pet: PetState; note: st
     return { pet: next, note: ` 알이 부화했어요! ${getSpecies(pet.speciesId).name}(이)가 태어났어요.` };
   }
   const lv = levelOf(after);
-  if (lv > levelOf(before)) return { pet: next, note: ` 레벨 ${lv}이 되었어요!` };
+  if (lv > levelOf(before)) {
+    const evolved = lv === LEGEND_LEVEL && isHiddenSpecies(pet.speciesId) ? ` ${getSpecies(pet.speciesId).name}(이)가 전설의 모습으로 진화했어요!` : '';
+    return { pet: next, note: ` 레벨 ${lv}이 되었어요!${evolved}` };
+  }
   return { pet: next, note: '' };
 }
 
@@ -108,6 +145,34 @@ export function play(pet: PetState): ActionResult {
   return { pet: gained.pet, ok: true, message: '신나요!' + gained.note };
 }
 
+/** 씻기기: 청결을 가득 채운다. 이미 깨끗하면(90 이상) 하지 않는다. */
+export function wash(pet: PetState): ActionResult {
+  if (stageOf(pet) === 'egg') return { pet, ok: false, message: '알은 아직 못 씻어요.' };
+  if (pet.clean >= 90) return { pet, ok: false, message: '이미 깨끗해요!' };
+  const washed = { ...pet, clean: 100, happiness: clamp(pet.happiness + 5) };
+  const gained = gainXp(washed, 4);
+  return { pet: gained.pet, ok: true, message: '보글보글! 깨끗해졌어요!' + gained.note };
+}
+
+/** 산책을 나갈 수 있는지(알이 아니고 너무 배고프지 않아야 한다). 못 나가면 이유를 message 로 돌려준다. */
+export function canStroll(pet: PetState): { ok: boolean; message: string } {
+  if (stageOf(pet) === 'egg') return { ok: false, message: '알은 아직 산책을 못 가요.' };
+  if (pet.hunger < 20) return { ok: false, message: '배고파서 산책 못 가요…' };
+  return { ok: true, message: '산책 가요! 마우스를 따라갈게요' };
+}
+
+/** 산책을 마치고 돌아왔을 때: 기분이 좋아지고 배고프고 지저분해진다. */
+export function finishStroll(pet: PetState): ActionResult {
+  const walked = { ...pet, happiness: clamp(pet.happiness + 15), hunger: clamp(pet.hunger - 10), clean: clamp(pet.clean - 10) };
+  const gained = gainXp(walked, 6);
+  return { pet: gained.pet, ok: true, message: '산책 끝! 지쳤어요…' + gained.note };
+}
+
+/** 응가를 하면 조금 더러워진다. */
+export function afterPoop(pet: PetState): PetState {
+  return { ...pet, clean: clamp(pet.clean - 6) };
+}
+
 export const LEARN_XP = { confirm: 10, fixed: 20, tip: 2 } as const;
 /** 확인 퀴즈를 맞히면 더해 주는 경험치 */
 export const QUIZ_BONUS = 5;
@@ -133,12 +198,12 @@ export function learn(pet: PetState, kind: keyof typeof LEARN_XP, bonus = 0): Ac
 
 /** 펫 상태 설명. 이름을 지어 줬으면 `이름(종)` 으로 보여 준다. */
 export function statusText(pet: PetState, petName = ''): string {
-  const stageName = { egg: '알', baby: '새끼', adult: '성체' }[stageOf(pet)];
+  const stageName = { egg: '알', baby: '새끼', adult: '성체', legend: '전설' }[stageOf(pet)];
   const species = stageOf(pet) === 'egg' ? '알' : getSpecies(pet.speciesId).name;
   const name = petName && stageOf(pet) !== 'egg' ? `${petName}(${species})` : species;
   return [
     `${name} · ${stageName} · Lv.${levelOf(pet.xp)}`,
     `경험치 ${Math.floor(pet.xp)}`,
-    `배고픔 ${Math.floor(pet.hunger)}/100 · 기분 ${Math.floor(pet.happiness)}/100`,
+    `배고픔 ${Math.floor(pet.hunger)}/100 · 기분 ${Math.floor(pet.happiness)}/100 · 청결 ${Math.floor(pet.clean)}/100`,
   ].join('\n');
 }

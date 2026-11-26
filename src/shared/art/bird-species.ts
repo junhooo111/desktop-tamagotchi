@@ -41,3 +41,17 @@ export const PENGUIN: BirdSpec = {
     eye: '#ffffff',
   }),
 };
+
+/** 주작: 불꽃처럼 붉은 새, 머리에 솜털 깃 */
+export const PHOENIX: BirdSpec = {
+  kind: 'chick',
+  tuft: true,
+  look: makeLook({
+    fur: '#ff5a36',
+    outline: '#4a1f1a',
+    belly: tone('#ffb04a'),
+    accent: tone('#c8281e'),
+    beak: tone('#ffd34a'),
+    eye: '#3b2f2f',
+  }),
+};

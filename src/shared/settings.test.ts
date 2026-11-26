@@ -10,7 +10,7 @@ describe('sanitizeSettings', () => {
   });
 
   it('유효한 값은 그대로 받는다', () => {
-    const s = { petScale: 2, inspectEnabled: false, scanSeconds: 30, tipMinutes: 0, autoUpdate: false, showNews: false, disabledRules: ['contrast'], ignored: ['http://localhost:3000/|img-alt|img'], variant: 'pastel', accessory: 'crown', petName: '콩이', cardSpecies: 'fox' };
+    const s = { petScale: 2, inspectEnabled: false, scanSeconds: 30, tipMinutes: 0, autoUpdate: false, showNews: false, disabledRules: ['contrast'], ignored: ['http://localhost:3000/|img-alt|img'], variant: 'pastel', accessory: 'crown', petName: '콩이', displayStage: 'baby', cardSpecies: 'fox' };
     expect(sanitizeSettings(s)).toEqual(s);
   });
 
@@ -23,9 +23,14 @@ describe('sanitizeSettings', () => {
     expect(sanitizeSettings({ petName: { a: 1 } }).petName).toBe('');
   });
 
+  it('보여 줄 모습은 auto·baby·adult·legend 만 받고, 나머지(알 포함)는 auto 로 돌린다', () => {
+    for (const ok of ['auto', 'baby', 'adult', 'legend']) expect(sanitizeSettings({ displayStage: ok }).displayStage).toBe(ok);
+    for (const bad of ['egg', 'giant', 3, null, undefined]) expect(sanitizeSettings({ displayStage: bad }).displayStage).toBe('auto');
+  });
+
   it('프로필 카드 동물은 아는 동물이나 current 만 받는다', () => {
     expect(sanitizeSettings({ cardSpecies: 'penguin' }).cardSpecies).toBe('penguin');
-    expect(sanitizeSettings({ cardSpecies: 'dragon' }).cardSpecies).toBe('current');
+    expect(sanitizeSettings({ cardSpecies: 'unicorn' }).cardSpecies).toBe('current');
     expect(sanitizeSettings({}).cardSpecies).toBe('current');
   });
 

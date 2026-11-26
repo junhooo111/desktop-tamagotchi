@@ -29,6 +29,8 @@ export function loadPet(file: string): PetState | null {
       happiness: p['happiness'],
       lastTickAt: p['lastTickAt'],
       lastTouchAt: p['lastTouchAt'],
+      // 예전 저장 파일에는 없다: 깨끗한 상태로 이어 간다
+      clean: isNum(p['clean']) ? Math.min(100, Math.max(0, p['clean'])) : 100,
     };
   } catch {
     return null;

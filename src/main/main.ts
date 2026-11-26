@@ -13,7 +13,7 @@ import electronUpdater from 'electron-updater';
 import { SnapshotFeed, mergeScans } from '../inspect/feed.js';
 import { scanLocalPages, type Finding } from '../inspect/scan.js';
 import { renderProfileCard } from '../shared/card.js';
-import { applyEvent, buildCodex, emptyGrowth, type Growth, type GrowthEvent } from '../shared/growth.js';
+import { applyEvent, buildCodex, emptyGrowth, localDay, type Growth, type GrowthEvent } from '../shared/growth.js';
 import { LESSONS, RULE_IDS, type RuleId } from '../shared/lessons.js';
 import { noticeOf } from '../shared/notice.js';
 import type { NoticeMessage } from '../shared/view.js';
@@ -26,7 +26,14 @@ import {
   LEARN_XP,
   QUIZ_BONUS,
   applyElapsed,
+  afterPoop,
+  canStroll,
   createPet,
+  effectiveStage,
+  finishStroll,
+  isDisplayStage,
+  isDirty,
+  wash,
   feed,
   gainXp,
   learn,
@@ -39,8 +46,35 @@ import {
   type ActionResult,
   type PetState,
 } from '../shared/pet.js';
-import { SPECIES, frameToRgba, isAccessory, isSpeciesId, isVariant, spriteSet, type SpeciesId } from '../shared/species.js';
-import { ACCESSORY_NAMES, SPECIES_UNLOCK, allowedPatch, buildWardrobe, cardSpeciesOf, rewardText, rewardsFor, type WardrobePatch } from '../shared/wardrobe.js';
+import { ACCESSORIES, COMMON_SPECIES, SPECIES, VARIANTS, frameToRgba, getSpecies, isAccessory, isSpeciesId, isVariant, spriteSet, type SpeciesId } from '../shared/species.js';
+import {
+  ACCESSORY_NAMES,
+  VARIANT_NAMES,
+  accessoryUnlocked,
+  allowedPatch,
+  buildWardrobe,
+  cardSpeciesOf,
+  rewardText,
+  rewardsFor,
+  variantUnlocked,
+  type Extra,
+  type WardrobePatch,
+} from '../shared/wardrobe.js';
+import {
+  DUPLICATE_XP,
+  buildCollectionView,
+  claimCare,
+  claimDaily,
+  levelRewards,
+  migrateCollection,
+  ownedIds,
+  pullCosmetic,
+  pullSpecies,
+  switchActive,
+  syncActive,
+  type Collection,
+} from '../shared/collection.js';
+import { loadCollection, saveCollection } from './collection-store.js';
 import type { PetView, TipBubble } from '../shared/view.js';
 import { debugProfileDir, findBrowser, launchArgs, type BrowserEnv } from './browser.js';
 import { startDemoServer, type DemoServer } from './demo-server.js';
@@ -51,8 +85,15 @@ import {
   drop,
   endAlert,
   goInspect,
+  clearHome,
+  isOccupied,
+  isStrolling,
   react,
   resize,
+  setHome,
+  startPoop,
+  startStroll,
+  startWash,
   step,
   trigger,
   wake,
@@ -65,6 +106,7 @@ import { petTargetFor } from './inspect-target.js';
 import { loadGrowth, saveGrowth } from './growth-store.js';
 import { loadSettings, saveSettings } from './settings-store.js';
 import { newsText, pickNews, type NewsItem } from '../shared/news.js';
+import { POOP_LIFE_MS, POOP_SIZE, poopHtml } from '../shared/poop.js';
 import { fetchNews, loadSeen, saveSeen } from './news.js';
 import { UPDATE_EVERY_MS, UPDATE_FIRST_CHECK_MS, UPDATE_REMIND_MS, UpdateController, type AutoUpdaterLike } from './updater.js';
 import {
@@ -139,6 +181,10 @@ let updates: UpdateController | null = null;
 /** 성장 기록: 연속 사용·업적·도감 */
 let growth: Growth = emptyGrowth();
 let growthPath = '';
+/** 가진 동물 목록·뽑기권(지금 키우는 동물은 이 중 하나) */
+let collection: Collection;
+let collectionPath = '';
+let collectionWin: BrowserWindow | null = null;
 let newsPath = '';
 /** 마지막으로 가져온 공지(메뉴에 보여 준다) */
 let newsItems: NewsItem[] = [];
@@ -164,16 +210,16 @@ let lastTipAt = Date.now();
 /** 지식 말풍선이 화면 밖으로 잘리지 않도록 옆으로 미는 거리 */
 let tipShift = 0;
 
+/** 처음 시작할 때 받는 동물(히든은 나오지 않는다) */
 const randomSpecies = (): SpeciesId => {
-  const base = SPECIES.filter((sp) => SPECIES_UNLOCK[sp.id] === undefined);
-  const pick = base[Math.floor(Math.random() * base.length)];
+  const pick = COMMON_SPECIES[Math.floor(Math.random() * COMMON_SPECIES.length)];
   return (pick ?? SPECIES[0]!).id;
 };
 
 function currentView(): PetView {
   return {
     speciesId: pet.speciesId,
-    stage: stageOf(pet),
+    stage: effectiveStage(stageOf(pet), settings.displayStage),
     level: levelOf(pet.xp),
     mood: moodOf(pet),
     mode: behavior.mode,
@@ -185,6 +231,7 @@ function currentView(): PetView {
     scale: settings.petScale,
     variant: settings.variant,
     accessory: settings.accessory,
+    dirty: isDirty(pet),
   };
 }
 
@@ -266,6 +313,37 @@ function persist(): void {
   } catch (error) {
     console.error('저장 실패', error);
   }
+  if (!collectionPath) return;
+  // 컬렉션에 지금 동물의 상태를 반영하고, 레벨이 올랐으면 레벨 보상(뽑기권)을 준다.
+  collection = syncActive(collection, pet, settings.petName);
+  const reward = levelRewards(collection, collection.active);
+  collection = reward.collection;
+  if (reward.tickets > 0) announceTickets(`레벨 ${reward.level} 보상! 뽑기권 +${reward.tickets}장`);
+  saveCollectionSafe();
+}
+
+function saveCollectionSafe(): void {
+  try {
+    saveCollection(collectionPath, collection);
+  } catch (error) {
+    console.error('컬렉션 저장 실패', error);
+  }
+  refreshCollection();
+}
+
+/** 뽑기권을 받았다고 알린다(방금 한 일의 말풍선이 지나간 뒤에). */
+function announceTickets(text: string): void {
+  setTimeout(() => say(`🎟 ${text}\n메뉴의 '뽑기·컬렉션…'에서 뽑아 보세요 (보유 ${collection.tickets}장)`), 3_000);
+}
+
+/** 오늘 처음 켰으면 출석 보상을 준다. */
+function checkDaily(): void {
+  if (!collectionPath) return;
+  const r = claimDaily(collection, localDay(Date.now()));
+  if (r.tickets === 0) return;
+  collection = r.collection;
+  saveCollectionSafe();
+  announceTickets(`오늘의 출석 보상! 뽑기권 +${r.tickets}장`);
 }
 
 function stepContext(now: number, dtMs: number): StepContext {
@@ -396,6 +474,14 @@ function ruleIdOfKey(key: string): RuleId | null {
 function recordGrowth(event: GrowthEvent): void {
   const result = applyEvent(growth, event, Date.now(), { tipsSeen: progress.tipsSeen.length });
   growth = result.growth;
+  if (event.kind === 'care' && collectionPath) {
+    const care = claimCare(collection, growth.counters.care);
+    if (care.tickets > 0) {
+      collection = care.collection;
+      saveCollectionSafe();
+      announceTickets(`열심히 돌봐 줘서 뽑기권 +${care.tickets}장!`);
+    }
+  }
   try {
     saveGrowth(growthPath, growth);
   } catch (error) {
@@ -480,11 +566,17 @@ function openResults(): void {
 /** IPC 로 받은 문제 키가 쓸 만한 문자열인지 */
 const isKey = (v: unknown): v is string => typeof v === 'string' && v !== '' && v.length <= 600;
 
+/** 뽑기로 얻은 꾸미기와 가진 동물(업적으로 연 것과 합쳐서 쓴다) */
+function wardrobeExtra(): Extra {
+  return { accessories: collection.accessories, variants: collection.variants, species: ownedIds(collection), stage: stageOf(pet) };
+}
+
 /** 꾸미기 창에 보여 줄 값. 알이면 새끼 모습으로 미리 보여 준다. */
 function wardrobeData() {
+  const stage = effectiveStage(stageOf(pet), settings.displayStage);
   return {
-    ...buildWardrobe(growth, { speciesId: pet.speciesId, variant: settings.variant, accessory: settings.accessory, name: settings.petName, cardSpecies: settings.cardSpecies }),
-    stage: stageOf(pet) === 'adult' ? ('adult' as const) : ('baby' as const),
+    ...buildWardrobe(growth, { speciesId: pet.speciesId, variant: settings.variant, accessory: settings.accessory, name: settings.petName, cardSpecies: settings.cardSpecies, displayStage: settings.displayStage }, wardrobeExtra()),
+    stage: (stage === 'egg' ? 'baby' : stage) as 'baby' | 'adult' | 'legend',
   };
 }
 
@@ -492,17 +584,17 @@ function wardrobeData() {
 function applyWardrobe(raw: unknown) {
   const r = typeof raw === 'object' && raw !== null ? (raw as Record<string, unknown>) : {};
   const wanted: WardrobePatch = {};
-  if (isSpeciesId(r['speciesId'])) wanted.speciesId = r['speciesId'];
   if (isVariant(r['variant'])) wanted.variant = r['variant'];
   if (isAccessory(r['accessory'])) wanted.accessory = r['accessory'];
   if (typeof r['name'] === 'string') wanted.name = r['name'];
+  if (isDisplayStage(r['displayStage'])) wanted.displayStage = r['displayStage'];
   if (r['cardSpecies'] === 'current' || isSpeciesId(r['cardSpecies'])) wanted.cardSpecies = r['cardSpecies'];
-  const ok = allowedPatch(growth, wanted);
-  if (ok.speciesId) changeSpecies(ok.speciesId);
+  const ok = allowedPatch(growth, wanted, wardrobeExtra());
   const settingsPatch = {
     ...(ok.variant !== undefined ? { variant: ok.variant } : {}),
     ...(ok.accessory !== undefined ? { accessory: ok.accessory } : {}),
     ...(ok.name !== undefined ? { petName: ok.name } : {}),
+    ...(ok.displayStage !== undefined ? { displayStage: ok.displayStage } : {}),
     ...(ok.cardSpecies !== undefined ? { cardSpecies: ok.cardSpecies } : {}),
   };
   if (Object.keys(settingsPatch).length > 0) applySettings(settingsPatch);
@@ -559,9 +651,14 @@ function openWardrobe(): void {
 /** 지금 펫의 프로필 카드(SVG)를 파일로 저장한다. GitHub 프로필 README 에 걸 수 있다. */
 async function exportCard(): Promise<void> {
   const current = applyElapsedInPlace();
+  collection = syncActive(collection, current, settings.petName);
+  // 카드에는 고른 동물(없으면 지금 키우는 동물) 자신의 레벨·모습이 나온다.
+  const cardId = cardSpeciesOf(settings.cardSpecies, collection.active, ownedIds(collection));
+  const entry = collection.owned[cardId];
   const svg = renderProfileCard({
-    pet: { ...current, speciesId: cardSpeciesOf(growth, settings.cardSpecies, current.speciesId) },
-    name: settings.petName,
+    pet: cardId === collection.active ? current : (entry?.pet ?? current),
+    stage: cardId === collection.active ? effectiveStage(stageOf(current), settings.displayStage) : undefined,
+    name: cardId === collection.active ? settings.petName : (entry?.name ?? ''),
     style: { variant: settings.variant, accessory: settings.accessory },
     codex: buildCodex(growth, { tipsSeen: progress.tipsSeen.length }, Date.now()),
   });
@@ -805,21 +902,89 @@ function finishCard(kind: 'confirm' | 'later' | 'ignore', choice: number | null 
   sendView();
 }
 
-function act(type: 'touch' | 'feed' | 'play'): ActionResult {
+/** 산책 중인지 지난 틱의 값(끝나는 순간을 알아채기 위해) */
+let wasStrolling = false;
+/** 우클릭 메뉴를 연 화면 위치(혼자 놀게 두기의 중심) */
+let menuPoint: { x: number; y: number } | null = null;
+let nextPoopAt = 0;
+const poopWins = new Set<BrowserWindow>();
+
+/** 펫 발치에 응가 창을 띄운다. 잠시 뒤 저절로 닫힌다. */
+function spawnPoop(): void {
+  const { width, height } = POOP_SIZE;
+  const x = Math.round(behavior.x + petSize / 2 - width / 2 + (behavior.dir === 'left' ? petSize * 0.35 : -petSize * 0.35));
+  const y = Math.round(behavior.y + petSize - height);
+  const w = new BrowserWindow({
+    x,
+    y,
+    width,
+    height,
+    transparent: true,
+    frame: false,
+    resizable: false,
+    movable: false,
+    hasShadow: false,
+    skipTaskbar: true,
+    focusable: false,
+    show: false,
+  });
+  w.setAlwaysOnTop(true, 'screen-saver');
+  w.setIgnoreMouseEvents(true);
+  w.once('ready-to-show', () => w.showInactive());
+  void w.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(poopHtml()));
+  poopWins.add(w);
+  const timer = setTimeout(() => {
+    if (!w.isDestroyed()) w.destroy();
+  }, POOP_LIFE_MS);
+  w.on('closed', () => {
+    clearTimeout(timer);
+    poopWins.delete(w);
+  });
+}
+
+/** 산책을 시작한다(메뉴). 알이거나 너무 배고프거나 쉬는 중이면 이유를 말풍선으로 알린다. */
+function startStrollNow(): void {
+  const now = Date.now();
+  const can = canStroll(applyElapsedInPlace());
+  if (!can.ok) {
+    say(can.message);
+    return;
+  }
+  if (isOccupied(behavior, now)) return;
+  if (isStrolling(behavior, now)) {
+    say('지금 산책 중이에요!');
+    return;
+  }
+  if (now < behavior.restUntil) {
+    say('아직 지쳐서 쉬는 중이에요…');
+    return;
+  }
+  behavior = wake(startStroll(behavior, stepContext(now, TICK_MS)), now);
+  if (!isStrolling(behavior, now)) return; // 다른 일을 하느라 시작하지 못했다
+  nextPoopAt = now + 12_000 + Math.random() * 10_000;
+  say(can.message);
+  updateTray();
+  sendView();
+}
+
+function act(type: 'touch' | 'feed' | 'play' | 'wash'): ActionResult {
   // 문제를 찾아 알리는 중에 펫을 누르면 쓰다듬기 대신 배움 카드가 열린다.
   if (type === 'touch' && active && behavior.mode === 'alert') {
     openCard();
     return { pet, ok: true, message: '' };
   }
   const now = Date.now();
+  // 하나의 행동이 끝나기 전(기절·씻기·먹기·놀기 중)에는 새 돌봄을 받지 않는다.
+  if (isOccupied(behavior, now)) return { pet, ok: false, message: '' };
   const current = applyElapsed(pet, now);
-  const result = type === 'touch' ? touch(current, now) : type === 'feed' ? feed(current) : play(current);
+  const result = type === 'touch' ? touch(current, now) : type === 'feed' ? feed(current) : type === 'play' ? play(current) : wash(current);
   pet = result.pet;
   if (result.ok) {
     behavior = wake(behavior, now);
     // 손길에 반응하는 동작: 쓰다듬으면 좋아하고, 밥을 주면 먹고, 놀아 주면 폴짝폴짝 논다.
     if (type === 'touch') behavior = react(behavior, 'happy', now);
     else if (type === 'feed') behavior = react(behavior, 'eat', now);
+    else if (type === 'wash') behavior = startWash(behavior, now);
     else behavior = trigger(behavior, 'play', stepContext(now, TICK_MS));
   }
   say(result.message);
@@ -832,12 +997,117 @@ function act(type: 'touch' | 'feed' | 'play'): ActionResult {
   return result;
 }
 
-function changeSpecies(id: SpeciesId): void {
-  pet = { ...pet, speciesId: id };
+/** 가진 동물 중 하나를 꺼내서 키운다(한 번에 한 마리). 지금 동물은 상태를 저장해 넣어 둔다. */
+function switchPet(id: SpeciesId): { ok: boolean; message: string } {
+  if (id === collection.active) return { ok: false, message: '이미 키우고 있어요' };
+  const now = Date.now();
+  const r = switchActive(collection, id, applyElapsedInPlace(), settings.petName, now);
+  if (!r) return { ok: false, message: '아직 없는 동물이에요' };
+  collection = r.collection;
+  pet = r.pet;
+  behavior = { ...behavior, strollUntil: 0 };
+  applySettings({ petName: r.name, displayStage: 'auto' }); // 다른 동물은 지금 단계 그대로 보여 준다
+  persist();
   refreshWardrobe();
   updateTray();
-  sendView();
+  sendView(true);
+  const name = r.name || getSpecies(id).name;
+  say(`${name}(이)가 나왔어요!`);
+  return { ok: true, message: `${name}(을)를 꺼냈어요` };
+}
+
+function refreshCollection(): void {
+  if (collectionWin && !collectionWin.isDestroyed()) collectionWin.webContents.send('collection:refresh');
+}
+
+function closeCollection(): void {
+  if (collectionWin && !collectionWin.isDestroyed()) collectionWin.close();
+  collectionWin = null;
+}
+
+/** 꾸미기 뽑기로 아직 얻을 수 있는 장식·색 수 */
+function cosmeticLeft(): number {
+  const a = ACCESSORIES.filter((x) => x !== 'none' && !accessoryUnlocked(growth, x, wardrobeExtra())).length;
+  const v = VARIANTS.filter((x) => x !== 'default' && !variantUnlocked(growth, x, wardrobeExtra())).length;
+  return a + v;
+}
+
+function collectionData() {
+  return buildCollectionView(collection, cosmeticLeft());
+}
+
+/** 동물 뽑기. 이미 가진 동물이 나오면 그 동물이 경험치를 받는다. */
+function doPullSpecies() {
+  const now = Date.now();
+  collection = syncActive(collection, applyElapsedInPlace(), settings.petName);
+  const r = pullSpecies(collection, now, Math.random);
+  collection = r.collection;
+  if (!r.result.ok) return { ok: false as const, message: r.result.reason, view: collectionData() };
+  // 중복으로 지금 키우는 동물이 경험치를 받았으면 살아 있는 상태에도 반영한다.
+  const active = collection.owned[collection.active];
+  if (active) pet = active.pet;
   persist();
+  updateTray();
+  sendView();
+  const sp = getSpecies(r.result.id);
+  const message = r.result.isNew
+    ? `${sp.name}(이)가 새로 왔어요!${r.result.hidden ? ' ✨히든 동물!' : ''}`
+    : `${sp.name}(이)가 또 나왔어요! (${r.result.count}번째) 경험치 +${DUPLICATE_XP}`;
+  return { ok: true as const, message, id: r.result.id, isNew: r.result.isNew, hidden: r.result.hidden, count: r.result.count, view: collectionData() };
+}
+
+/** 꾸미기 뽑기: 아직 못 가진 장식·색 중 하나를 같은 확률로 뽑는다. */
+function doPullCosmetic() {
+  const achieved = {
+    accessories: new Set(ACCESSORIES.filter((a) => a !== 'none' && accessoryUnlocked(growth, a))),
+    variants: new Set(VARIANTS.filter((v) => v !== 'default' && variantUnlocked(growth, v))),
+  };
+  const r = pullCosmetic(collection, { accessories: ACCESSORIES, variants: VARIANTS }, achieved, Math.random);
+  collection = r.collection;
+  if (!r.result.ok) return { ok: false as const, message: r.result.reason, view: collectionData() };
+  saveCollectionSafe();
+  refreshWardrobe();
+  const item = r.result.item;
+  const name = item.kind === 'accessory' ? ACCESSORY_NAMES[item.id] : VARIANT_NAMES[item.id] + ' 색';
+  return { ok: true as const, message: `${name}(을)를 얻었어요!`, kind: item.kind, itemId: item.id, view: collectionData() };
+}
+
+function openCollection(): void {
+  if (collectionWin && !collectionWin.isDestroyed()) {
+    collectionWin.show();
+    collectionWin.focus();
+    return;
+  }
+  const area = screen.getDisplayNearestPoint({ x: Math.round(behavior.x), y: Math.round(behavior.y) }).workArea;
+  const width = 560;
+  const height = Math.min(720, area.height - 40);
+  const w = new BrowserWindow({
+    x: area.x + Math.round((area.width - width) / 2),
+    y: area.y + Math.round((area.height - height) / 2),
+    width,
+    height,
+    resizable: true,
+    minimizable: false,
+    maximizable: false,
+    autoHideMenuBar: true,
+    title: '뽑기·컬렉션',
+    backgroundColor: '#fffdf5',
+    show: false,
+    webPreferences: {
+      preload: path.join(projectRoot, 'static', 'collection-preload.cjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  w.setMenu(null);
+  w.setAlwaysOnTop(true, 'screen-saver');
+  w.once('ready-to-show', () => w.show());
+  w.on('closed', () => {
+    if (collectionWin === w) collectionWin = null;
+  });
+  void w.loadFile(path.join(projectRoot, 'static', 'collection.html'));
+  collectionWin = w;
 }
 
 function applyElapsedInPlace(): PetState {
@@ -902,6 +1172,7 @@ function buildMenu(): Menu {
     { label: '상태 보기', click: () => say(statusText(applyElapsedInPlace(), settings.petName)) },
     { label: '검사 결과…', click: () => openResults() },
     { label: '도감·기록…', click: () => openCodex() },
+    { label: '🎟 뽑기·컬렉션… (' + collection.tickets + '장)', click: () => openCollection() },
     { label: '프로필 카드 내보내기…', click: () => void exportCard() },
     {
       label: '📢 공지',
@@ -949,6 +1220,25 @@ function buildMenu(): Menu {
     { label: '쓰다듬기', click: () => act('touch') },
     { label: '밥 주기', enabled: !egg, click: () => act('feed') },
     { label: '놀아주기', enabled: !egg, click: () => act('play') },
+    { label: '씻기기', enabled: !egg, click: () => act('wash') },
+    behavior.home
+      ? {
+          label: '자유롭게 돌아다니게 하기',
+          click: () => {
+            behavior = clearHome(behavior);
+            say('이제 마음대로 돌아다닐게요!');
+          },
+        }
+      : {
+          label: '혼자 놀게 두기 (여기서만)',
+          enabled: !egg,
+          click: () => {
+            const p = menuPoint ?? { x: behavior.x + petSize / 2, y: behavior.y + petSize / 2 };
+            behavior = setHome(behavior, p.x, p.y);
+            say('여기서 혼자 놀고 있을게요!');
+          },
+        },
+    { label: isStrolling(behavior, Date.now()) ? '산책 중…' : '산책하기', enabled: !egg && !isStrolling(behavior, Date.now()), click: () => startStrollNow() },
     { type: 'separator' },
     {
       label: '동작 보기 (테스트용)',
@@ -976,7 +1266,7 @@ function buildMenu(): Menu {
 }
 
 function trayIcon() {
-  const set = spriteSet(pet.speciesId, stageOf(pet));
+  const set = spriteSet(pet.speciesId, effectiveStage(stageOf(pet), settings.displayStage));
   // 트레이 아이콘은 32x32 그림 그대로(배율 1)
   const { width, height, data } = frameToRgba(set.frames.idleA, set.palette, 1);
   // Electron 의 비트맵은 BGRA 순서다.
@@ -1079,6 +1369,27 @@ function updateInspection(now: number, dtMs: number): void {
   behavior = goInspect(behavior, ctx, target.x, target.y);
 }
 
+/** 산책 중 응가를 하고, 산책이 끝나는 순간 지친 모습과 보상을 알린다. */
+function updateStroll(now: number): void {
+  const strolling = isStrolling(behavior, now);
+  if (strolling && now >= nextPoopAt && !drag && ['walk', 'run', 'idle'].includes(behavior.mode)) {
+    behavior = startPoop(behavior, now);
+    spawnPoop();
+    pet = afterPoop(applyElapsed(pet, now));
+    nextPoopAt = now + 15_000 + Math.random() * 15_000;
+    persist();
+  }
+  if (wasStrolling && !strolling && behavior.strollUntil === 0) {
+    const result = finishStroll(applyElapsed(pet, now));
+    pet = result.pet;
+    say(result.message);
+    persist();
+    updateTray();
+    recordGrowth({ kind: 'care', care: 'play' });
+  }
+  wasStrolling = strolling;
+}
+
 function tick(lastAt: number): number {
   const now = Date.now();
   if (!win || win.isDestroyed()) return now;
@@ -1101,6 +1412,7 @@ function tick(lastAt: number): number {
     behavior = step(behavior, stepContext(now, now - lastAt));
   }
   updateInspection(now, now - lastAt);
+  updateStroll(now);
   tipShift = Math.round(computeTipShift());
   placeWindow();
   sendView();
@@ -1116,7 +1428,7 @@ function tick(lastAt: number): number {
 function setupIpc(): void {
   ipcMain.handle('pet:get-view', () => currentView());
   ipcMain.handle('pet:act', (_event, type: unknown) => {
-    if (type === 'touch' || type === 'feed' || type === 'play') return act(type).ok;
+    if (type === 'touch' || type === 'feed' || type === 'play' || type === 'wash') return act(type).ok;
     return false;
   });
   ipcMain.on('pet:interactive', (_event, value: unknown) => {
@@ -1136,6 +1448,7 @@ function setupIpc(): void {
   });
   ipcMain.on('pet:context-menu', () => {
     if (!win) return;
+    menuPoint = screen.getCursorScreenPoint();
     const w = win;
     // 펫 창은 포커스를 받지 않는 창이라, 그대로 메뉴를 띄우면 바깥을 눌러도 메뉴가 닫히지 않는다.
     // 메뉴가 떠 있는 동안만 포커스를 받게 하고, 닫히면(바깥 클릭·선택·Esc) 원래대로 돌린다.
@@ -1162,6 +1475,15 @@ function setupIpc(): void {
   ipcMain.on('tip:confirm', () => confirmTip());
   ipcMain.on('card:ignore', () => finishCard('ignore'));
   ipcMain.handle('wardrobe:get', () => wardrobeData());
+  ipcMain.handle('collection:get', () => collectionData());
+  ipcMain.handle('collection:pull-species', () => doPullSpecies());
+  ipcMain.handle('collection:pull-cosmetic', () => doPullCosmetic());
+  ipcMain.handle('collection:switch', (_event, id: unknown) => {
+    if (!isSpeciesId(id)) return { ok: false, message: '알 수 없는 동물이에요', view: collectionData() };
+    const r = switchPet(id);
+    return { ...r, view: collectionData() };
+  });
+  ipcMain.on('collection:close', () => closeCollection());
   ipcMain.handle('wardrobe:set', (_event, patch: unknown) => applyWardrobe(patch));
   ipcMain.on('wardrobe:close', () => closeWardrobe());
   ipcMain.handle('results:get', () =>
@@ -1240,9 +1562,19 @@ if (!app.requestSingleInstanceLock()) {
     newsPath = path.join(app.getPath('userData'), 'news.json');
     const now = Date.now();
     lastTipAt = now;
+    // 컬렉션이 없으면(처음 실행이거나 예전 버전에서 올라온 경우) 지금 펫과 이미 열어 둔 동물로 만든다.
     // 처음 실행하면 임의의 종이 든 알로 시작한다. 알은 쓰다듬으면 부화한다.
-    pet = applyElapsed(loadPet(savePath) ?? createPet(randomSpecies(), now), now);
+    collectionPath = path.join(app.getPath('userData'), 'collection.json');
+    const loadedCollection = loadCollection(collectionPath);
+    const starter = loadPet(savePath) ?? createPet(randomSpecies(), now);
+    collection = loadedCollection ?? migrateCollection(starter, growth.achievements, now, settings.petName);
+    pet = applyElapsed(collection.owned[collection.active]?.pet ?? starter, now);
     persist();
+    if (!loadedCollection) {
+      setTimeout(() => say(`🎟 새 기능! 뽑기권 ${collection.tickets}장을 드렸어요.\n메뉴의 '뽑기·컬렉션…'에서 새 동물을 뽑아 보세요`), 6_000);
+    }
+    setTimeout(() => checkDaily(), 9_000);
+    setInterval(() => checkDaily(), 30 * 60_000);
 
     petSize = petPixelSize(stageOf(pet), settings.petScale);
     const first = screen.getPrimaryDisplay().workArea;
@@ -1279,6 +1611,7 @@ if (!app.requestSingleInstanceLock()) {
     if (savePath && pet) persist();
     void demoServer?.close();
     feedServer?.close();
+    for (const w of poopWins) if (!w.isDestroyed()) w.destroy();
   });
   // 창이 하나뿐이고 트레이로 끝낼 수 있으므로, 창이 닫혀도 앱은 유지한다.
   app.on('window-all-closed', () => {});

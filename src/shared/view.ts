@@ -21,6 +21,8 @@ export interface PetView {
   /** 꾸미기: 색 변형과 장식 */
   variant: Variant;
   accessory: Accessory;
+  /** 더러워서 냄새가 난다(청결이 낮다) */
+  dirty?: boolean;
 }
 
 /** 펫이 찾아 알린 문제의 말풍선. 무엇이 문제인지, 어디인지, 어떻게 고치는지를 함께 보여 준다. */

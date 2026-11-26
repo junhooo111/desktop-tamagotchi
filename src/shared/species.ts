@@ -8,16 +8,17 @@
  *
  * 프레임은 처음 쓸 때 만들어서 기억해 둔다(앱이 뜰 때 전부 그리지 않는다).
  */
+import { tone } from './art/color.js';
 import { chunky } from './art/chunky.js';
 import { accessoryPalette, DEFAULT_STYLE, tintLook, type PetStyle } from './art/style.js';
 import { birdFrames } from './art/bird-plan.js';
 import { type BirdSpec } from './art/bird.js';
-import { CHICK, DUCK, PENGUIN } from './art/bird-species.js';
+import { CHICK, DUCK, PENGUIN, PHOENIX } from './art/bird-species.js';
 import { EGG_LOOK, eggFrames } from './art/egg.js';
 import { type Frames } from './art/frames.js';
 import { quadFrames, type Gait } from './art/quad-plan.js';
 import { type QuadSpec } from './art/quadruped.js';
-import { CAT, DOG, FOX, HAMSTER, RABBIT, TURTLE } from './art/quad-species.js';
+import { AZURE, CAT, DOG, DRAGON, FOX, HAMSTER, QILIN, RABBIT, TORTOISE, TURTLE, WHITETIGER } from './art/quad-species.js';
 import { paletteOf, type Look } from './art/types.js';
 import { SIZE } from './pixel.js';
 
@@ -26,8 +27,25 @@ export { ACCESSORIES, type Accessory } from './art/accessory.js';
 export { DEFAULT_STYLE, VARIANTS, isAccessory, isVariant, type PetStyle, type Variant } from './art/style.js';
 export { SIZE as SPRITE_SIZE };
 
-export type SpeciesId = 'rabbit' | 'cat' | 'dog' | 'turtle' | 'chick' | 'duck' | 'fox' | 'hamster' | 'penguin';
-export type SpriteStage = 'egg' | 'baby' | 'adult';
+export type SpeciesId =
+  | 'rabbit'
+  | 'cat'
+  | 'dog'
+  | 'turtle'
+  | 'chick'
+  | 'duck'
+  | 'fox'
+  | 'hamster'
+  | 'penguin'
+  // 히든 동물: 뽑기에서 아주 드물게 나오고, 성체 다음 단계(전설)까지 자란다
+  | 'dragon'
+  | 'azure'
+  | 'whitetiger'
+  | 'tortoise'
+  | 'phoenix'
+  | 'qilin';
+/** 전설(legend)은 히든 동물만 가는 성체 다음 단계다. 히든이 아닌 동물에게 요청하면 성체 그림을 쓴다. */
+export type SpriteStage = 'egg' | 'baby' | 'adult' | 'legend';
 
 export interface SpriteSet {
   /** 문자 → '#rrggbb' */
@@ -40,6 +58,8 @@ export interface SpriteSet {
 export interface Species {
   readonly id: SpeciesId;
   readonly name: string;
+  /** 히든 동물(뽑기 확률이 아주 낮고 전설 단계까지 자란다) */
+  readonly hidden?: boolean;
 }
 
 type Design =
@@ -56,6 +76,12 @@ const DESIGNS: Record<SpeciesId, Design> = {
   fox: { kind: 'quad', spec: FOX, gait: 'trot', skin: 'f' },
   hamster: { kind: 'quad', spec: HAMSTER, gait: 'trot', skin: 'f' },
   penguin: { kind: 'bird', spec: PENGUIN, skin: 'f' },
+  dragon: { kind: 'quad', spec: DRAGON, gait: 'trot', skin: 'f' },
+  azure: { kind: 'quad', spec: AZURE, gait: 'trot', skin: 'f' },
+  whitetiger: { kind: 'quad', spec: WHITETIGER, gait: 'trot', skin: 'f' },
+  tortoise: { kind: 'quad', spec: TORTOISE, gait: 'trot', skin: 'f' },
+  phoenix: { kind: 'bird', spec: PHOENIX, skin: 'f' },
+  qilin: { kind: 'quad', spec: QILIN, gait: 'trot', skin: 'f' },
 };
 
 export const SPECIES: readonly Species[] = [
@@ -68,7 +94,24 @@ export const SPECIES: readonly Species[] = [
   { id: 'fox', name: '여우' },
   { id: 'hamster', name: '햄스터' },
   { id: 'penguin', name: '펭귄' },
+  { id: 'dragon', name: '용', hidden: true },
+  { id: 'azure', name: '청룡', hidden: true },
+  { id: 'whitetiger', name: '백호', hidden: true },
+  { id: 'tortoise', name: '현무', hidden: true },
+  { id: 'phoenix', name: '주작', hidden: true },
+  { id: 'qilin', name: '기린', hidden: true },
 ];
+
+/** 처음부터 뽑을 수 있는 동물과, 히든 동물 */
+export const COMMON_SPECIES: readonly Species[] = SPECIES.filter((s) => !s.hidden);
+export const HIDDEN_SPECIES: readonly Species[] = SPECIES.filter((s) => s.hidden);
+export const isHiddenSpecies = (id: SpeciesId): boolean => HIDDEN_SPECIES.some((s) => s.id === id);
+
+/** 전설 단계: 몸에 금빛 날개가 돋고 불꽃 갈기가 난다(히든 동물만). */
+function legendDesign(d: Design): Design {
+  if (d.kind === 'bird') return { ...d, spec: { ...d.spec, bodyWings: true } };
+  return { ...d, spec: { ...d.spec, look: { ...d.spec.look, beak: d.spec.bodyWings || d.spec.horns ? d.spec.look.beak : tone('#ffd34a') }, bodyWings: true, mane: d.spec.mane ?? 'flame' } };
+}
 
 /** 모든 프레임을 16칸 굵기로 뭉친다(art/chunky.ts) */
 function chunkAll(frames: Frames): Frames {
@@ -79,16 +122,18 @@ const cache = new Map<string, SpriteSet>();
 
 /** 종·단계·스타일에 맞는 스프라이트. 알 단계는 종·스타일과 상관없이 같은 알이다. */
 export function spriteSet(id: SpeciesId, stage: SpriteStage, style: PetStyle = DEFAULT_STYLE): SpriteSet {
-  const key = stage === 'egg' ? 'egg' : [id, stage, style.variant, style.accessory].join('/');
+  const key = stage === 'egg' ? 'egg' : [id, stage === 'legend' && !isHiddenSpecies(id) ? 'adult' : stage, style.variant, style.accessory].join('/');
   const cached = cache.get(key);
   if (cached) return cached;
   let made: SpriteSet;
   if (stage === 'egg') {
     made = { palette: paletteOf(EGG_LOOK), frames: chunkAll(eggFrames()), skin: '' };
   } else {
-    const d = DESIGNS[id];
+    const legend = stage === 'legend' && isHiddenSpecies(id);
+    const d = legend ? legendDesign(DESIGNS[id]) : DESIGNS[id];
+    const artStage = stage === 'baby' ? 'baby' : 'adult';
     const look = tintLook(d.spec.look, style.variant);
-    const frames = d.kind === 'quad' ? quadFrames({ ...d.spec, look, accessory: style.accessory }, stage, d.gait) : birdFrames({ ...d.spec, look, accessory: style.accessory }, stage);
+    const frames = d.kind === 'quad' ? quadFrames({ ...d.spec, look, accessory: style.accessory }, artStage, d.gait) : birdFrames({ ...d.spec, look, accessory: style.accessory }, artStage);
     made = { palette: { ...paletteOf(look), ...accessoryPalette(style.accessory) }, frames: chunkAll(frames), skin: d.skin };
   }
   cache.set(key, made);

@@ -40,6 +40,14 @@ export interface BehaviorState {
   /** 매달린 자리(마우스 위치) */
   anchorX: number;
   anchorY: number;
+  /** 떨어지기 시작한 높이(펫 위쪽 y). 얼마나 높은 데서 떨어졌는지 잰다. */
+  fallFrom: number;
+  /** 산책이 끝나는 시각(ms). 0 이면 산책 중이 아니다. 산책 동안 마우스를 따라다닌다. */
+  strollUntil: number;
+  /** 산책하고 지쳐서 쉬는 시간이 끝나는 시각(ms). 쉬는 동안은 마우스를 따라가지 않는다. */
+  restUntil: number;
+  /** 혼자 놀게 두기: 이 점 둘레(radius px) 안에서만 돌아다닌다. null 이면 화면 전체를 자유롭게 다닌다. */
+  home: { x: number; y: number; radius: number } | null;
 }
 
 export interface StepContext {
@@ -67,6 +75,18 @@ export const HANG_RELEASE_PX = 6;
 export const SLIP_PER_SEC = 0.12;
 /** 문제를 찾은 자리에서 사용자를 기다리는 최대 시간 */
 export const ALERT_MS = 90_000;
+/** 이 높이(px) 이상에서 떨어져 바닥에 닿으면 기절한다 */
+export const FAINT_FALL_PX = 300;
+/** 기절해서 헤롱헤롱하는 시간 */
+export const DIZZY_MS = 4_500;
+/** 산책 시간(ms)의 범위. 이 시간 동안 마우스를 따라다니다가 지친다. */
+export const STROLL_MS = { min: 60_000, max: 120_000 } as const;
+/** 산책하고 지쳐서 마우스를 따라가지 않고 쉬는 시간 */
+export const REST_MS = 120_000;
+export const POOP_MS = 1_400;
+export const WASH_MS = 3_000;
+/** 산책 중 마우스 옆에서 이만큼(펫 크기 배수) 떨어져 따라간다 */
+const FOLLOW_GAP = 1.4;
 
 const PLAY_MS: Record<PlayKind, number> = { hop: 1_800, roll: 1_600, look: 2_400 };
 
@@ -90,6 +110,10 @@ export function createBehavior(x: number, y: number, now: number): BehaviorState
     vy: 0,
     anchorX: 0,
     anchorY: 0,
+    fallFrom: y,
+    strollUntil: 0,
+    restUntil: 0,
+    home: null,
   };
 }
 
@@ -122,19 +146,35 @@ function currentArea(s: BehaviorState, ctx: StepContext): Rect | undefined {
   return areaAt(ctx.areas, s.x + ctx.size / 2, s.y + ctx.size / 2);
 }
 
-/** 모니터 하나를 골라 그 안에서 펫이 통째로 들어가는 임의의 위치를 돌려준다. */
+/**
+ * 모니터 하나를 골라 그 안에서 펫이 통째로 들어가는 임의의 위치를 돌려준다.
+ * home 이 있으면 그 점 둘레 안(모니터와 겹치는 부분)에서만 고른다.
+ */
 export function pickSpot(
   areas: readonly Rect[],
   size: number,
   rng: () => number,
+  home: BehaviorState['home'] = null,
 ): { x: number; y: number } | null {
-  const area = areas[Math.min(areas.length - 1, Math.floor(rng() * areas.length))];
+  const pool = home ? areas.filter((a) => areaContains(a, home.x, home.y)) : areas;
+  const list = pool.length > 0 ? pool : areas;
+  const area = list[Math.min(list.length - 1, Math.floor(rng() * list.length))];
   if (!area) return null;
-  return {
-    x: area.x + Math.round(rng() * Math.max(0, area.width - size)),
-    y: area.y + Math.round(rng() * Math.max(0, area.height - size)),
-  };
+  let minX = area.x;
+  let maxX = area.x + Math.max(0, area.width - size);
+  let minY = area.y;
+  let maxY = area.y + Math.max(0, area.height - size);
+  if (home) {
+    // 펫 그림의 왼쪽 위 모서리가 home 중심에서 radius 안(그림이 통째로 들어가게)에 오도록 좁힌다.
+    minX = Math.min(maxX, Math.max(minX, home.x - home.radius));
+    maxX = Math.max(minX, Math.min(maxX, home.x + home.radius - size));
+    minY = Math.min(maxY, Math.max(minY, home.y - home.radius));
+    maxY = Math.max(minY, Math.min(maxY, home.y + home.radius - size));
+  }
+  return { x: minX + Math.round(rng() * (maxX - minX)), y: minY + Math.round(rng() * (maxY - minY)) };
 }
+
+const areaContains = (a: Rect, x: number, y: number): boolean => x >= a.x && x < a.x + a.width && y >= a.y && y < a.y + a.height;
 
 // ---- 상태 전환 도우미 ----
 
@@ -184,12 +224,14 @@ function randomPlay(rng: () => number, egg: boolean): PlayKind {
 }
 
 function startRoute(s: BehaviorState, ctx: StepContext, mode: 'walk' | 'run'): BehaviorState {
-  const spot = pickSpot(ctx.areas, ctx.size, ctx.rng);
+  const spot = pickSpot(ctx.areas, ctx.size, ctx.rng, s.home);
   return spot ? startTravel(s, ctx, mode, spot.x, spot.y, 'none') : toIdle(s, ctx, 2_000, 4_000);
 }
 
 /** 벽 쪽으로 걸어가서, 닿으면 기어오른다. */
 function startWallRoute(s: BehaviorState, ctx: StepContext): BehaviorState {
+  // 혼자 놀게 두는 동안에는 멀리 있는 벽까지 가지 않는다.
+  if (s.home) return toIdle(s, ctx, 2_000, 4_000);
   const area = ctx.areas[Math.min(ctx.areas.length - 1, Math.floor(ctx.rng() * ctx.areas.length))];
   if (!area) return toIdle(s, ctx, 2_000, 4_000);
   const side: Side = ctx.rng() < 0.5 ? 'left' : 'right';
@@ -228,7 +270,7 @@ export function carry(s: BehaviorState, now: number): BehaviorState {
 
 /** 사용자가 펫을 놓았다. 중력으로 떨어진다. */
 export function drop(s: BehaviorState, now: number): BehaviorState {
-  return { ...s, mode: 'fall', surface: 'floor', since: now, vy: 0 };
+  return { ...s, mode: 'fall', surface: 'floor', since: now, vy: 0, fallFrom: s.y };
 }
 
 /** 자거나 조는 펫을 깨운다. */
@@ -257,6 +299,60 @@ export function canInspect(s: BehaviorState, stage: Stage): boolean {
   if (stage === 'egg' || s.then !== 'none') return false;
   return s.mode === 'idle' || s.mode === 'walk' || s.mode === 'run' || s.mode === 'play' || s.mode === 'sit';
 }
+
+/** 지금 하는 동작이 끝나기 전에는 새 돌봄(쓰다듬기·밥·놀기·씻기)을 받지 않는다. */
+const BUSY: readonly Mode[] = ['happy', 'eat', 'play', 'wash', 'poop', 'dizzy'];
+export function isOccupied(s: BehaviorState, now: number): boolean {
+  return BUSY.includes(s.mode) && now < s.until;
+}
+
+/** 산책을 시작한다: 정해진 시간 동안 마우스를 따라다닌다. 쉬는 중이거나 이미 산책 중이면 그대로. */
+export function startStroll(s: BehaviorState, ctx: StepContext): BehaviorState {
+  if (ctx.stage === 'egg' || s.strollUntil > ctx.now || ctx.now < s.restUntil) return s;
+  if (s.mode === 'carried' || s.mode === 'fall' || s.mode === 'dizzy' || s.then !== 'none') return s;
+  return {
+    ...s,
+    mode: 'idle',
+    surface: 'floor',
+    since: ctx.now,
+    until: ctx.now,
+    then: 'none',
+    strollUntil: ctx.now + rand(ctx.rng, STROLL_MS.min, STROLL_MS.max),
+  };
+}
+
+/** 산책 중에 응가를 한다(웅크려서 잠시 멈춘다). */
+export function startPoop(s: BehaviorState, now: number): BehaviorState {
+  return { ...s, mode: 'poop', surface: 'floor', since: now, until: now + POOP_MS, then: 'none' };
+}
+
+/** 씻는다. 하던 일이 끊겨도 되는 상태일 때만 시작한다. */
+export function startWash(s: BehaviorState, now: number): BehaviorState {
+  if (!REACTABLE.includes(s.mode) || s.then !== 'none') return s;
+  return { ...s, mode: 'wash', surface: 'floor', dir: horizontal(s.dir), since: now, until: now + WASH_MS, then: 'none' };
+}
+
+/** 혼자 놀게 두기 반경(px) */
+export const HOME_RADIUS = 220;
+
+/** 혼자 놀게 둔다: (x, y) 근방에서만 행동하게 한다. */
+export function setHome(s: BehaviorState, x: number, y: number): BehaviorState {
+  return { ...s, home: { x, y, radius: HOME_RADIUS } };
+}
+
+/** 혼자 놀게 두기를 풀고 다시 자유롭게 돌아다니게 한다. */
+export function clearHome(s: BehaviorState): BehaviorState {
+  return { ...s, home: null };
+}
+
+/** 펫이 home 범위 밖에 있는지(펫 중심 기준) */
+function outsideHome(s: BehaviorState, size: number): boolean {
+  if (!s.home) return false;
+  return Math.hypot(s.x + size / 2 - s.home.x, s.y + size / 2 - s.home.y) > s.home.radius;
+}
+
+/** 산책 중인지 */
+export const isStrolling = (s: BehaviorState, now: number): boolean => s.strollUntil > now;
 
 /** 반응 동작이 이어지는 시간(ms) */
 export const REACT_MS = { happy: 1_600, eat: 2_400 } as const;
@@ -305,11 +401,20 @@ const HANGABLE: readonly Mode[] = ['idle', 'walk', 'run', 'doze', 'play', 'sit']
 export function step(s: BehaviorState, ctx: StepContext): BehaviorState {
   if (s.mode === 'carried') return s;
 
+  // 산책 중이면 마우스를 따라다닌다(끝나면 지쳐서 쉰다).
+  if (s.strollUntil > 0) {
+    const walked = stepStroll(s, ctx);
+    if (walked) return walked;
+  }
+
   // 마우스를 한참 가만히 두면 매달리러 간다(알은 제외).
   // 문제를 알리러 가는 중이면 방해하지 않는다: 화면을 읽느라 마우스를 안 움직이는 때가 많기 때문이다.
   if (
     ctx.stage !== 'egg' &&
     ctx.cursorIdleMs >= HANG_AFTER_MS &&
+    ctx.now >= s.restUntil &&
+    s.strollUntil === 0 &&
+    (!s.home || Math.hypot(ctx.cursor.x - s.home.x, ctx.cursor.y - s.home.y) <= s.home.radius + ctx.size) &&
     HANGABLE.includes(s.mode) &&
     s.then !== 'hang' &&
     s.then !== 'alert'
@@ -350,14 +455,54 @@ export function step(s: BehaviorState, ctx: StepContext): BehaviorState {
         : toIdle(s, ctx, 1_000, 3_000);
     case 'happy':
     case 'eat':
+    case 'wash':
+    case 'poop':
+    case 'dizzy':
       return ctx.now < s.until ? s : toIdle(s, ctx, 1_000, 3_000);
     default:
       return s;
   }
 }
 
+/**
+ * 산책 한 틱. 끝났으면 지쳐서 쉬는 상태로 바꾸고, 따라갈 수 없는 상태(떨어지는 중·반응 중·문제 알리러 가는 중 등)면 null 을 돌려
+ * 평소 규칙이 처리하게 한다.
+ */
+function stepStroll(s: BehaviorState, ctx: StepContext): BehaviorState | null {
+  if (ctx.now >= s.strollUntil) {
+    return { ...s, strollUntil: 0, restUntil: ctx.now + REST_MS, mode: 'sit', surface: 'floor', since: ctx.now, until: ctx.now + 8_000, then: 'none' };
+  }
+  const FOLLOWING: readonly Mode[] = ['idle', 'walk', 'run', 'sit', 'doze', 'sleep'];
+  if (!FOLLOWING.includes(s.mode) || s.then !== 'none') return null;
+  const left = ctx.cursor.x >= s.x + ctx.size / 2; // 마우스가 오른쪽에 있으면 그 왼쪽에, 아니면 오른쪽에 선다
+  const tx = ctx.cursor.x - ctx.size / 2 + (left ? -1 : 1) * ctx.size * FOLLOW_GAP;
+  const ty = ctx.cursor.y - ctx.size / 2;
+  const target = clampToAreas(tx, ty, ctx.size, ctx.areas);
+  const dx = target.x - s.x;
+  const dy = target.y - s.y;
+  const dist = Math.hypot(dx, dy);
+  const facing: Dir = ctx.cursor.x >= s.x + ctx.size / 2 ? 'right' : 'left';
+  if (dist <= ctx.size * 0.35) return { ...s, mode: 'idle', surface: 'floor', dir: facing, since: s.mode === 'idle' ? s.since : ctx.now, until: ctx.now + 400 };
+  const mode = dist > ctx.size * 4 ? 'run' : 'walk';
+  const stepPx = Math.min(dist, (SPEED[mode] * ctx.dtMs) / 1000);
+  return {
+    ...s,
+    mode,
+    surface: 'floor',
+    dir: Math.abs(dx) > 1 ? (dx > 0 ? 'right' : 'left') : facing,
+    since: s.mode === mode ? s.since : ctx.now,
+    x: s.x + (dx / dist) * stepPx,
+    y: s.y + (dy / dist) * stepPx,
+  };
+}
+
 function stepIdle(s: BehaviorState, ctx: StepContext): BehaviorState {
   if (ctx.now < s.until) return s;
+  // 혼자 놀게 두는 중인데 범위 밖으로 나와 있으면(떨어졌거나 산책했거나) 먼저 돌아온다.
+  if (ctx.stage !== 'egg' && outsideHome(s, ctx.size)) {
+    const back = pickSpot(ctx.areas, ctx.size, ctx.rng, s.home);
+    if (back) return startTravel(s, ctx, 'walk', back.x, back.y, 'none');
+  }
   const r = ctx.rng();
   if (ctx.stage === 'egg') {
     if (r < 0.6) return startRoute(s, ctx, 'walk');
@@ -444,7 +589,7 @@ function stepPlay(s: BehaviorState, ctx: StepContext): BehaviorState {
 
 function stepHang(s: BehaviorState, ctx: StepContext): BehaviorState {
   if (Math.hypot(ctx.cursor.x - s.anchorX, ctx.cursor.y - s.anchorY) > HANG_RELEASE_PX) {
-    return { ...s, mode: 'fall', since: ctx.now, vy: 0 };
+    return { ...s, mode: 'fall', since: ctx.now, vy: 0, fallFrom: s.y };
   }
   return { ...s, x: s.anchorX - ctx.size / 2, y: s.anchorY };
 }
@@ -455,6 +600,12 @@ function stepFall(s: BehaviorState, ctx: StepContext): BehaviorState {
   const ground = area.y + area.height - ctx.size;
   const vy = s.vy + (GRAVITY * ctx.dtMs) / 1000;
   const y = s.y + (vy * ctx.dtMs) / 1000;
-  if (y >= ground) return toIdle({ ...s, y: ground }, ctx, 1_000, 2_500);
+  if (y >= ground) {
+    // 높은 데서 떨어졌으면 기절해서 헤롱헤롱한다.
+    if (ground - s.fallFrom >= FAINT_FALL_PX) {
+      return { ...s, y: ground, vy: 0, mode: 'dizzy', surface: 'floor', since: ctx.now, until: ctx.now + DIZZY_MS, then: 'none' };
+    }
+    return toIdle({ ...s, y: ground }, ctx, 1_000, 2_500);
+  }
   return { ...s, y, vy };
 }

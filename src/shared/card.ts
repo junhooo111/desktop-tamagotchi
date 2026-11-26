@@ -13,7 +13,7 @@
  * 글자는 영문 대문자·숫자만 쓴다(<img> 로 불러온 SVG 는 웹폰트를 못 쓰고, 한글 글꼴은 보는 사람 PC 에 달려 있다).
  */
 import { buildCodex, emptyGrowth, type CodexView } from './growth.js';
-import { levelOf, stageOf, type PetState } from './pet.js';
+import { levelOf, stageOf, type PetState, type Stage } from './pet.js';
 import { spriteSet, type PetStyle, type SpeciesId } from './species.js';
 
 export interface CardInput {
@@ -23,6 +23,8 @@ export interface CardInput {
   codex?: CodexView;
   /** 펫 이름. 있으면 종 이름 대신 크게 보여 준다. */
   name?: string;
+  /** 보여 줄 단계(꾸미기에서 지나온 단계로 되돌렸을 때). 없으면 지금 단계. */
+  stage?: Stage;
 }
 
 /** 지금 레벨 안에서의 경험치 진행: into/need. 레벨 n 은 경험치 10*(n-1)^2 부터다. */
@@ -199,7 +201,7 @@ function sceneArt(): string {
 export function renderProfileCard(input: CardInput): string {
   const { pet, style } = input;
   const codex = input.codex ?? buildCodex(emptyGrowth(), { tipsSeen: 0 }, 0);
-  const stage = stageOf(pet);
+  const stage = input.stage ?? stageOf(pet);
   const set = spriteSet(pet.speciesId as SpeciesId, stage, style);
   const level = levelOf(pet.xp);
   const prog = xpProgress(pet.xp);

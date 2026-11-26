@@ -15,7 +15,7 @@ export const WINDOW = { width: 460, height: 460 } as const;
  * 그림 한 칸이 화면 몇 픽셀인지(1 = 32x32 그림이 32px). 모든 단계가 같은 32x32 칸을 같은 배율로 쓰고,
  * 크기 차이는 그림 자체(새끼는 성체의 약 65%이고 머리가 큼, 알은 작음)에서 나온다.
  */
-export const STAGE_SCALE: Record<Stage, number> = { egg: 1, baby: 1, adult: 1 };
+export const STAGE_SCALE: Record<Stage, number> = { egg: 1, baby: 1, adult: 1, legend: 1 };
 
 /** FE 지식 말풍선의 폭과 최대 높이. 기본은 150~210px 이고 `코드 보기`를 펼치면 가장 긴 지식이 약 325px 까지 커진다. */
 export const TIP_BUBBLE = { width: 240, maxHeight: 330 } as const;

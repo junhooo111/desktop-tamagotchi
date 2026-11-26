@@ -4,6 +4,7 @@
  */
 import type { Accessory } from './art/accessory.js';
 import { isAccessory, isVariant, type Variant } from './art/style.js';
+import { isDisplayStage, type DisplayStage } from './pet.js';
 import { isSpeciesId, type SpeciesId } from './species.js';
 import { RULE_IDS, type RuleId } from './lessons.js';
 
@@ -32,6 +33,8 @@ export interface Settings {
   accessory: Accessory;
   /** 펫 이름(없으면 빈 문자열). 말풍선·프로필 카드에 보인다. */
   petName: string;
+  /** 꾸미기에서 고른 모습: auto 는 지금 단계 그대로, 아니면 이미 지나온 단계(새끼·성체·전설)로 되돌린 모습. 동물을 바꾸면 auto 로 돌아간다. */
+  displayStage: DisplayStage;
   /** 프로필 카드에 보여 줄 동물('current' = 지금 키우는 동물). 열려 있는 동물만 쓴다(검증은 메인에서). */
   cardSpecies: SpeciesId | 'current';
 }
@@ -58,6 +61,7 @@ export const DEFAULT_SETTINGS: Settings = {
   variant: 'default',
   accessory: 'none',
   petName: '',
+  displayStage: 'auto',
   cardSpecies: 'current',
 };
 
@@ -102,6 +106,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     variant: isVariant(r['variant']) ? r['variant'] : DEFAULT_SETTINGS.variant,
     accessory: isAccessory(r['accessory']) ? r['accessory'] : DEFAULT_SETTINGS.accessory,
     petName: sanitizePetName(r['petName']),
+    displayStage: isDisplayStage(r['displayStage']) ? r['displayStage'] : DEFAULT_SETTINGS.displayStage,
     cardSpecies: r['cardSpecies'] === 'current' || isSpeciesId(r['cardSpecies']) ? r['cardSpecies'] : DEFAULT_SETTINGS.cardSpecies,
   };
 }

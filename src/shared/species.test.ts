@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { boundsOf, SIZE } from './pixel.js';
 import {
+  COMMON_SPECIES,
   FRAME_NAMES,
+  HIDDEN_SPECIES,
   SPECIES,
   frameToRgba,
   getSpecies,
+  isHiddenSpecies,
   isSpeciesId,
   spriteSet,
   type SpeciesId,
@@ -19,8 +22,22 @@ const cases: [string, SpeciesId, SpriteStage][] = IDS.flatMap((id) =>
 const all: [string, SpeciesId, SpriteStage][] = [...cases, ['egg', 'cat', 'egg']];
 
 describe('종 목록', () => {
-  it('처음 6종과 업적으로 여는 3종이 모두 있다', () => {
-    expect(SPECIES.map((s) => s.name)).toEqual(['토끼', '고양이', '강아지', '거북이', '병아리', '오리', '여우', '햄스터', '펭귄']);
+  it('일반 동물 9종과 히든 동물 6종이 모두 있다', () => {
+    expect(SPECIES.map((s) => s.name)).toEqual(['토끼', '고양이', '강아지', '거북이', '병아리', '오리', '여우', '햄스터', '펭귄', '용', '청룡', '백호', '현무', '주작', '기린']);
+    expect(COMMON_SPECIES).toHaveLength(9);
+    expect(HIDDEN_SPECIES.map((s) => s.id)).toEqual(['dragon', 'azure', 'whitetiger', 'tortoise', 'phoenix', 'qilin']);
+    expect(isHiddenSpecies('dragon')).toBe(true);
+    expect(isHiddenSpecies('cat')).toBe(false);
+  });
+
+  it('히든 동물만 전설 그림이 따로 있고(몸에 금빛 날개), 일반 동물에게 전설을 요청하면 성체 그림이다', () => {
+    for (const s of HIDDEN_SPECIES) {
+      const adult = spriteSet(s.id, 'adult');
+      const legend = spriteSet(s.id, 'legend');
+      expect(legend.frames.idleA, s.id).not.toEqual(adult.frames.idleA);
+      expect(legend.frames.idleA.join(''), s.id).toContain('p'); // 금빛 날개·뿔 색
+    }
+    expect(spriteSet('cat', 'legend')).toBe(spriteSet('cat', 'adult'));
   });
 
   it('동작별 프레임이 34개 있다', () => {
@@ -71,8 +88,8 @@ describe('스프라이트 데이터', () => {
     expect(new Set([f.walk1, f.walk2, f.walk3, f.walk4].map((r) => r.join('\n'))).size).toBe(4);
     expect(new Set([f.run1, f.run2, f.run3, f.run4].map((r) => r.join('\n'))).size).toBe(4);
     // 거북이·햄스터 새끼의 앉아서 숨쉬기(거북이는 서서 숨쉬기도)는 1칸 차이라 16칸 굵기로 뭉치면 사라진다(그 한 경우만 예외)
-    if (!(id === 'turtle' && stage === 'baby')) expect(f.idleA).not.toEqual(f.idleB);
-    if (!(stage === 'baby' && (id === 'turtle' || id === 'hamster'))) expect(f.sitA).not.toEqual(f.sitB);
+    if (!(stage === 'baby' && (id === 'turtle' || id === 'tortoise'))) expect(f.idleA).not.toEqual(f.idleB);
+    if (!(stage === 'baby' && (id === 'turtle' || id === 'tortoise' || id === 'hamster'))) expect(f.sitA).not.toEqual(f.sitB);
     expect(f.sleepA).not.toEqual(f.sleepB);
     expect(f.hangA).not.toEqual(f.hangB);
     for (const other of ['walk1', 'run2', 'sitA', 'sleepA', 'dozeA', 'jumpPeak', 'curl', 'climbA', 'slipA', 'hangA', 'fall', 'alertA', 'happyA', 'eatA'] as const) {
@@ -164,9 +181,10 @@ describe('frameToRgba', () => {
 describe('getSpecies / isSpeciesId', () => {
   it('id로 종을 찾고, 모르는 id는 거부한다', () => {
     expect(getSpecies('cat').name).toBe('고양이');
-    expect(() => getSpecies('dragon' as never)).toThrow();
+    expect(() => getSpecies('unicorn' as never)).toThrow();
     expect(isSpeciesId('cat')).toBe(true);
-    expect(isSpeciesId('dragon')).toBe(false);
+    expect(isSpeciesId('dragon')).toBe(true);
+    expect(isSpeciesId('unicorn')).toBe(false);
     expect(isSpeciesId(3)).toBe(false);
   });
 });

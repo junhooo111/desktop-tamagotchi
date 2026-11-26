@@ -31,6 +31,10 @@ export interface Pose {
   hearts: boolean;
   /** 먹는 중이라 앞에 먹이를 놓는다 */
   food: boolean;
+  /** 기절해서 머리 위로 별이 돈다 */
+  dizzy: boolean;
+  /** 씻는 중이라 거품이 떠오른다 */
+  bubbles: boolean;
 }
 
 const WALK: readonly FrameName[] = ['walk1', 'walk2', 'walk3', 'walk4'];
@@ -73,6 +77,8 @@ export function resolvePose(v: MotionView, now: number): Pose {
     alert: false,
     hearts: false,
     food: false,
+    dizzy: false,
+    bubbles: false,
     ...extra,
   });
   const blink = now % 3600 < 140;
@@ -108,6 +114,14 @@ export function resolvePose(v: MotionView, now: number): Pose {
       return make(pick(HAPPY, now, 180), { hearts: true });
     case 'eat':
       return make(pick(EAT, now, 240), { food: true });
+    case 'dizzy':
+      // 앉아서 눈을 감고 휘청휘청 흔들린다
+      return make(pick(SIT, now, 700), { eyesClosed: true, dizzy: true, dx: Math.round(Math.sin(now / 170) * 1.5) });
+    case 'wash':
+      return make(pick(IDLE, now, 650), { bubbles: true, dx: Math.floor(now / 90) % 2 === 0 ? 1 : -1 });
+    case 'poop':
+      // 웅크려서 끙끙
+      return make('jumpCrouch', { dx: Math.floor(now / 110) % 2 === 0 ? 1 : 0 });
   }
 }
 

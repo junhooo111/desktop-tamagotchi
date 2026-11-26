@@ -134,6 +134,57 @@ function drawHearts(centerX: number, top: number, now: number, unit: number): vo
   });
 }
 
+const STAR = ['.#.', '###', '.#.'];
+
+/** 전설 단계의 오라: 몸 둘레에서 금빛 반짝임이 깜빡인다. */
+function drawAura(rect: { x: number; y: number; size: number }, now: number): void {
+  for (let i = 0; i < 6; i++) {
+    const phase = ((now / 900 + i / 6) % 1 + 1) % 1;
+    const a = i * 1.05 + now / 2400;
+    const x = rect.x + rect.size / 2 + Math.cos(a) * rect.size * 0.62;
+    const y = rect.y + rect.size * 0.55 + Math.sin(a) * rect.size * 0.5;
+    ctx.globalAlpha = Math.sin(phase * Math.PI);
+    drawGlyph(STAR, Math.round(x), Math.round(y), 2, '#ffe27a');
+  }
+  ctx.globalAlpha = 1;
+}
+
+/** 기절해서 머리 위로 별 셋이 빙글빙글 돈다. */
+function drawDizzy(centerX: number, top: number, now: number, unit: number): void {
+  for (let i = 0; i < 3; i++) {
+    const a = now / 260 + (i * Math.PI * 2) / 3;
+    drawGlyph(STAR, Math.round(centerX - 4 + Math.cos(a) * 16), Math.round(top - 6 * unit + Math.sin(a) * 4), 2, '#ffd34a');
+  }
+}
+
+/** 씻는 동안 거품이 몸 둘레에서 떠오른다. */
+function drawBubbles(rect: { x: number; y: number; size: number }, now: number): void {
+  for (let i = 0; i < 7; i++) {
+    const t = ((now / 1100 + i / 7) % 1 + 1) % 1;
+    const r = 2 + (i % 3) * 1.5;
+    const x = rect.x + rect.size * (0.1 + 0.8 * (((i * 37) % 10) / 10)) + Math.sin(t * 8 + i) * 2;
+    const y = rect.y + rect.size - t * rect.size * 1.15;
+    ctx.globalAlpha = 1 - t * 0.7;
+    ctx.fillStyle = '#7ec8ee';
+    ctx.fillRect(Math.round(x), Math.round(y), Math.round(r * 2), Math.round(r * 2));
+    ctx.fillStyle = '#e6f6ff';
+    ctx.fillRect(Math.round(x) + 1, Math.round(y) + 1, Math.max(1, Math.round(r * 2) - 2), Math.max(1, Math.round(r * 2) - 2));
+  }
+  ctx.globalAlpha = 1;
+}
+
+/** 더러운 펫 위로 냄새 줄이 피어오른다. */
+function drawStink(centerX: number, top: number, now: number): void {
+  for (let i = 0; i < 3; i++) {
+    const t = ((now / 1300 + i / 3) % 1 + 1) % 1;
+    const baseX = Math.round(centerX - 10 + i * 9);
+    ctx.globalAlpha = 0.9 - t * 0.9;
+    ctx.fillStyle = '#8fbf4a';
+    for (let k = 0; k < 5; k++) ctx.fillRect(baseX + (k % 2 === 0 ? 0 : 2), Math.round(top - 4 - t * 12 - k * 2), 2, 2);
+  }
+  ctx.globalAlpha = 1;
+}
+
 function draw(now: number): void {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!view) return;
@@ -167,6 +218,10 @@ function draw(now: number): void {
   if (pose.zzz) drawZzz({ x: rect.x, y: top, size: rect.size }, now);
   if (pose.alert) drawAlert(centerX, top, Math.floor(now / 300) % 2 === 0 ? 0 : -2);
   if (pose.hearts) drawHearts(centerX, top, now, scale);
+  if (pose.dizzy) drawDizzy(centerX, top, now, scale);
+  if (view.stage === 'legend') drawAura({ x: offsetX, y: offsetY, size: rect.size }, now);
+  if (pose.bubbles) drawBubbles({ x: offsetX, y: offsetY, size: rect.size }, now);
+  if (view.dirty && !pose.bubbles) drawStink(centerX, top, now);
   if (pose.food && figure) {
     // 먹이는 바라보는 쪽(앞) 바닥에 놓는다.
     const front = pose.orientation.flip ? figure.x0 - 5 * scale - 1 : figure.x1 + 1;

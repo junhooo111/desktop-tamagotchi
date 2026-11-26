@@ -3,7 +3,7 @@
  * 좌표는 네발 동물과 같은 "성체 설계 공간"(32x32, 오른쪽을 봄, 발바닥 줄 = 30)이고 새끼는 줄여서 그린다.
  */
 import { blank, ellipse, line, markEllipse, part, px, rect, shift, toRows, triangle, type Grid } from '../pixel.js';
-import { drawBackWings, drawHeadAccessory, type Accessory } from './accessory.js';
+import { drawBackWings, drawHeadAccessory, wingKind, type Accessory } from './accessory.js';
 import { drawHangArms } from './hang-arms.js';
 import { SHADE, type ArtStage, type EyePose, type Look, type Pose } from './types.js';
 
@@ -14,6 +14,8 @@ export interface BirdSpec {
   tuft?: boolean;
   /** 꾸미기 장식(리본·안경·왕관·날개) */
   accessory?: Accessory;
+  /** 몸에 달린 날개(전설 단계). 꾸미기 날개를 달면 그쪽이 우선한다. */
+  bodyWings?: boolean;
 }
 
 const hasTuft = (spec: BirdSpec): boolean => spec.tuft ?? spec.kind === 'chick';
@@ -212,7 +214,7 @@ function standing(r: Rig, pose: Pose): Grid {
   drawTail(g, rb, rb.X(5.4), rb.Y(duck ? 19.8 : 18.6), pose.tailAngle > 60 ? 2 : 0);
   drawBody(g, rb, rb.X(14.2), rb.Y(21.4), (duck ? 9.8 : 9.2) * r.size * (r.baby ? 0.95 : 1), (duck ? 6.9 : 7.4) * r.size * (r.baby ? 0.95 : 1));
   drawWing(g, rb, pose, rb.X(12.2), rb.Y(21.4));
-  drawBackWings(g, r.spec.accessory, rb.X(11), rb.Y(21.4) - 7 * r.size, r.size);
+  drawBackWings(g, wingKind(r.spec), rb.X(11), rb.Y(21.4) - 7 * r.size, r.size);
   drawHead(g, rb, pose);
   return pose.dy === 0 ? g : shift(g, 0, pose.dy);
 }
@@ -225,7 +227,7 @@ function sitting(r: Rig, pose: Pose): Grid {
   drawTail(g, rb, rb.X(5.2), rb.Y(24), pose.tailAngle > 60 ? 2 : 0);
   drawBody(g, rb, rb.X(14.4), rb.Y(24.6), (duck ? 10.2 : 9.8) * r.size, (duck ? 5.6 : 6) * r.size);
   drawWing(g, rb, { ...pose, wing: 0 }, rb.X(12.4), rb.Y(24.6));
-  drawBackWings(g, r.spec.accessory, rb.X(11), rb.Y(24.6) - 6 * r.size, r.size);
+  drawBackWings(g, wingKind(r.spec), rb.X(11), rb.Y(24.6) - 6 * r.size, r.size);
   // 앉은 자세의 머리는 조금 낮다
   const lowerPose = { ...pose, headDy: pose.headDy + 3 };
   drawHead(g, rb, lowerPose);
@@ -240,7 +242,7 @@ function lying(r: Rig, pose: Pose): Grid {
   drawTail(g, r, r.X(5), r.Y(26), 0);
   drawBody(g, r, r.X(14.8), r.Y(25.4 - breath * 0.4), (10.2 + breath * 0.4) * r.size, (5.8 + breath * 0.5) * r.size);
   drawWing(g, r, { ...pose, wing: 0 }, r.X(12.6), r.Y(25.2));
-  drawBackWings(g, r.spec.accessory, r.X(11), r.Y(25.4) - 5.5 * r.size, r.size);
+  drawBackWings(g, wingKind(r.spec), r.X(11), r.Y(25.4) - 5.5 * r.size, r.size);
   const head = { cx: r.X(22), cy: r.Y(24), rx: 5.4 * r.size * r.headMod, ry: 4.8 * r.size * r.headMod };
   part(g, (t) => ellipse(t, head.cx, head.cy, head.rx, head.ry, duck ? 'g' : 'f'), { outline: 'k', shade: SHADE });
   const ex = Math.round(head.cx + head.rx * 0.2);
@@ -263,7 +265,7 @@ function curled(r: Rig, pose: Pose): Grid {
     { outline: 'k', shade: SHADE },
   );
   drawWing(g, r, { ...pose, wing: 0 }, r.X(11.8), r.Y(22));
-  drawBackWings(g, r.spec.accessory, r.X(12.5), r.Y(21.6) - 8 * r.size + 2, r.size);
+  drawBackWings(g, wingKind(r.spec), r.X(12.5), r.Y(21.6) - 8 * r.size + 2, r.size);
   const head = { cx: r.X(19.8), cy: r.Y(16.4), rx: 6.3 * r.size * r.headMod, ry: 5.7 * r.size * r.headMod };
   part(g, (t) => ellipse(t, head.cx, head.cy, head.rx, head.ry, duck ? 'g' : 'f'), { outline: 'k', shade: SHADE });
   drawFace(g, r, { ...pose, mouth: 'none' }, head);

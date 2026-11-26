@@ -15,6 +15,8 @@ const { renderProfileCard } = await load('shared/card.js');
 const { sanitizeSettings } = await load('shared/settings.js');
 const { sanitizeGrowth, buildCodex } = await load('shared/growth.js');
 const { cardSpeciesOf } = await load('shared/wardrobe.js');
+const { sanitizeCollection, ownedIds } = await load('shared/collection.js');
+const { ACCESSORIES, VARIANTS } = await load('shared/species.js');
 
 const dataDir = process.env.PET_DATA_DIR ?? path.join(process.env.APPDATA ?? path.join(os.homedir(), 'AppData', 'Roaming'), 'desktop-tamagotchi');
 const read = (name) => {
@@ -34,9 +36,27 @@ const settings = sanitizeSettings(read('settings.json'));
 const tipsSeen = read('progress.json')?.tipsSeen;
 const growth = sanitizeGrowth(read('growth.json'));
 const codex = buildCodex(growth, { tipsSeen: Array.isArray(tipsSeen) ? tipsSeen.length : 0 }, Date.now());
+// 컬렉션이 있으면 고른 동물(없으면 지금 키우는 동물) 자신의 레벨·이름으로 그린다.
+const collection = sanitizeCollection(read('collection.json'), ACCESSORIES, VARIANTS);
+let cardPet = pet;
+let cardName = settings.petName;
+if (collection) {
+  const id = cardSpeciesOf(settings.cardSpecies, collection.active, ownedIds(collection));
+  if (id !== collection.active) {
+    cardPet = collection.owned[id].pet;
+    cardName = collection.owned[id].name;
+  } else {
+    cardPet = collection.owned[id].pet;
+  }
+}
+const { effectiveStage } = await load('shared/pet.js');
+const { stageOf } = await load('shared/pet.js');
+// 꾸미기에서 지나온 단계로 되돌려 둔 모습은 지금 키우는 동물에만 적용한다.
+const activeCard = !collection || cardPet === collection.owned[collection.active]?.pet;
 const svg = renderProfileCard({
-  pet: { ...pet, speciesId: cardSpeciesOf(growth, settings.cardSpecies, pet.speciesId) },
-  name: settings.petName,
+  stage: activeCard ? effectiveStage(stageOf(cardPet), settings.displayStage) : undefined,
+  pet: cardPet,
+  name: cardName,
   style: { variant: settings.variant, accessory: settings.accessory },
   codex,
 });

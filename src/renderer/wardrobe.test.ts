@@ -17,7 +17,8 @@ const flush = async (): Promise<void> => {
 };
 const withAchievements = (...ids: string[]): Growth => ({ ...emptyGrowth(), achievements: Object.fromEntries(ids.map((id) => [id, 1])) });
 const data = (g: Growth, over: Partial<WardrobeData['current']> = {}): WardrobeData => ({
-  ...buildWardrobe(g, { speciesId: 'cat', variant: 'default', accessory: 'none', ...over }),
+  // 고양이와 강아지만 가지고 있다(나머지 동물은 뽑기로 얻어야 한다)
+  ...buildWardrobe(g, { speciesId: 'cat', variant: 'default', accessory: 'none', ...over }, { accessories: [], variants: [], species: ['cat', 'dog'] }),
   stage: 'adult',
 });
 const buttons = (id: string): HTMLButtonElement[] => [...el(id).querySelectorAll('button')] as HTMLButtonElement[];
@@ -58,13 +59,12 @@ afterEach(() => {
 });
 
 describe('꾸미기 창', () => {
-  it('동물·색·장식을 모두 보여 주고 지금 입고 있는 것을 눌린 상태로 표시한다', async () => {
+  it('색·장식을 모두 보여 주고 지금 입고 있는 것을 눌린 상태로 표시하며, 동물은 여기서 고르지 않는다(뽑기·컬렉션에서 꺼낸다)', async () => {
     await open(data(emptyGrowth(), { speciesId: 'dog' }));
-    expect(buttons('species')).toHaveLength(SPECIES.length);
+    expect(document.getElementById('species')).toBeNull();
     expect(buttons('variants')).toHaveLength(4);
     expect(buttons('accessories')).toHaveLength(9);
     const pressed = (id: string): string[] => buttons(id).filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset['id'] ?? '');
-    expect(pressed('species')).toEqual(['dog']);
     expect(pressed('variants')).toEqual(['default']);
     expect(pressed('accessories')).toEqual(['none']);
   });
@@ -76,10 +76,6 @@ describe('꾸미기 창', () => {
 
   it('열린 것을 누르면 그 값만 메인에 보내고, 돌려받은 상태로 다시 그린다', async () => {
     const { api } = await open(data(emptyGrowth()));
-    buttons('species').find((b) => b.dataset['id'] === 'rabbit')!.click();
-    await flush();
-    expect(api.set).toHaveBeenCalledWith({ speciesId: 'rabbit' });
-    expect(buttons('species').find((b) => b.dataset['id'] === 'rabbit')!.getAttribute('aria-pressed')).toBe('true');
     buttons('variants').find((b) => b.dataset['id'] === 'default')!.click();
     await flush();
     expect(api.set).toHaveBeenLastCalledWith({ variant: 'default' });
@@ -99,20 +95,19 @@ describe('꾸미기 창', () => {
   });
 
   it('업적을 달성한 것은 잠김 표시가 없고 눌러서 쓸 수 있다', async () => {
-    const { api } = await open(data(withAchievements('rules-all', 'first-confirm')));
+    const { api } = await open(data(withAchievements('rules-all')));
     const crown = buttons('accessories').find((b) => b.dataset['id'] === 'crown')!;
     expect(crown.textContent).not.toContain('🔒');
     crown.click();
     await flush();
     expect(api.set).toHaveBeenCalledWith({ accessory: 'crown' });
-    expect(buttons('species').find((b) => b.dataset['id'] === 'fox')!.getAttribute('aria-disabled')).toBeNull();
   });
 
   it('고르면 이전의 잠김 안내가 사라진다', async () => {
     await open(data(withAchievements()));
     buttons('accessories').find((b) => b.dataset['id'] === 'wings')!.click();
     expect(el('lock-hint').textContent).not.toBe('');
-    buttons('species')[0]!.click();
+    buttons('variants')[0]!.click();
     await flush();
     expect(el('lock-hint').textContent).toBe('');
   });
@@ -124,7 +119,7 @@ describe('꾸미기 창', () => {
     await flush();
     expect(api.get).toHaveBeenCalledTimes(2);
     expect(buttons('accessories').find((b) => b.dataset['id'] === 'crown')!.getAttribute('aria-disabled')).toBeNull();
-    expect(buttons('species')).toHaveLength(SPECIES.length); // 중복으로 쌓이지 않는다
+    expect(buttons('card-species')).toHaveLength(SPECIES.length + 1); // 중복으로 쌓이지 않는다
   });
 
   it('이름을 쓰고 저장(또는 Enter)하면 이름만 메인에 보내고, 입력칸에는 저장된 이름이 보인다', async () => {
@@ -154,6 +149,27 @@ describe('꾸미기 창', () => {
     locked.click();
     await flush();
     expect(api.set).not.toHaveBeenCalled();
+  });
+
+  it('모습(성장 단계): 자동과 지나온 단계가 열려 있고, 누르면 그 단계만 메인에 보낸다', async () => {
+    const { api } = await open(data(emptyGrowth()));
+    expect(buttons('stages').map((b) => b.dataset['id'])).toEqual(['auto', 'baby', 'adult']);
+    expect(buttons('stages').find((b) => b.dataset['id'] === 'auto')!.getAttribute('aria-pressed')).toBe('true');
+    buttons('stages').find((b) => b.dataset['id'] === 'baby')!.click();
+    await flush();
+    expect(api.set).toHaveBeenLastCalledWith({ displayStage: 'baby' });
+    expect(buttons('stages').find((b) => b.dataset['id'] === 'baby')!.getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('아직 안 지나온 단계는 잠겨 있고 눌러도 보내지 않는다', async () => {
+    const baby = { ...data(emptyGrowth()), ...buildWardrobe(emptyGrowth(), { speciesId: 'cat', variant: 'default', accessory: 'none' }, { accessories: [], variants: [], species: ['cat'], stage: 'baby' }), stage: 'baby' as const };
+    const { api } = await open(baby);
+    const adult = buttons('stages').find((b) => b.dataset['id'] === 'adult')!;
+    expect(adult.getAttribute('aria-disabled')).toBe('true');
+    adult.click();
+    await flush();
+    expect(api.set).not.toHaveBeenCalled();
+    expect(el('lock-hint').textContent).toContain('지나오지');
   });
 
   it('닫기 버튼과 Esc 로 닫는다', async () => {

@@ -7,7 +7,7 @@
 import { LESSONS, RULE_IDS, type RuleId } from './lessons.js';
 import { TIPS } from './tips.js';
 
-export type CareKind = 'touch' | 'feed' | 'play';
+export type CareKind = 'touch' | 'feed' | 'play' | 'wash';
 
 export type GrowthEvent =
   | { kind: 'confirm'; ruleId: RuleId; correct: boolean }
