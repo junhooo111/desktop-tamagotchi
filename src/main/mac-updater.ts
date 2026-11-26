@@ -9,6 +9,7 @@
  * 외부와 닿는 부분(네트워크·파일·프로세스)은 모두 deps 로 받아서 맥이 없어도 테스트한다.
  * 주의: 맥에서 실제로 돌려 보지는 못했다.
  */
+import { isNewerVersion } from '../shared/version.js';
 import type { AutoUpdaterLike, UpdateInfoLike } from './updater.js';
 
 /** 업데이트 파일은 이 저장소의 릴리스에서만 받는다(매니페스트가 주는 주소는 쓰지 않는다). */
@@ -55,16 +56,7 @@ export function parseManifest(raw: unknown): MacManifest | null {
   return { version, files };
 }
 
-/** a 가 b 보다 새 버전인지(x.y.z 숫자 비교) */
-export function isNewerVersion(a: string, b: string): boolean {
-  const pa = a.split('.').map(Number);
-  const pb = b.split('.').map(Number);
-  for (let i = 0; i < 3; i++) {
-    const d = (pa[i] ?? 0) - (pb[i] ?? 0);
-    if (d !== 0) return d > 0;
-  }
-  return false;
-}
+export { isNewerVersion };
 
 /** 실행 파일 경로에서 앱 번들(…/Desktop Tamagotchi.app)을 찾는다. 개발 실행처럼 .app 안이 아니면 null. */
 export function appBundleOf(execPath: string): string | null {

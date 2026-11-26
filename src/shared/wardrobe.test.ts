@@ -90,6 +90,16 @@ describe('buildWardrobe', () => {
     expect(v.species.find((s) => s.id === 'rabbit')!.hint).toContain('뽑기');
   });
 
+  it('아직 못 뽑은 히든 동물은 이름이 ???로 가려지고, 뽑은 뒤에는 이름이 보인다(일반 동물은 늘 이름이 보인다)', () => {
+    const none = buildWardrobe(emptyGrowth(), current, { accessories: [], variants: [], species: ['cat'] }).species;
+    expect(none.find((s) => s.id === 'dragon')!.name).toBe('???');
+    expect(none.filter((s) => s.id !== 'cat' && SPECIES.find((x) => x.id === s.id)!.hidden).every((s) => s.name === '???')).toBe(true);
+    expect(none.find((s) => s.id === 'rabbit')!.name).toBe('토끼'); // 일반 동물은 못 뽑았어도 이름이 보인다
+    const got = buildWardrobe(emptyGrowth(), current, { accessories: [], variants: [], species: ['cat', 'dragon'] }).species;
+    expect(got.find((s) => s.id === 'dragon')!.name).toBe('용');
+    expect(got.find((s) => s.id === 'azure')!.name).toBe('???');
+  });
+
   it('업적을 달성하면 열리고 힌트가 사라진다', () => {
     const v = buildWardrobe(withAchievements('rules-all'), current);
     expect(v.accessories.find((a) => a.id === 'crown')).toMatchObject({ unlocked: true, hint: '' });

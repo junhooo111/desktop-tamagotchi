@@ -65,7 +65,9 @@ import {
   DUPLICATE_XP,
   buildCollectionView,
   claimCare,
+  addUptime,
   claimDaily,
+  claimUpdateGift,
   levelRewards,
   migrateCollection,
   ownedIds,
@@ -108,6 +110,7 @@ import { loadGrowth, saveGrowth } from './growth-store.js';
 import { loadSettings, saveSettings } from './settings-store.js';
 import { newsText, pickNews, type NewsItem } from '../shared/news.js';
 import { buildStatus } from '../shared/status.js';
+import { GIFT_LIFE_MS, GIFT_WINDOW, giftHtml, giftText, nextGiftDelayMs, offerGift, rollGift } from '../shared/gift.js';
 import { POOP_LIFE_MS, POOP_SIZE, poopHtml } from '../shared/poop.js';
 import { fetchNews, loadSeen, saveSeen } from './news.js';
 import { createMacUpdater } from './mac-updater-node.js';
@@ -345,6 +348,110 @@ function saveCollectionSafe(): void {
 /** 뽑기권을 받았다고 알린다(방금 한 일의 말풍선이 지나간 뒤에). */
 function announceTickets(text: string): void {
   setTimeout(() => say(`🎟 ${text}\n메뉴의 '뽑기·컬렉션…'에서 뽑아 보세요 (보유 ${collection.tickets}장)`), 3_000);
+}
+
+// ---- 선물 상자: 하루 두세 번 펫이 선물을 가져온다(뽑기권·경험치·응가(꽝)) ----
+let giftWin: BrowserWindow | null = null;
+let giftTimer: ReturnType<typeof setTimeout> | undefined;
+let nextGiftAt = 0;
+
+function closeGift(): void {
+  clearTimeout(giftTimer);
+  if (giftWin && !giftWin.isDestroyed()) giftWin.destroy();
+  giftWin = null;
+}
+
+/** 선물 상자를 펫 옆(발 높이)에 붙인다. 펫이 움직이면 따라온다. */
+function positionGift(): void {
+  if (!giftWin || giftWin.isDestroyed()) return;
+  giftWin.setPosition(Math.round(behavior.x + petSize * 0.85), Math.round(behavior.y + petSize - GIFT_WINDOW.height));
+}
+
+function openGiftBox(): void {
+  closeGift();
+  const w = new BrowserWindow({
+    ...GIFT_WINDOW,
+    x: 0,
+    y: 0,
+    transparent: true,
+    frame: false,
+    resizable: false,
+    movable: false,
+    hasShadow: false,
+    skipTaskbar: true,
+    focusable: false,
+    show: false,
+    webPreferences: { preload: path.join(projectRoot, 'static', 'gift-preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true },
+  });
+  w.setAlwaysOnTop(true, 'screen-saver');
+  w.once('ready-to-show', () => {
+    positionGift();
+    w.showInactive();
+  });
+  void w.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(giftHtml()));
+  giftWin = w;
+  positionGift();
+  say('선물을 가져왔어요! 🎁 눌러 보세요');
+  // 누르지 않으면 잠시 뒤 사라진다.
+  giftTimer = setTimeout(() => {
+    if (giftWin === w) {
+      closeGift();
+      say('선물 상자가 사라졌어요…');
+    }
+  }, GIFT_LIFE_MS);
+}
+
+/** 선물 상자를 눌렀다: 뽑기권·경험치·응가(꽝) 중 하나가 나온다. */
+function resolveGift(): void {
+  if (!giftWin) return;
+  setTimeout(closeGift, 200); // 줄어들며 사라지는 연출이 끝난 뒤 창을 닫는다
+  clearTimeout(giftTimer);
+  const result = rollGift(Math.random);
+  let note = '';
+  if (result.kind === 'ticket') {
+    collection = { ...collection, tickets: collection.tickets + result.tickets };
+    saveCollectionSafe();
+  } else if (result.kind === 'xp') {
+    const gained = gainXp(applyElapsedInPlace(), result.xp);
+    pet = gained.pet;
+    note = gained.note;
+    persist();
+    updateTray();
+    sendView();
+  } else {
+    spawnPoop(); // 꽝: 응가가 나온다(눌러서 치울 수 있다)
+  }
+  if (result.kind !== 'dud') behavior = react(behavior, 'happy', Date.now());
+  say(giftText(result) + note);
+}
+
+/** 1분마다: 때가 되었고 오늘 한도(3번)가 남았으면 선물을 가져온다. */
+function maybeOfferGift(now: number): void {
+  if (!collectionPath || (giftWin && !giftWin.isDestroyed()) || stageOf(pet) === 'egg' || now < nextGiftAt) return;
+  const r = offerGift(collection, localDay(now));
+  collection = r.collection;
+  if (!r.ok) {
+    nextGiftAt = now + 60 * 60_000; // 오늘은 다 가져왔다: 날짜가 바뀐 뒤 다시 본다
+    return;
+  }
+  saveCollectionSafe();
+  nextGiftAt = now + nextGiftDelayMs(Math.random);
+  openGiftBox();
+}
+
+/** 켜 둔 시간으로 받는 뽑기권: 1분마다 흐른 시간을 더한다(컴퓨터가 잠든 사이 같은 긴 공백은 1분만 센다). */
+let lastUptimeAt = 0;
+function accrueUptime(): void {
+  if (!collectionPath) return;
+  const now = Date.now();
+  const gap = lastUptimeAt === 0 ? 0 : Math.min(now - lastUptimeAt, 2 * 60_000);
+  lastUptimeAt = now;
+  const r = addUptime(collection, gap, localDay(now));
+  collection = r.collection;
+  if (r.tickets > 0) {
+    saveCollectionSafe();
+    announceTickets(`함께 있어 줘서 고마워요! 뽑기권 +${r.tickets}장`);
+  }
 }
 
 /** 오늘 처음 켰으면 출석 보상을 준다. */
@@ -1440,6 +1547,7 @@ function tick(lastAt: number): number {
   updateStroll(now);
   tipShift = Math.round(computeTipShift());
   placeWindow();
+  positionGift();
   sendView();
 
   const hungryDue = now - lastHungryNoticeAt > HUNGRY_NOTICE_MS;
@@ -1500,6 +1608,9 @@ function setupIpc(): void {
   ipcMain.on('tip:confirm', () => confirmTip());
   ipcMain.on('card:ignore', () => finishCard('ignore'));
   ipcMain.handle('wardrobe:get', () => wardrobeData());
+  ipcMain.on('gift:open', (event) => {
+    if (giftWin && !giftWin.isDestroyed() && event.sender === giftWin.webContents) resolveGift();
+  });
   ipcMain.handle('collection:get', () => collectionData());
   ipcMain.handle('collection:pull-species', () => doPullSpecies());
   ipcMain.handle('collection:pull-cosmetic', () => doPullCosmetic());
@@ -1593,11 +1704,27 @@ if (!app.requestSingleInstanceLock()) {
     const loadedCollection = loadCollection(collectionPath);
     const starter = loadPet(savePath) ?? createPet(randomSpecies(), now);
     collection = loadedCollection ?? migrateCollection(starter, growth.achievements, now, settings.petName);
+    // 업데이트해서 처음 켠 사용자에게는 뽑기권을 선물한다(처음 설치한 사용자는 시작 선물이 있으니 버전만 기억한다).
+    let updateGift = 0;
+    if (app.isPackaged) {
+      if (!loadedCollection) {
+        collection = { ...collection, appVersion: app.getVersion() };
+      } else {
+        const gift = claimUpdateGift(collection, app.getVersion());
+        collection = gift.collection;
+        updateGift = gift.tickets;
+      }
+    }
     pet = applyElapsed(collection.owned[collection.active]?.pet ?? starter, now);
     persist();
+    if (updateGift > 0) setTimeout(() => announceTickets(`새 버전으로 업데이트해 줘서 고마워요! 뽑기권 +${updateGift}장`), 5_000);
     if (!loadedCollection) {
       setTimeout(() => say(`🎟 새 기능! 뽑기권 ${collection.tickets}장을 드렸어요.\n메뉴의 '뽑기·컬렉션…'에서 새 동물을 뽑아 보세요`), 6_000);
     }
+    lastUptimeAt = Date.now();
+    setInterval(() => accrueUptime(), 60_000);
+    nextGiftAt = Date.now() + nextGiftDelayMs(Math.random, true);
+    setInterval(() => maybeOfferGift(Date.now()), 60_000);
     setTimeout(() => checkDaily(), 9_000);
     setTimeout(() => recordGrowth({ kind: 'sync' }), 12_000); // 이미 조건을 채운 업적(예전 사용자) 확인
     setInterval(() => checkDaily(), 30 * 60_000);
@@ -1639,6 +1766,7 @@ if (!app.requestSingleInstanceLock()) {
     void demoServer?.close();
     feedServer?.close();
     for (const w of poopWins) if (!w.isDestroyed()) w.destroy();
+    closeGift();
   });
   // 창이 하나뿐이고 트레이로 끝낼 수 있으므로, 창이 닫혀도 앱은 유지한다.
   app.on('window-all-closed', () => {});

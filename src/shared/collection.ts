@@ -10,6 +10,7 @@ import type { Accessory, SpeciesId, Variant } from './species.js';
 import { COMMON_SPECIES, HIDDEN_SPECIES, SPECIES, isSpeciesId } from './species.js';
 import { HATCH_XP, createPet, levelOf, stageOf, type PetState, type Stage } from './pet.js';
 import { sanitizePetName } from './settings.js';
+import { VERSION_PATTERN, isNewerVersion } from './version.js';
 
 // ---- 규칙 값 ----
 
@@ -19,6 +20,13 @@ export const COST = { species: 3, cosmetic: 2 } as const;
 export const WELCOME_TICKETS = 3;
 /** 하루에 한 번(앱을 켜면) 받는 출석 뽑기권 */
 export const DAILY_TICKETS = 1;
+/** 앱을 켜 두고 함께한 시간이 이만큼 쌓일 때마다 뽑기권 1장(자리를 비우고 켜 두기만 해도 받는다) */
+export const UPTIME_HOURS_PER_TICKET = 6;
+export const UPTIME_MS_PER_TICKET = UPTIME_HOURS_PER_TICKET * 3_600_000;
+/** 켜 둔 시간으로 받는 뽑기권은 하루에 이만큼까지다(너무 자주 받지 않게) */
+export const UPTIME_TICKETS_PER_DAY = 1;
+/** 새 버전으로 업데이트해서 처음 켤 때마다 받는 뽑기권(계속 써 준 사용자에게 주는 선물) */
+export const UPDATE_GIFT_TICKETS = 2;
 /** 쓰다듬기·밥·놀기·씻기·산책을 이만큼 하면 뽑기권 1장 */
 export const CARE_PER_TICKET = 25;
 /** 이미 가진 동물이 또 나오면 그 동물이 받는 경험치 */
@@ -62,6 +70,16 @@ export interface Collection {
   lastDaily: string;
   /** 돌봄 보상으로 이미 받은 뽑기권 수 */
   careTicketsGiven: number;
+  /** 켜 두고 함께한 시간(ms) 중 아직 뽑기권으로 바뀌지 않은 양 */
+  uptimeMs: number;
+  /** 켜 둔 시간으로 오늘(uptimeDay) 이미 받은 뽑기권 수 */
+  uptimeToday: number;
+  uptimeDay: string;
+  /** 오늘(giftDay) 가져온 선물 상자 수 */
+  giftsToday: number;
+  giftDay: string;
+  /** 마지막으로 켠 앱 버전(업데이트 선물을 한 번만 주려고 기억한다) */
+  appVersion: string;
 }
 
 // ---- 만들기 ----
@@ -83,6 +101,12 @@ export function startCollection(pet: PetState, now: number, name = ''): Collecti
     variants: [],
     lastDaily: '',
     careTicketsGiven: 0,
+    uptimeMs: 0,
+    uptimeToday: 0,
+    uptimeDay: '',
+    giftsToday: 0,
+    giftDay: '',
+    appVersion: '',
   };
 }
 
@@ -217,6 +241,36 @@ export function claimDaily(c: Collection, today: string): { collection: Collecti
   return { collection: { ...c, tickets: c.tickets + DAILY_TICKETS, lastDaily: today }, tickets: DAILY_TICKETS };
 }
 
+/**
+ * 새 버전으로 업데이트한 뒤 처음 켰으면 뽑기권을 선물한다(버전마다 한 번). 같은 버전이거나 더 낮은 버전(다시 설치 등)이면 주지 않는다.
+ * 기록이 없던 옛 저장(appVersion 이 빈 문자열)에서 올라오면 업데이트로 본다. 처음 설치한 사용자는 호출한 쪽이 appVersion 만 채워 준다.
+ */
+export function claimUpdateGift(c: Collection, version: string): { collection: Collection; tickets: number } {
+  if (!VERSION_PATTERN.test(version) || c.appVersion === version) return { collection: c, tickets: 0 };
+  if (c.appVersion !== '' && !isNewerVersion(version, c.appVersion)) return { collection: c, tickets: 0 };
+  return { collection: { ...c, appVersion: version, tickets: c.tickets + UPDATE_GIFT_TICKETS }, tickets: UPDATE_GIFT_TICKETS };
+}
+
+/**
+ * 앱을 켜 두고 흐른 시간(ms)을 더한다. UPTIME_MS_PER_TICKET 가 쌓일 때마다 뽑기권 1장을 주되, 하루 UPTIME_TICKETS_PER_DAY 장까지만 준다.
+ * 오늘 한도를 다 받았으면 시간은 더 쌓지 않는다(한도를 넘겨 몰아 받지 못하게). today 는 로컬 날짜 'YYYY-MM-DD'.
+ */
+export function addUptime(c: Collection, ms: number, today: string): { collection: Collection; tickets: number } {
+  const day = c.uptimeDay === today ? c : { ...c, uptimeDay: today, uptimeToday: 0 };
+  if (!(ms > 0) || day.uptimeToday >= UPTIME_TICKETS_PER_DAY) return { collection: day === c ? c : day, tickets: 0 };
+  let uptimeMs = day.uptimeMs + ms;
+  let given = 0;
+  while (uptimeMs >= UPTIME_MS_PER_TICKET && day.uptimeToday + given < UPTIME_TICKETS_PER_DAY) {
+    uptimeMs -= UPTIME_MS_PER_TICKET;
+    given++;
+  }
+  const reachedCap = day.uptimeToday + given >= UPTIME_TICKETS_PER_DAY;
+  return {
+    collection: { ...day, tickets: day.tickets + given, uptimeToday: day.uptimeToday + given, uptimeMs: reachedCap ? 0 : uptimeMs },
+    tickets: given,
+  };
+}
+
 /** 지금까지 돌본 횟수(careCount)에 맞춰 아직 안 준 돌봄 보상을 준다. */
 export function claimCare(c: Collection, careCount: number): { collection: Collection; tickets: number } {
   const due = Math.floor(careCount / CARE_PER_TICKET) - c.careTicketsGiven;
@@ -335,5 +389,11 @@ export function sanitizeCollection(raw: unknown, validAccessories: readonly Acce
     variants: list(r['variants'], validVariants),
     lastDaily: typeof r['lastDaily'] === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r['lastDaily']) ? r['lastDaily'] : '',
     careTicketsGiven: count(r['careTicketsGiven']),
+    uptimeMs: Math.min(UPTIME_MS_PER_TICKET, count(r['uptimeMs'])),
+    uptimeToday: count(r['uptimeToday']),
+    uptimeDay: typeof r['uptimeDay'] === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r['uptimeDay']) ? r['uptimeDay'] : '',
+    giftsToday: count(r['giftsToday']),
+    giftDay: typeof r['giftDay'] === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r['giftDay']) ? r['giftDay'] : '',
+    appVersion: typeof r['appVersion'] === 'string' && VERSION_PATTERN.test(r['appVersion']) ? r['appVersion'] : '',
   };
 }

@@ -18,7 +18,8 @@
     "dist": "npm run build && electron-builder --win --publish never",
     "build:extension": "node scripts/build-extension.mjs",
     "card": "npm run build && node scripts/export-card.mjs",
-    "pack:mac": "npm run build && node scripts/pack-mac.mjs"
+    "pack:mac": "npm run build && node scripts/pack-mac.mjs",
+    "readme-images": "npm run build && node scripts/make-readme-images.mjs"
   },
   "build": {
     "appId": "com.desktop-tamagotchi.app",

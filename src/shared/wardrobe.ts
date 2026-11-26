@@ -129,7 +129,11 @@ export function buildWardrobe(
   return {
     current: { name: '', cardSpecies: 'current', displayStage: 'auto', ...current },
     stages: stageList.map((st) => entry(st, STAGE_NAMES[st], st === 'auto' || (reached as string[]).includes(st), '아직 지나오지 않은 단계예요')),
-    species: SPECIES.map((s) => entry(s.id, s.name, extra.species.includes(s.id), '뽑기로 얻을 수 있어요')),
+    // 아직 못 뽑은 히든 동물은 이름을 숨긴다(뽑는 재미를 위해 ???로 보인다).
+    species: SPECIES.map((s) => {
+      const owned = extra.species.includes(s.id);
+      return entry(s.id, s.hidden && !owned ? '???' : s.name, owned, '뽑기로 얻을 수 있어요');
+    }),
     variants: (Object.keys(VARIANT_NAMES) as Variant[]).map((v) => entry(v, VARIANT_NAMES[v], variantUnlocked(g, v, extra), hintOf(VARIANT_UNLOCK[v]))),
     accessories: (Object.keys(ACCESSORY_NAMES) as Accessory[]).map((a) => entry(a, ACCESSORY_NAMES[a], accessoryUnlocked(g, a, extra), accessoryHint(a))),
   };
