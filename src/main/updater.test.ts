@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { UpdateController, type AutoUpdaterLike, type UpdateInfoLike } from './updater.js';
+import { TOAST_EVERY, UPDATE_EVERY_MS, UPDATE_REMIND_MS, UpdateController, type AutoUpdaterLike, type UpdateInfoLike } from './updater.js';
 
 function fakeUpdater() {
   const handlers: Record<string, ((arg: never) => void)[]> = {};
@@ -100,6 +100,25 @@ describe('UpdateController', () => {
     updater.emit('update-downloaded', { version: '0.4.0' });
     await ctl.check(true);
     expect(updater.checkForUpdates).not.toHaveBeenCalled();
+  });
+
+  it('새 버전을 받아 두기 전에는 다시 알릴 것이 없다', () => {
+    const { ctl } = setup();
+    expect(ctl.remind()).toBeNull();
+  });
+
+  it('받아 둔 새 버전은 계속 다시 알리고, 시스템 알림(toast)은 첫 번째와 TOAST_EVERY 번마다 띄운다', () => {
+    const { updater, ctl } = setup();
+    updater.emit('update-downloaded', { version: '0.5.0' });
+    const toasts = Array.from({ length: TOAST_EVERY * 2 + 1 }, () => ctl.remind()?.toast);
+    expect(toasts.map((t, i) => (t ? i : -1)).filter((i) => i >= 0)).toEqual([0, TOAST_EVERY, TOAST_EVERY * 2]);
+    expect(ctl.remind()?.text).toContain('0.5.0');
+    expect(ctl.remind()?.text).toContain('설치하고 다시 시작');
+  });
+
+  it('점검은 30분마다, 다시 알림은 10분마다다(자주 알려 항상 최신으로 쓰게 한다)', () => {
+    expect(UPDATE_EVERY_MS).toBe(30 * 60_000);
+    expect(UPDATE_REMIND_MS).toBe(10 * 60_000);
   });
 
   it('installNow: 받아 둔 것이 있을 때만 다시 시작해 설치한다', () => {

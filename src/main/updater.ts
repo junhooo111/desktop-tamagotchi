@@ -31,6 +31,7 @@ export class UpdateController {
   private status = '';
   private downloadedVersion: string | null = null;
   private manual = false;
+  private reminders = 0;
 
   constructor(
     private readonly updater: AutoUpdaterLike,
@@ -75,6 +76,17 @@ export class UpdateController {
     return this.status;
   }
 
+  /**
+   * 받아 둔 새 버전을 다시 알릴 때 쓰는 안내. 받아 둔 것이 없으면 null.
+   * 말풍선은 매번, 눈에 잘 띄는 시스템 알림(toast)은 첫 번째와 이후 TOAST_EVERY 번에 한 번씩만 띄운다.
+   */
+  remind(): { text: string; toast: boolean } | null {
+    if (!this.downloadedVersion) return null;
+    const toast = this.reminders % TOAST_EVERY === 0;
+    this.reminders += 1;
+    return { text: `새 버전 ${this.downloadedVersion} 이 준비됐어요! 우클릭 → '설치하고 다시 시작'을 눌러 주세요`, toast };
+  }
+
   /** 받아 둔 새 버전을 지금 설치하고 다시 시작한다. 받아 둔 것이 없으면 false. */
   installNow(): boolean {
     if (!this.downloadedVersion) return false;
@@ -83,6 +95,10 @@ export class UpdateController {
   }
 }
 
-/** 점검 주기: 시작 30초 뒤 한 번, 이후 6시간마다 */
+/** 점검 주기: 시작 30초 뒤 한 번, 이후 30분마다(항상 최신으로 쓰는 게 좋아서 자주 본다) */
 export const UPDATE_FIRST_CHECK_MS = 30_000;
-export const UPDATE_EVERY_MS = 6 * 60 * 60_000;
+export const UPDATE_EVERY_MS = 30 * 60_000;
+/** 받아 둔 새 버전이 있으면 이 간격으로 다시 알린다 */
+export const UPDATE_REMIND_MS = 10 * 60_000;
+/** 다시 알릴 때 시스템 알림(toast)은 몇 번에 한 번 띄울지(첫 알림은 항상 띄운다) */
+export const TOAST_EVERY = 3;

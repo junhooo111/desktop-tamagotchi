@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { BrowserWindow, Menu, Tray, app, dialog, ipcMain, nativeImage, screen, shell } from 'electron';
+import { BrowserWindow, Menu, Notification, Tray, app, dialog, ipcMain, nativeImage, screen, shell } from 'electron';
 import electronUpdater from 'electron-updater';
 import { SnapshotFeed, mergeScans } from '../inspect/feed.js';
 import { scanLocalPages, type Finding } from '../inspect/scan.js';
@@ -64,7 +64,7 @@ import { FEED_PORT_DEFAULT, startFeedServer, type FeedServer } from './feed-serv
 import { petTargetFor } from './inspect-target.js';
 import { loadGrowth, saveGrowth } from './growth-store.js';
 import { loadSettings, saveSettings } from './settings-store.js';
-import { UPDATE_EVERY_MS, UPDATE_FIRST_CHECK_MS, UpdateController, type AutoUpdaterLike } from './updater.js';
+import { UPDATE_EVERY_MS, UPDATE_FIRST_CHECK_MS, UPDATE_REMIND_MS, UpdateController, type AutoUpdaterLike } from './updater.js';
 import {
   confirm,
   detectFixes,
@@ -671,13 +671,27 @@ function setupUpdates(): void {
     onStatus: (text) => {
       if (settingsWin && !settingsWin.isDestroyed()) settingsWin.webContents.send('update:status', text);
     },
-    onDownloaded: (version) => {
-      say('새 버전 ' + version + ' 이 준비됐어요! 우클릭 메뉴에서 바로 설치할 수 있어요');
+    onDownloaded: () => {
+      remindUpdate();
       updateTray();
     },
   });
   setTimeout(() => void updates?.check(false), UPDATE_FIRST_CHECK_MS);
   setInterval(() => void updates?.check(false), UPDATE_EVERY_MS);
+  // 받아 둔 새 버전이 있으면 계속 다시 알린다(설치 전까지)
+  setInterval(remindUpdate, UPDATE_REMIND_MS);
+}
+
+/** 새 버전이 준비돼 있으면 말풍선으로, 가끔은 시스템 알림(눌러서 바로 설치)으로 알린다. */
+function remindUpdate(): void {
+  const r = updates?.remind();
+  if (!r) return;
+  say(r.text);
+  if (r.toast && Notification.isSupported()) {
+    const n = new Notification({ title: 'Desktop Tamagotchi 새 버전', body: r.text.replace(/^새 버전 /, '') + '\n이 알림을 누르면 바로 설치해요.', silent: false });
+    n.on('click', () => void updates?.installNow());
+    n.show();
+  }
 }
 
 function closeCard(): void {
@@ -848,14 +862,14 @@ function buildMenu(): Menu {
     },
   });
   return Menu.buildFromTemplate([
+    ...(updates?.ready
+      ? [{ label: '🆕 새 버전 ' + updates.ready + ' 설치하고 다시 시작', click: () => void updates?.installNow() }, { type: 'separator' as const }]
+      : []),
     { label: '상태 보기', click: () => say(statusText(applyElapsedInPlace(), settings.petName)) },
     { label: '검사 결과…', click: () => openResults() },
     { label: '도감·기록…', click: () => openCodex() },
     { label: '프로필 카드 내보내기…', click: () => void exportCard() },
     { label: '설정…', click: () => openSettings() },
-    ...(updates?.ready
-      ? [{ label: '새 버전 ' + updates.ready + ' 설치하고 다시 시작', click: () => void updates?.installNow() }]
-      : []),
     { label: scanStatus, enabled: false },
     { label: '지금 검사하기', enabled: !egg, click: () => void scanOnce() },
     {
@@ -1068,7 +1082,18 @@ function setupIpc(): void {
     sendView();
   });
   ipcMain.on('pet:context-menu', () => {
-    if (win) buildMenu().popup({ window: win });
+    if (!win) return;
+    const w = win;
+    // 펫 창은 포커스를 받지 않는 창이라, 그대로 메뉴를 띄우면 바깥을 눌러도 메뉴가 닫히지 않는다.
+    // 메뉴가 떠 있는 동안만 포커스를 받게 하고, 닫히면(바깥 클릭·선택·Esc) 원래대로 돌린다.
+    w.setFocusable(true);
+    w.focus();
+    buildMenu().popup({
+      window: w,
+      callback: () => {
+        if (!w.isDestroyed()) w.setFocusable(false);
+      },
+    });
   });
   ipcMain.handle('card:get', () => {
     if (!active) return null;
