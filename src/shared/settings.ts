@@ -4,6 +4,7 @@
  */
 import type { Accessory } from './art/accessory.js';
 import { isAccessory, isVariant, type Variant } from './art/style.js';
+import { isSpeciesId, type SpeciesId } from './species.js';
 import { RULE_IDS, type RuleId } from './lessons.js';
 
 export const MAX_IGNORED_KEYS = 500;
@@ -27,6 +28,20 @@ export interface Settings {
   /** 꾸미기: 색 변형과 장식(업적으로 연 것만 고를 수 있다. 검증은 메인에서) */
   variant: Variant;
   accessory: Accessory;
+  /** 펫 이름(없으면 빈 문자열). 말풍선·프로필 카드에 보인다. */
+  petName: string;
+  /** 프로필 카드에 보여 줄 동물('current' = 지금 키우는 동물). 열려 있는 동물만 쓴다(검증은 메인에서). */
+  cardSpecies: SpeciesId | 'current';
+}
+
+export const MAX_PET_NAME = 12;
+
+/** 이름을 다듬는다: 문자열이 아니면 빈 값, 제어문자·꺾쇠 제거, 공백 정리, 12자까지. */
+export function sanitizePetName(v: unknown): string {
+  if (typeof v !== 'string') return '';
+  // eslint-disable-next-line no-control-regex
+  const cleaned = v.replace(/[\u0000-\u001f\u007f<>&"]/g, '').replace(/\s+/g, ' ').trim();
+  return Array.from(cleaned).slice(0, MAX_PET_NAME).join('').trim();
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -39,6 +54,8 @@ export const DEFAULT_SETTINGS: Settings = {
   ignored: [],
   variant: 'default',
   accessory: 'none',
+  petName: '',
+  cardSpecies: 'current',
 };
 
 /** 설정 창이 보여 주는 선택지(허용하는 값과 같다) */
@@ -80,6 +97,8 @@ export function sanitizeSettings(raw: unknown): Settings {
     ignored: keyList(r['ignored']),
     variant: isVariant(r['variant']) ? r['variant'] : DEFAULT_SETTINGS.variant,
     accessory: isAccessory(r['accessory']) ? r['accessory'] : DEFAULT_SETTINGS.accessory,
+    petName: sanitizePetName(r['petName']),
+    cardSpecies: r['cardSpecies'] === 'current' || isSpeciesId(r['cardSpecies']) ? r['cardSpecies'] : DEFAULT_SETTINGS.cardSpecies,
   };
 }
 

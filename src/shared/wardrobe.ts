@@ -3,6 +3,7 @@
  * 순수 함수라서 시계·파일·화면 없이 테스트한다. 업적은 shared/growth.ts 가 정한다.
  */
 import { ACHIEVEMENTS, type Growth } from './growth.js';
+import { sanitizePetName } from './settings.js';
 import { SPECIES, type Accessory, type SpeciesId, type Variant } from './species.js';
 
 /** 처음부터 쓸 수 있는 동물(나머지는 업적으로 연다) */
@@ -24,10 +25,14 @@ export const ACCESSORY_UNLOCK: Partial<Record<Accessory, string>> = {
   glasses: 'confirm-50',
   crown: 'rules-all',
   wings: 'fix-30',
+  sprout: 'tips-10',
+  flower: 'streak-3',
+  partyhat: 'quiz-25',
+  halo: 'streak-30',
 };
 
 export const VARIANT_NAMES: Record<Variant, string> = { default: '기본', pastel: '파스텔', deep: '진하게', mono: '흑백' };
-export const ACCESSORY_NAMES: Record<Accessory, string> = { none: '없음', ribbon: '리본', glasses: '선글라스', crown: '왕관', wings: '날개' };
+export const ACCESSORY_NAMES: Record<Accessory, string> = { none: '없음', ribbon: '리본', glasses: '선글라스', crown: '왕관', wings: '날개', sprout: '새싹', flower: '꽃', partyhat: '파티 모자', halo: '천사 고리' };
 
 const achievementName = (id: string): string => ACHIEVEMENTS.find((a) => a.id === id)?.name ?? id;
 
@@ -50,13 +55,13 @@ export interface WardrobeEntry<T extends string> {
 }
 
 export interface WardrobeView {
-  current: { speciesId: SpeciesId; variant: Variant; accessory: Accessory };
+  current: { speciesId: SpeciesId; variant: Variant; accessory: Accessory; name: string; cardSpecies: SpeciesId | 'current' };
   species: WardrobeEntry<SpeciesId>[];
   variants: WardrobeEntry<Variant>[];
   accessories: WardrobeEntry<Accessory>[];
 }
 
-export function buildWardrobe(g: Growth, current: WardrobeView['current']): WardrobeView {
+export function buildWardrobe(g: Growth, current: Pick<WardrobeView['current'], 'speciesId' | 'variant' | 'accessory'> & Partial<WardrobeView['current']>): WardrobeView {
   const entry = <T extends string>(id: T, name: string, requires: string | undefined): WardrobeEntry<T> => ({
     id,
     name,
@@ -64,7 +69,7 @@ export function buildWardrobe(g: Growth, current: WardrobeView['current']): Ward
     hint: isDone(g, requires) ? '' : hintOf(requires),
   });
   return {
-    current,
+    current: { name: '', cardSpecies: 'current', ...current },
     species: SPECIES.map((s) => entry(s.id, s.name, SPECIES_UNLOCK[s.id])),
     variants: (Object.keys(VARIANT_NAMES) as Variant[]).map((v) => entry(v, VARIANT_NAMES[v], VARIANT_UNLOCK[v])),
     accessories: (Object.keys(ACCESSORY_NAMES) as Accessory[]).map((a) => entry(a, ACCESSORY_NAMES[a], a === 'none' ? undefined : ACCESSORY_UNLOCK[a])),
@@ -75,6 +80,10 @@ export interface WardrobePatch {
   speciesId?: SpeciesId;
   variant?: Variant;
   accessory?: Accessory;
+  /** 펫 이름(다듬어서 저장) */
+  name?: string;
+  /** 프로필 카드에 보여 줄 동물 */
+  cardSpecies?: SpeciesId | 'current';
 }
 
 /** 요청한 바꾸기 중 아직 열리지 않은 것은 버린다(열린 것만 남긴다). */
@@ -83,7 +92,14 @@ export function allowedPatch(g: Growth, patch: WardrobePatch): WardrobePatch {
   if (patch.speciesId !== undefined && speciesUnlocked(g, patch.speciesId)) out.speciesId = patch.speciesId;
   if (patch.variant !== undefined && variantUnlocked(g, patch.variant)) out.variant = patch.variant;
   if (patch.accessory !== undefined && accessoryUnlocked(g, patch.accessory)) out.accessory = patch.accessory;
+  if (typeof patch.name === 'string') out.name = sanitizePetName(patch.name);
+  if (patch.cardSpecies === 'current' || (patch.cardSpecies !== undefined && speciesUnlocked(g, patch.cardSpecies))) out.cardSpecies = patch.cardSpecies;
   return out;
+}
+
+/** 프로필 카드에 그릴 동물. 고른 동물이 아직 안 열렸으면(저장 파일을 손으로 고친 경우 등) 지금 키우는 동물로 돌아간다. */
+export function cardSpeciesOf(g: Growth, chosen: SpeciesId | 'current', current: SpeciesId): SpeciesId {
+  return chosen !== 'current' && speciesUnlocked(g, chosen) ? chosen : current;
 }
 
 export interface Rewards {

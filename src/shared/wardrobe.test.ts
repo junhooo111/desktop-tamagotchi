@@ -10,6 +10,7 @@ import {
   accessoryUnlocked,
   allowedPatch,
   buildWardrobe,
+  cardSpeciesOf,
   rewardText,
   rewardsFor,
   speciesUnlocked,
@@ -66,7 +67,8 @@ describe('buildWardrobe', () => {
     expect(fox).toMatchObject({ unlocked: false });
     expect(fox.hint).toContain('첫 배움');
     expect(v.species.find((s) => s.id === 'cat')).toMatchObject({ unlocked: true, hint: '' });
-    expect(v.current).toEqual(current);
+    expect(v.current).toMatchObject(current);
+    expect(v.current).toMatchObject({ name: '', cardSpecies: 'current' });
   });
 
   it('업적을 달성하면 열리고 힌트가 사라진다', () => {
@@ -85,16 +87,46 @@ describe('allowedPatch', () => {
   });
 });
 
+describe('이름과 프로필 카드 동물', () => {
+  it('이름은 늘 받되 다듬어서 남긴다', () => {
+    expect(allowedPatch(emptyGrowth(), { name: '  콩이  ' })).toEqual({ name: '콩이' });
+    expect(allowedPatch(emptyGrowth(), { name: '<>' })).toEqual({ name: '' });
+  });
+
+  it('프로필 카드 동물은 열린 동물이나 current 만 받는다', () => {
+    expect(allowedPatch(emptyGrowth(), { cardSpecies: 'dog' })).toEqual({ cardSpecies: 'dog' });
+    expect(allowedPatch(emptyGrowth(), { cardSpecies: 'current' })).toEqual({ cardSpecies: 'current' });
+    expect(allowedPatch(emptyGrowth(), { cardSpecies: 'penguin' })).toEqual({});
+    expect(allowedPatch(withAchievements('fix-10'), { cardSpecies: 'penguin' })).toEqual({ cardSpecies: 'penguin' });
+  });
+
+  it('카드에 그릴 동물: 고른 동물이 열려 있으면 그 동물, 아니면 지금 키우는 동물', () => {
+    expect(cardSpeciesOf(emptyGrowth(), 'current', 'cat')).toBe('cat');
+    expect(cardSpeciesOf(emptyGrowth(), 'dog', 'cat')).toBe('dog');
+    expect(cardSpeciesOf(emptyGrowth(), 'penguin', 'cat')).toBe('cat'); // 안 열린 동물
+    expect(cardSpeciesOf(withAchievements('fix-10'), 'penguin', 'cat')).toBe('penguin');
+  });
+
+  it('새 장식(새싹·꽃·파티 모자·천사 고리)은 업적으로 열린다', () => {
+    const g = withAchievements('streak-3');
+    expect(accessoryUnlocked(g, 'flower')).toBe(true);
+    expect(accessoryUnlocked(g, 'halo')).toBe(false);
+    for (const a of ['sprout', 'flower', 'partyhat', 'halo'] as const) expect(ACCESSORY_UNLOCK[a], a).toBeDefined();
+  });
+});
+
 describe('보상', () => {
   it('방금 달성한 업적이 연 동물·색·장식을 알려 준다', () => {
     expect(rewardsFor(['rules-all'])).toEqual({ species: [], variants: [], accessories: ['crown'] });
     expect(rewardsFor(['first-confirm', 'first-fix'])).toEqual({ species: ['fox'], variants: ['pastel'], accessories: [] });
-    expect(rewardsFor(['tips-10'])).toEqual({ species: [], variants: [], accessories: [] });
+    expect(rewardsFor(['tips-all'])).toEqual({ species: [], variants: [], accessories: [] });
+    expect(rewardsFor(['tips-10', 'streak-3', 'quiz-25', 'streak-30'])).toEqual({ species: [], variants: [], accessories: ['sprout', 'flower', 'partyhat', 'halo'] });
   });
 
   it('보상 문구: 장식, 동물, 색 순서로 이름을 붙이고 없으면 빈 문자열', () => {
     expect(rewardText(rewardsFor(['rules-all']))).toBe('새로 받았어요: 왕관');
     expect(rewardText(rewardsFor(['fix-30', 'first-confirm', 'first-fix']))).toBe('새로 받았어요: 날개, 여우, 파스텔 색');
-    expect(rewardText(rewardsFor(['tips-10']))).toBe('');
+    expect(rewardText(rewardsFor(['tips-all']))).toBe('');
+    expect(rewardText(rewardsFor(['streak-3']))).toBe('새로 받았어요: 꽃');
   });
 });

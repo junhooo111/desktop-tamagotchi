@@ -40,7 +40,7 @@ import {
   type PetState,
 } from '../shared/pet.js';
 import { SPECIES, frameToRgba, isAccessory, isSpeciesId, isVariant, spriteSet, type SpeciesId } from '../shared/species.js';
-import { ACCESSORY_NAMES, SPECIES_UNLOCK, allowedPatch, buildWardrobe, rewardText, rewardsFor, type WardrobePatch } from '../shared/wardrobe.js';
+import { ACCESSORY_NAMES, SPECIES_UNLOCK, allowedPatch, buildWardrobe, cardSpeciesOf, rewardText, rewardsFor, type WardrobePatch } from '../shared/wardrobe.js';
 import type { PetView, TipBubble } from '../shared/view.js';
 import { debugProfileDir, findBrowser, launchArgs, type BrowserEnv } from './browser.js';
 import { startDemoServer, type DemoServer } from './demo-server.js';
@@ -478,7 +478,7 @@ const isKey = (v: unknown): v is string => typeof v === 'string' && v !== '' && 
 /** 꾸미기 창에 보여 줄 값. 알이면 새끼 모습으로 미리 보여 준다. */
 function wardrobeData() {
   return {
-    ...buildWardrobe(growth, { speciesId: pet.speciesId, variant: settings.variant, accessory: settings.accessory }),
+    ...buildWardrobe(growth, { speciesId: pet.speciesId, variant: settings.variant, accessory: settings.accessory, name: settings.petName, cardSpecies: settings.cardSpecies }),
     stage: stageOf(pet) === 'adult' ? ('adult' as const) : ('baby' as const),
   };
 }
@@ -490,14 +490,17 @@ function applyWardrobe(raw: unknown) {
   if (isSpeciesId(r['speciesId'])) wanted.speciesId = r['speciesId'];
   if (isVariant(r['variant'])) wanted.variant = r['variant'];
   if (isAccessory(r['accessory'])) wanted.accessory = r['accessory'];
+  if (typeof r['name'] === 'string') wanted.name = r['name'];
+  if (r['cardSpecies'] === 'current' || isSpeciesId(r['cardSpecies'])) wanted.cardSpecies = r['cardSpecies'];
   const ok = allowedPatch(growth, wanted);
   if (ok.speciesId) changeSpecies(ok.speciesId);
-  if (ok.variant !== undefined || ok.accessory !== undefined) {
-    applySettings({
-      ...(ok.variant !== undefined ? { variant: ok.variant } : {}),
-      ...(ok.accessory !== undefined ? { accessory: ok.accessory } : {}),
-    });
-  }
+  const settingsPatch = {
+    ...(ok.variant !== undefined ? { variant: ok.variant } : {}),
+    ...(ok.accessory !== undefined ? { accessory: ok.accessory } : {}),
+    ...(ok.name !== undefined ? { petName: ok.name } : {}),
+    ...(ok.cardSpecies !== undefined ? { cardSpecies: ok.cardSpecies } : {}),
+  };
+  if (Object.keys(settingsPatch).length > 0) applySettings(settingsPatch);
   return wardrobeData();
 }
 
@@ -550,8 +553,10 @@ function openWardrobe(): void {
 
 /** 지금 펫의 프로필 카드(SVG)를 파일로 저장한다. GitHub 프로필 README 에 걸 수 있다. */
 async function exportCard(): Promise<void> {
+  const current = applyElapsedInPlace();
   const svg = renderProfileCard({
-    pet: applyElapsedInPlace(),
+    pet: { ...current, speciesId: cardSpeciesOf(growth, settings.cardSpecies, current.speciesId) },
+    name: settings.petName,
     style: { variant: settings.variant, accessory: settings.accessory },
     codex: buildCodex(growth, { tipsSeen: progress.tipsSeen.length }, Date.now()),
   });
@@ -843,7 +848,7 @@ function buildMenu(): Menu {
     },
   });
   return Menu.buildFromTemplate([
-    { label: '상태 보기', click: () => say(statusText(applyElapsedInPlace())) },
+    { label: '상태 보기', click: () => say(statusText(applyElapsedInPlace(), settings.petName)) },
     { label: '검사 결과…', click: () => openResults() },
     { label: '도감·기록…', click: () => openCodex() },
     { label: '프로필 카드 내보내기…', click: () => void exportCard() },

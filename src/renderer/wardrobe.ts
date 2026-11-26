@@ -71,6 +71,11 @@ function render(): void {
   group<SpeciesId>('species', data.species, data.current.speciesId, (id) => ({ speciesId: id }));
   group<Variant>('variants', data.variants, data.current.variant, (id) => ({ variant: id }));
   group<Accessory>('accessories', data.accessories, data.current.accessory, (id) => ({ accessory: id }));
+  const cardEntries: WardrobeEntry<SpeciesId | 'current'>[] = [{ id: 'current', name: '지금 키우는 펫', unlocked: true, hint: '' }, ...data.species];
+  group<SpeciesId | 'current'>('card-species', cardEntries, data.current.cardSpecies, (id) => ({ cardSpecies: id }));
+  // 입력 중인 글자를 새로고침이 덮어쓰지 않게, 입력칸에 포커스가 없을 때만 값을 맞춘다.
+  const input = $<HTMLInputElement>('pet-name');
+  if (document.activeElement !== input) input.value = data.current.name;
   drawPreview();
 }
 
@@ -85,6 +90,16 @@ async function refresh(): Promise<void> {
   render();
 }
 
+async function saveName(): Promise<void> {
+  $('lock-hint').textContent = '';
+  data = await window.wardrobeApi.set({ name: $<HTMLInputElement>('pet-name').value });
+  render();
+}
+
+$('name-save').addEventListener('click', () => void saveName());
+$('pet-name').addEventListener('keydown', (e) => {
+  if ((e as KeyboardEvent).key === 'Enter') void saveName();
+});
 $('close').addEventListener('click', () => window.wardrobeApi.close());
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') window.wardrobeApi.close();

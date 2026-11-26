@@ -12,10 +12,17 @@
   <body>
     <main>
       <h1>꾸미기</h1>
-      <p class="hint">업적을 달성하면 새 친구와 색, 장식이 열려요. 도감을 채우면 왕관, 문제를 많이 고치면 날개를 받아요.</p>
+      <p class="hint">업적을 달성하면 새 친구와 색, 장식이 열려요. 도감을 채우면 왕관, 문제를 많이 고치면 날개, 연속으로 오면 꽃과 천사 고리를 받아요.</p>
 
       <div class="preview"><canvas id="preview" width="192" height="192" aria-label="미리보기"></canvas></div>
 
+      <section>
+        <h2>이름</h2>
+        <div class="name-row">
+          <input id="pet-name" type="text" maxlength="12" placeholder="이름을 지어 주세요" aria-label="펫 이름" autocomplete="off" />
+          <button id="name-save" type="button">저장</button>
+        </div>
+      </section>
       <section>
         <h2>친구</h2>
         <div class="choices" id="species" role="group" aria-label="동물 고르기"></div>
@@ -27,6 +34,11 @@
       <section>
         <h2>장식</h2>
         <div class="choices" id="accessories" role="group" aria-label="장식 고르기"></div>
+      </section>
+      <section>
+        <h2>프로필 카드에 보여 줄 펫</h2>
+        <div class="choices" id="card-species" role="group" aria-label="프로필 카드에 보여 줄 펫 고르기"></div>
+        <p class="hint">메뉴의 `프로필 카드 내보내기…` 로 저장하는 카드에 나올 동물이에요. 색과 장식은 지금 입은 그대로 들어가요.</p>
       </section>
       <p class="lock-hint" id="lock-hint" role="status"></p>
 

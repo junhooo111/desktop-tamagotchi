@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_SETTINGS, MAX_PET_SCALE, SETTING_CHOICES, sanitizeSettings, tipIntervalMs } from './settings.js';
+import { DEFAULT_SETTINGS, MAX_PET_SCALE, SETTING_CHOICES, sanitizePetName, sanitizeSettings, tipIntervalMs } from './settings.js';
 
 describe('sanitizeSettings', () => {
   it('아무것도 없거나 이상한 값이면 기본 설정이다', () => {
@@ -10,8 +10,23 @@ describe('sanitizeSettings', () => {
   });
 
   it('유효한 값은 그대로 받는다', () => {
-    const s = { petScale: 2, inspectEnabled: false, scanSeconds: 30, tipMinutes: 0, autoUpdate: false, disabledRules: ['contrast'], ignored: ['http://localhost:3000/|img-alt|img'], variant: 'pastel', accessory: 'crown' };
+    const s = { petScale: 2, inspectEnabled: false, scanSeconds: 30, tipMinutes: 0, autoUpdate: false, disabledRules: ['contrast'], ignored: ['http://localhost:3000/|img-alt|img'], variant: 'pastel', accessory: 'crown', petName: '콩이', cardSpecies: 'fox' };
     expect(sanitizeSettings(s)).toEqual(s);
+  });
+
+  it('펫 이름은 다듬어서 받는다(제어문자·꺾쇠 제거, 공백 정리, 12자까지)', () => {
+    expect(sanitizePetName('  콩  이 ')).toBe('콩 이');
+    expect(sanitizePetName('<b>콩이</b>')).toBe('b콩이/b');
+    expect(sanitizePetName('a\u0000b\nc')).toBe('abc');
+    expect(sanitizePetName('가나다라마바사아자차카타파하')).toBe('가나다라마바사아자차카타');
+    expect(sanitizePetName(42)).toBe('');
+    expect(sanitizeSettings({ petName: { a: 1 } }).petName).toBe('');
+  });
+
+  it('프로필 카드 동물은 아는 동물이나 current 만 받는다', () => {
+    expect(sanitizeSettings({ cardSpecies: 'penguin' }).cardSpecies).toBe('penguin');
+    expect(sanitizeSettings({ cardSpecies: 'dragon' }).cardSpecies).toBe('current');
+    expect(sanitizeSettings({}).cardSpecies).toBe('current');
   });
 
   it('허용하지 않는 값은 항목별로 기본값으로 바꾼다(나머지는 유지)', () => {

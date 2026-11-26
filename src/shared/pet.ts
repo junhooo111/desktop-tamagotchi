@@ -131,9 +131,11 @@ export function learn(pet: PetState, kind: keyof typeof LEARN_XP, bonus = 0): Ac
   return { pet: gained.pet, ok: true, message: `${head} 경험치 +${xp}${gained.note}` };
 }
 
-export function statusText(pet: PetState): string {
+/** 펫 상태 설명. 이름을 지어 줬으면 `이름(종)` 으로 보여 준다. */
+export function statusText(pet: PetState, petName = ''): string {
   const stageName = { egg: '알', baby: '새끼', adult: '성체' }[stageOf(pet)];
-  const name = stageOf(pet) === 'egg' ? '알' : getSpecies(pet.speciesId).name;
+  const species = stageOf(pet) === 'egg' ? '알' : getSpecies(pet.speciesId).name;
+  const name = petName && stageOf(pet) !== 'egg' ? `${petName}(${species})` : species;
   return [
     `${name} · ${stageName} · Lv.${levelOf(pet.xp)}`,
     `경험치 ${Math.floor(pet.xp)}`,

@@ -180,4 +180,9 @@ describe('statusText', () => {
     expect(statusText(base())).toContain('알 · 알 · Lv.1');
     expect(statusText(hatched())).toContain('고양이 · 새끼 · Lv.2');
   });
+
+  it('이름이 있으면 이름(종)으로 보여 주고, 알은 이름을 숨긴다', () => {
+    expect(statusText(hatched(), '콩이')).toContain('콩이(고양이) · 새끼');
+    expect(statusText(base(), '콩이')).toContain('알 · 알');
+  });
 });

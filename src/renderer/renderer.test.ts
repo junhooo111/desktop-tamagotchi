@@ -169,6 +169,19 @@ describe('그림 그리기', () => {
     expect(fillStyles).not.toContain(PINK);
   });
 
+  it('장식·색을 바꾸면 바로 새 모습으로 그린다(같은 자세의 옛 그림을 재사용하지 않는다)', async () => {
+    const h = await start(view({ speciesId: 'cat', accessory: 'none', variant: 'default' }));
+    expect(fillStyles).not.toContain('#5ab8ff'); // 파티 모자 색
+    h.emitView(view({ speciesId: 'cat', accessory: 'partyhat', variant: 'default' }));
+    vi.advanceTimersByTime(200);
+    expect(fillStyles).toContain('#5ab8ff');
+    fillStyles.length = 0;
+    h.emitView(view({ speciesId: 'cat', accessory: 'none', variant: 'pastel' }));
+    vi.advanceTimersByTime(200);
+    expect(fillStyles).not.toContain('#5ab8ff');
+    expect(fillStyles).toContain(spriteSet('cat', 'adult', { variant: 'pastel', accessory: 'none' }).palette['f']);
+  });
+
   it('설정한 배율만큼 그림 한 칸을 크게 그린다(2배면 한 칸이 2px)', async () => {
     await start(view({ scale: 2 }));
     const sizes = new Set(fillRect.mock.calls.map((c) => c[2]));

@@ -62,7 +62,7 @@ describe('꾸미기 창', () => {
     await open(data(emptyGrowth(), { speciesId: 'dog' }));
     expect(buttons('species')).toHaveLength(SPECIES.length);
     expect(buttons('variants')).toHaveLength(4);
-    expect(buttons('accessories')).toHaveLength(5);
+    expect(buttons('accessories')).toHaveLength(9);
     const pressed = (id: string): string[] => buttons(id).filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset['id'] ?? '');
     expect(pressed('species')).toEqual(['dog']);
     expect(pressed('variants')).toEqual(['default']);
@@ -125,6 +125,35 @@ describe('꾸미기 창', () => {
     expect(api.get).toHaveBeenCalledTimes(2);
     expect(buttons('accessories').find((b) => b.dataset['id'] === 'crown')!.getAttribute('aria-disabled')).toBeNull();
     expect(buttons('species')).toHaveLength(SPECIES.length); // 중복으로 쌓이지 않는다
+  });
+
+  it('이름을 쓰고 저장(또는 Enter)하면 이름만 메인에 보내고, 입력칸에는 저장된 이름이 보인다', async () => {
+    const { api } = await open(data(emptyGrowth(), { name: '콩이' }));
+    expect(el<HTMLInputElement>('pet-name').value).toBe('콩이');
+    el<HTMLInputElement>('pet-name').value = '두부';
+    el('name-save').click();
+    await flush();
+    expect(api.set).toHaveBeenLastCalledWith({ name: '두부' });
+    el<HTMLInputElement>('pet-name').value = '모찌';
+    el('pet-name').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
+    await flush();
+    expect(api.set).toHaveBeenLastCalledWith({ name: '모찌' });
+  });
+
+  it('프로필 카드에 보여 줄 펫: 지금 키우는 펫 + 모든 동물을 보여 주고, 열린 것만 고른다', async () => {
+    const { api } = await open(data(emptyGrowth()));
+    const ids = buttons('card-species').map((b) => b.dataset['id']);
+    expect(ids).toEqual(['current', ...SPECIES.map((s) => s.id)]);
+    expect(buttons('card-species').find((b) => b.dataset['id'] === 'current')!.getAttribute('aria-pressed')).toBe('true');
+    buttons('card-species').find((b) => b.dataset['id'] === 'dog')!.click();
+    await flush();
+    expect(api.set).toHaveBeenLastCalledWith({ cardSpecies: 'dog' });
+    const locked = buttons('card-species').find((b) => b.dataset['id'] === 'penguin')!;
+    expect(locked.getAttribute('aria-disabled')).toBe('true');
+    api.set.mockClear();
+    locked.click();
+    await flush();
+    expect(api.set).not.toHaveBeenCalled();
   });
 
   it('닫기 버튼과 Esc 로 닫는다', async () => {

@@ -9,9 +9,9 @@
  */
 import { blank, line, part, px, rect, triangle, type Grid } from '../pixel.js';
 
-export type Accessory = 'none' | 'ribbon' | 'glasses' | 'crown' | 'wings';
+export type Accessory = 'none' | 'ribbon' | 'glasses' | 'crown' | 'wings' | 'sprout' | 'flower' | 'partyhat' | 'halo';
 
-export const ACCESSORIES: readonly Accessory[] = ['none', 'ribbon', 'glasses', 'crown', 'wings'];
+export const ACCESSORIES: readonly Accessory[] = ['none', 'ribbon', 'glasses', 'crown', 'wings', 'sprout', 'flower', 'partyhat', 'halo'];
 
 /** 장식별 색: X 주색, Y 보조색(안경의 Y 는 짙은 렌즈 색이라 선글라스로 보인다) */
 export const ACCESSORY_COLORS: Record<Accessory, { X: string; Y: string }> = {
@@ -20,6 +20,10 @@ export const ACCESSORY_COLORS: Record<Accessory, { X: string; Y: string }> = {
   glasses: { X: '#ffffff', Y: '#2b3a55' },
   crown: { X: '#ffd84a', Y: '#e5484d' },
   wings: { X: '#fff1b8', Y: '#ffd04a' },
+  sprout: { X: '#6fcf6f', Y: '#2f9a45' },
+  flower: { X: '#ff9ecb', Y: '#ffd04a' },
+  partyhat: { X: '#5ab8ff', Y: '#ff6b8b' },
+  halo: { X: '#fff3a0', Y: '#ffd04a' },
 };
 
 export interface HeadGeom {
@@ -37,7 +41,7 @@ export function drawHeadAccessory(g: Grid, acc: Accessory | undefined, head: Hea
     case 'crown': {
       // 3칸 x 2칸: 뾰족한 끝 둘과 가운데 보석
       const x = even(head.cx) - 3;
-      const y = even(head.cy - head.ry) - 3;
+      const y = Math.max(0, even(head.cy - head.ry) - 3);
       part(
         g,
         (t) => {
@@ -52,15 +56,81 @@ export function drawHeadAccessory(g: Grid, acc: Accessory | undefined, head: Hea
       break;
     }
     case 'ribbon': {
-      // 머리 위쪽 뒤편에 단 작은 리본(매듭 하나와 양쪽 날개)
-      const x = even(head.cx - head.rx * 0.35) - 3;
-      const y = even(head.cy - head.ry) - 1;
+      // 머리 위쪽 뒤편에 단 큰 리본: 좌우 고리(4x6)와 가운데 매듭(4x2), 매듭 위아래는 비어 나비 모양이 된다 (12x6)
+      const x = even(head.cx - head.rx * 0.35) - 6;
+      const y = Math.max(0, even(head.cy - head.ry) - 4);
+      part(
+        g,
+        (t) => {
+          rect(t, x, y, 4, 6, 'X');
+          rect(t, x + 8, y, 4, 6, 'X');
+          rect(t, x + 4, y + 2, 4, 2, 'Y');
+        },
+        { outline: 'k' },
+      );
+      break;
+    }
+    case 'sprout': {
+      // 머리 위에 돋은 새싹: 줄기 하나와 양쪽 잎 (6x6)
+      const x = even(head.cx) - 3;
+      const y = Math.max(0, even(head.cy - head.ry) - 5);
       part(
         g,
         (t) => {
           rect(t, x, y, 2, 2, 'X');
-          rect(t, x + 2, y, 2, 2, 'Y');
           rect(t, x + 4, y, 2, 2, 'X');
+          rect(t, x + 2, y + 2, 2, 2, 'Y');
+          rect(t, x, y + 2, 2, 2, 'X');
+          rect(t, x + 4, y + 2, 2, 2, 'X');
+          rect(t, x + 2, y + 4, 2, 2, 'Y');
+        },
+        { outline: 'k' },
+      );
+      break;
+    }
+    case 'flower': {
+      // 머리 위쪽 뒤편의 꽃: 꽃잎 넷과 노란 가운데 (6x6)
+      const x = even(head.cx - head.rx * 0.35) - 3;
+      const y = Math.max(0, even(head.cy - head.ry) - 4);
+      part(
+        g,
+        (t) => {
+          rect(t, x + 2, y, 2, 2, 'X');
+          rect(t, x, y + 2, 2, 2, 'X');
+          rect(t, x + 2, y + 2, 2, 2, 'Y');
+          rect(t, x + 4, y + 2, 2, 2, 'X');
+          rect(t, x + 2, y + 4, 2, 2, 'X');
+        },
+        { outline: 'k' },
+      );
+      break;
+    }
+    case 'partyhat': {
+      // 뾰족한 파티 모자: 끝에 방울, 아래로 갈수록 넓어진다 (8x8)
+      const x = even(head.cx) - 4;
+      const y = Math.max(0, even(head.cy - head.ry) - 6);
+      part(
+        g,
+        (t) => {
+          rect(t, x + 3, y, 2, 2, 'Y');
+          rect(t, x + 2, y + 2, 4, 2, 'X');
+          rect(t, x + 2, y + 4, 4, 2, 'Y');
+          rect(t, x, y + 6, 8, 2, 'X');
+        },
+        { outline: 'k' },
+      );
+      break;
+    }
+    case 'halo': {
+      // 머리 위에 떠 있는 고리 (8x4)
+      const x = even(head.cx) - 4;
+      const y = Math.max(0, even(head.cy - head.ry) - 6);
+      part(
+        g,
+        (t) => {
+          rect(t, x + 2, y, 4, 2, 'X');
+          rect(t, x, y + 2, 2, 2, 'Y');
+          rect(t, x + 6, y + 2, 2, 2, 'Y');
         },
         { outline: 'k' },
       );

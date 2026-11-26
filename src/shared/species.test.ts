@@ -210,7 +210,7 @@ describe('꾸미기 스타일(색 변형·장식)', () => {
 
   it.each(stylable)('%s: 장식마다 그림이 달라지고(장식 색이 팔레트에 있다) 칸 밖으로 나가지 않는다', (_n, id) => {
     const base = spriteSet(id, 'adult');
-    for (const accessory of ['ribbon', 'glasses', 'crown', 'wings'] as const) {
+    for (const accessory of ['ribbon', 'glasses', 'crown', 'wings', 'sprout', 'flower', 'partyhat', 'halo'] as const) {
       const set = spriteSet(id, 'adult', { variant: 'default', accessory });
       expect(frame(set.frames.idleA), accessory).not.toBe(frame(base.frames.idleA));
       expect(set.palette['X'], accessory).toBeDefined();
@@ -230,6 +230,25 @@ describe('꾸미기 스타일(색 변형·장식)', () => {
     for (const accessory of ['crown', 'ribbon', 'glasses'] as const) {
       const set = spriteSet('cat', 'adult', { variant: 'default', accessory });
       expect(frame(set.frames.sleepA), accessory).toContain(accessory === 'glasses' ? 'Y' : 'X');
+    }
+  });
+
+  it.each(stylable)('%s: 머리 장식은 새끼·성체의 모든 자세(걷기·앉기·자기·매달리기 등)에 따라다닌다', (_n, id) => {
+    for (const stage of ['baby', 'adult'] as const) {
+      for (const accessory of ['ribbon', 'crown', 'sprout', 'flower', 'partyhat', 'halo'] as const) {
+        const set = spriteSet(id, stage, { variant: 'default', accessory });
+        for (const [name, rows] of Object.entries(set.frames)) {
+          expect(frame(rows), `${stage} ${accessory} ${name}`).toMatch(/[XY]/);
+        }
+      }
+    }
+  });
+
+  it('리본은 크게(가로 10칸 이상) 그려 작은 화면에서도 잘 보인다', () => {
+    for (const id of IDS) {
+      const rows = spriteSet(id, 'adult', { variant: 'default', accessory: 'ribbon' }).frames.idleA;
+      const xs = rows.flatMap((r) => [...r].map((c, x) => (c === 'X' || c === 'Y' ? x : -1))).filter((x) => x >= 0);
+      expect(Math.max(...xs) - Math.min(...xs) + 1, id).toBeGreaterThanOrEqual(10);
     }
   });
 
