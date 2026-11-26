@@ -550,7 +550,11 @@ function openWardrobe(): void {
 
 /** 지금 펫의 프로필 카드(SVG)를 파일로 저장한다. GitHub 프로필 README 에 걸 수 있다. */
 async function exportCard(): Promise<void> {
-  const svg = renderProfileCard({ pet: applyElapsedInPlace(), style: { variant: settings.variant, accessory: settings.accessory } });
+  const svg = renderProfileCard({
+    pet: applyElapsedInPlace(),
+    style: { variant: settings.variant, accessory: settings.accessory },
+    codex: buildCodex(growth, { tipsSeen: progress.tipsSeen.length }, Date.now()),
+  });
   const result = await dialog.showSaveDialog({
     title: '프로필 카드 저장',
     defaultPath: path.join(app.getPath('documents'), 'pet-card.svg'),

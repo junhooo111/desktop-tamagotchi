@@ -13,6 +13,7 @@ const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const load = (p) => import(pathToFileURL(path.join(root, 'dist', p)).href);
 const { renderProfileCard } = await load('shared/card.js');
 const { sanitizeSettings } = await load('shared/settings.js');
+const { sanitizeGrowth, buildCodex } = await load('shared/growth.js');
 
 const dataDir = process.env.PET_DATA_DIR ?? path.join(process.env.APPDATA ?? path.join(os.homedir(), 'AppData', 'Roaming'), 'desktop-tamagotchi');
 const read = (name) => {
@@ -29,7 +30,9 @@ if (!pet) {
   process.exit(1);
 }
 const settings = sanitizeSettings(read('settings.json'));
-const svg = renderProfileCard({ pet, style: { variant: settings.variant, accessory: settings.accessory } });
+const tipsSeen = read('progress.json')?.tipsSeen;
+const codex = buildCodex(sanitizeGrowth(read('growth.json')), { tipsSeen: Array.isArray(tipsSeen) ? tipsSeen.length : 0 }, Date.now());
+const svg = renderProfileCard({ pet, style: { variant: settings.variant, accessory: settings.accessory }, codex });
 
 const out = path.resolve(process.argv[2] ?? 'pet-card.svg');
 fs.mkdirSync(path.dirname(out), { recursive: true });
