@@ -74,9 +74,18 @@ body {
 
 #status .st-head {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: 7px;
+}
+
+#status #st-sub {
+  margin: 1px 0 5px;
+  color: #7a6a5a;
+  font-size: 11px;
+}
+
+#status #st-sub:empty {
+  display: none;
 }
 
 #status .lv {
@@ -95,7 +104,7 @@ body {
 }
 
 #status .st-head {
-  margin-bottom: 2px;
+  margin-bottom: 1px;
 }
 
 #status .bar {

@@ -38,7 +38,8 @@ describe('레벨 등급(10 레벨마다 색이 바뀐다)', () => {
 describe('상태 보기 값', () => {
   it('제목·레벨·등급과 막대 네 줄(경험치·배부름·기분·청결)을 만든다', () => {
     const s = buildStatus(pet(), '콩이');
-    expect(s.title).toBe('콩이(병아리) · 성체');
+    expect(s.name).toBe('콩이');
+    expect(s.sub).toBe('병아리 · 성체');
     expect(s.level).toBe(6);
     expect(s.tier.name).toBe('새내기');
     expect(s.xp).toBe(302);
@@ -70,10 +71,11 @@ describe('상태 보기 값', () => {
   });
 
   it('알은 이름을 숨기고, 돌려 둔 모습이 있으면 그 단계 이름을 보여 준다(레벨·경험치는 그대로)', () => {
-    expect(buildStatus({ ...createPet('cat', NOW), xp: 3 }, '콩이').title).toBe('알 · 알');
+    expect(buildStatus({ ...createPet('cat', NOW), xp: 3 }, '콩이')).toMatchObject({ name: '알', sub: '' });
     const adult = { ...createPet('cat', NOW), xp: 300 };
-    expect(buildStatus(adult, '', 'baby').title).toBe('고양이 · 새끼');
+    expect(buildStatus(adult, '', 'baby')).toMatchObject({ name: '고양이', sub: '새끼' }); // 이름이 없으면 종 이름이 첫 줄
     expect(buildStatus(adult, '', 'baby').level).toBe(buildStatus(adult).level);
-    expect(buildStatus(adult, '', 'legend').title).toBe('고양이 · 성체'); // 안 지나온 단계는 지금 단계
+    expect(buildStatus(adult, '', 'legend')).toMatchObject({ name: '고양이', sub: '성체' }); // 안 지나온 단계는 지금 단계
+    expect(buildStatus(adult, '두부', 'baby')).toMatchObject({ name: '두부', sub: '고양이 · 새끼' });
   });
 });

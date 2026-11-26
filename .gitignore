@@ -9,3 +9,6 @@ release/
 Thumbs.db
 .vscode/
 .idea/
+
+.mac-build/
+release-mac/

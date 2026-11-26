@@ -110,6 +110,8 @@ import { newsText, pickNews, type NewsItem } from '../shared/news.js';
 import { buildStatus } from '../shared/status.js';
 import { POOP_LIFE_MS, POOP_SIZE, poopHtml } from '../shared/poop.js';
 import { fetchNews, loadSeen, saveSeen } from './news.js';
+import { createMacUpdater } from './mac-updater-node.js';
+import type { MacAutoUpdater } from './mac-updater.js';
 import { UPDATE_EVERY_MS, UPDATE_FIRST_CHECK_MS, UPDATE_REMIND_MS, UpdateController, type AutoUpdaterLike } from './updater.js';
 import {
   confirm,
@@ -180,6 +182,7 @@ let settingsWin: BrowserWindow | null = null;
 let scanTimer: ReturnType<typeof setInterval> | undefined;
 /** 자동 업데이트(설치본에서만 만든다) */
 let updates: UpdateController | null = null;
+let macUpdater: MacAutoUpdater | null = null;
 /** 성장 기록: 연속 사용·업적·도감 */
 let growth: Growth = emptyGrowth();
 let growthPath = '';
@@ -786,7 +789,9 @@ function openSettings(): void {
 /** 자동 업데이트: 설치본에서만, 시작 30초 뒤와 6시간마다 새 버전을 확인한다. */
 function setupUpdates(): void {
   if (!app.isPackaged) return;
-  const updater = electronUpdater.autoUpdater as unknown as AutoUpdaterLike;
+  // 맥은 서명이 없어 electron-updater 를 쓸 수 없으므로 같은 모양의 직접 만든 업데이트기를 쓴다.
+  macUpdater = process.platform === 'darwin' ? createMacUpdater() : null;
+  const updater = macUpdater ?? (electronUpdater.autoUpdater as unknown as AutoUpdaterLike);
   updates = new UpdateController(updater, {
     enabled: () => settings.autoUpdate,
     onStatus: (text) => {
@@ -1630,6 +1635,7 @@ if (!app.requestSingleInstanceLock()) {
 
   app.on('before-quit', () => {
     if (savePath && pet) persist();
+    macUpdater?.installOnQuit(); // 받아 둔 새 버전이 있으면 끝나는 순간 교체한다(맥)
     void demoServer?.close();
     feedServer?.close();
     for (const w of poopWins) if (!w.isDestroyed()) w.destroy();

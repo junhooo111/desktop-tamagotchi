@@ -186,6 +186,16 @@ describe('그림 그리기', () => {
     expect(fillStyles).toContain(spriteSet('cat', 'adult', { variant: 'pastel', accessory: 'none' }).palette['f']);
   });
 
+  it('씻는 동안에는 머리 위 하얀 거품과 파란 비누방울을 그리고, 씻지 않을 때는 그리지 않는다', async () => {
+    await start(view({ mode: 'idle' }));
+    expect(fillStyles).not.toContain('#4aa8e8');
+    fillStyles.length = 0;
+    await start(view({ mode: 'wash', since: 0 }));
+    expect(fillStyles).toContain('#4aa8e8'); // 비누방울
+    expect(fillStyles).toContain('#ffffff'); // 거품
+    expect(fillStyles).toContain('#7cbfee'); // 거품 그림자
+  });
+
   it('설정한 배율만큼 그림 한 칸을 크게 그린다(2배면 한 칸이 2px)', async () => {
     await start(view({ scale: 2 }));
     const sizes = new Set(fillRect.mock.calls.map((c) => c[2]));
@@ -235,7 +245,8 @@ describe('그림 그리기', () => {
 
 describe('상태 보기 말풍선', () => {
   const status = (over: Partial<StatusBubble> = {}): StatusBubble => ({
-    title: '콩이(병아리) · 새끼',
+    name: '콩이',
+    sub: '병아리 · 새끼',
     level: 12,
     tier: { tier: 1, name: '숙련', color: '#3aa55d', onColor: '#ffffff' },
     xp: 500,
@@ -252,7 +263,8 @@ describe('상태 보기 말풍선', () => {
     const h = await start();
     h.emitStatus(status());
     expect(el('status').hidden).toBe(false);
-    expect(el('st-title').textContent).toBe('콩이(병아리) · 새끼');
+    expect(el('st-name').textContent).toBe('콩이'); // 이름 옆에 레벨 배지
+    expect(el('st-sub').textContent).toBe('병아리 · 새끼'); // 종·단계는 다음 줄
     expect(el('st-lv').textContent).toBe('Lv.12 숙련');
     expect(el('st-lv').style.background).toBeTruthy();
     const rows = [...el('st-bars').querySelectorAll('.row')];
@@ -273,7 +285,7 @@ describe('상태 보기 말풍선', () => {
   it('잠시 뒤 사라지고, 다시 부르면 막대가 쌓이지 않고 새로 그려진다', async () => {
     const h = await start();
     h.emitStatus(status());
-    h.emitStatus(status({ title: '다음' }));
+    h.emitStatus(status({ name: '다음' }));
     expect(el('st-bars').querySelectorAll('.row')).toHaveLength(4);
     vi.advanceTimersByTime(7_100);
     expect(el('status').hidden).toBe(true);
@@ -281,9 +293,10 @@ describe('상태 보기 말풍선', () => {
 
   it('글자를 HTML 로 해석하지 않는다', async () => {
     const h = await start();
-    h.emitStatus(status({ title: '<img src=x onerror=alert(1)>' }));
-    expect(el('st-title').querySelector('img')).toBeNull();
-    expect(el('st-title').textContent).toContain('<img');
+    h.emitStatus(status({ name: '<img src=x onerror=alert(1)>', sub: '<b>x</b>' }));
+    expect(el('st-name').querySelector('img')).toBeNull();
+    expect(el('st-name').textContent).toContain('<img');
+    expect(el('st-sub').querySelector('b')).toBeNull();
   });
 });
 

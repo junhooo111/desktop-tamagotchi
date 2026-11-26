@@ -162,19 +162,26 @@ function drawDizzy(centerX: number, top: number, now: number, unit: number): voi
 }
 
 /** 씻는 동안 거품이 몸 둘레에서 떠오른다. */
-function drawBubbles(rect: { x: number; y: number; size: number }, now: number): void {
-  for (let i = 0; i < 7; i++) {
-    const t = ((now / 1100 + i / 7) % 1 + 1) % 1;
-    const r = 2 + (i % 3) * 1.5;
-    const x = rect.x + rect.size * (0.1 + 0.8 * (((i * 37) % 10) / 10)) + Math.sin(t * 8 + i) * 2;
-    const y = rect.y + rect.size - t * rect.size * 1.15;
-    ctx.globalAlpha = 1 - t * 0.7;
-    ctx.fillStyle = '#7ec8ee';
-    ctx.fillRect(Math.round(x), Math.round(y), Math.round(r * 2), Math.round(r * 2));
-    ctx.fillStyle = '#e6f6ff';
-    ctx.fillRect(Math.round(x) + 1, Math.round(y) + 1, Math.max(1, Math.round(r * 2) - 2), Math.max(1, Math.round(r * 2) - 2));
+const BUBBLE_SMALL = ['.#.', '#.#', '.#.'];
+const BUBBLE_LARGE = ['.###.', '#...#', '#..##', '#...#', '.###.'];
+const FOAM = ['..###...###..', '.#####.#####.', '#############', '.###########.'];
+
+/** 씻는 동안: 머리 위에 비누 거품이 수북하고, 몸 둘레에서 비누방울이 올라가며 터진다. */
+function drawBubbles(rect: { x: number; y: number; size: number }, now: number, centerX: number, top: number, unit: number): void {
+  const u = Math.max(1, unit); // 거품 더미
+  const ub = Math.max(2, unit * 2); // 비누방울은 작은 화면에서도 보이게 크게
+  for (let i = 0; i < 14; i++) {
+    const t = ((now / 1300 + i / 14) % 1 + 1) % 1;
+    const large = i % 3 === 0;
+    const x = rect.x - rect.size * 0.25 + rect.size * 1.5 * (((i * 37) % 14) / 14) + Math.sin(t * 8 + i) * 3 * ub;
+    const y = rect.y + rect.size - t * rect.size * 1.3;
+    drawGlyph(large ? BUBBLE_LARGE : BUBBLE_SMALL, Math.round(x), Math.round(y), ub, '#4aa8e8', Math.sin(t * Math.PI));
   }
-  ctx.globalAlpha = 1;
+  // 머리 위 거품 더미(그림자 한 줄을 깔고 그 위에 하얀 거품)
+  const fx = Math.round(centerX - (FOAM[0]!.length * u) / 2);
+  const fy = Math.round(top - 3 * u + Math.sin(now / 160) * u);
+  drawGlyph(FOAM, fx, fy + u, u, '#7cbfee');
+  drawGlyph(FOAM, fx, fy, u, '#ffffff');
 }
 
 /** 더러운 펫 위로 냄새 줄이 피어오른다. */
@@ -224,7 +231,7 @@ function draw(now: number): void {
   if (pose.hearts) drawHearts(centerX, top, now, scale);
   if (pose.dizzy) drawDizzy(centerX, top, now, scale);
   if (view.stage === 'legend') drawAura({ x: offsetX, y: offsetY, size: rect.size }, now);
-  if (pose.bubbles) drawBubbles({ x: offsetX, y: offsetY, size: rect.size }, now);
+  if (pose.bubbles) drawBubbles({ x: offsetX, y: offsetY, size: rect.size }, now, centerX, top, scale);
   if (view.dirty && !pose.bubbles) drawStink(centerX, top, now);
   if (pose.food && figure) {
     // 먹이는 바라보는 쪽(앞) 바닥에 놓는다.
@@ -238,7 +245,8 @@ let statusTimer: number | undefined;
 
 /** 상태 보기: 이름·단계, 레벨 배지(등급 색), 경험치, 그리고 막대 세 줄. 글자는 textContent 로만 넣는다. */
 function showStatus(s: StatusBubble): void {
-  (document.getElementById('st-title') as HTMLElement).textContent = s.title;
+  (document.getElementById('st-name') as HTMLElement).textContent = s.name;
+  (document.getElementById('st-sub') as HTMLElement).textContent = s.sub;
   const lv = document.getElementById('st-lv') as HTMLElement;
   lv.textContent = `Lv.${s.level} ${s.tier.name}`;
   lv.style.setProperty('background', s.tier.color);

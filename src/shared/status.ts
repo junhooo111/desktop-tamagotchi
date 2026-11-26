@@ -23,8 +23,10 @@ export interface StatusBar {
 }
 
 export interface StatusBubble {
-  /** 예) 콩이(병아리) · 새끼 */
-  title: string;
+  /** 첫 줄 이름: 지어 준 이름, 없으면 종 이름(알이면 '알'). 레벨 배지가 이 옆에 붙는다. */
+  name: string;
+  /** 둘째 줄: 이름이 있으면 `병아리 · 새끼`, 없으면 단계(`새끼`), 알이면 빈 문자열 */
+  sub: string;
   level: number;
   tier: LevelTier;
   /** 총 경험치 */
@@ -41,7 +43,9 @@ export function buildStatus(pet: PetState, petName = '', display: DisplayStage =
   const actual = stageOf(pet);
   const shown = effectiveStage(actual, display);
   const species = actual === 'egg' ? '알' : getSpecies(pet.speciesId).name;
-  const name = petName && actual !== 'egg' ? `${petName}(${species})` : species;
+  const named = petName !== '' && actual !== 'egg';
+  const name = named ? petName : species;
+  const sub = actual === 'egg' ? '' : named ? `${species} · ${STAGE_NAME[shown]}` : STAGE_NAME[shown];
   const level = levelOf(pet.xp);
   const prog = xpProgress(pet.xp);
   const bar = (kind: BarKind, label: string, raw: number): StatusBar => {
@@ -52,7 +56,8 @@ export function buildStatus(pet: PetState, petName = '', display: DisplayStage =
   const into = Math.floor(prog.into);
   const xpBar: StatusBar = { kind: 'xp', label: '경험치', value: Math.min(100, Math.round((prog.into / prog.need) * 100)), level: 'high', text: `${into}/${prog.need}`, color: tier.color };
   return {
-    title: `${name} · ${STAGE_NAME[shown]}`,
+    name,
+    sub,
     level,
     tier,
     xp: Math.floor(pet.xp),

@@ -119,6 +119,38 @@ describe('뽑기·컬렉션 창', () => {
     expect(fillRect).toHaveBeenCalled();
   });
 
+  it('뽑고 나면 뽑기권·가진 수·천장·뽑은 횟수 문구가 새 값으로 바뀐다', async () => {
+    const before = base(7);
+    const after = pullSpecies(before, 2, () => 0.99).collection; // 부엉이
+    const { api } = await open(view(before));
+    expect(el('pity').textContent).toContain('40번 안에');
+    expect(el('pity').textContent).toContain('지금까지 0번');
+    expect(el('tickets').textContent).toContain('7장');
+    expect(el('owned-count').textContent).toContain('1/20');
+    api.pullSpecies.mockResolvedValue({ ok: true, message: '부엉이(이)가 새로 왔어요!', id: 'owl', isNew: true, hidden: false, count: 1, view: view(after) });
+    el('pull-species').click();
+    await flush(1_000);
+    expect(el('pity').textContent).toContain('39번 안에');
+    expect(el('pity').textContent).toContain('지금까지 1번');
+    expect(el('tickets').textContent).toContain('4장');
+    expect(el('owned-count').textContent).toContain('2/20');
+  });
+
+  it('뽑는 중에 새로고침 신호가 와도 연출이 끝난 뒤 최신 값으로 다시 맞춘다', async () => {
+    const before = base(7);
+    const after = pullSpecies(before, 2, () => 0.99).collection;
+    const newer: Collection = { ...after, tickets: after.tickets + 2 }; // 뽑는 사이에 레벨 보상으로 뽑기권이 늘었다
+    const { api, refresh, set } = await open(view(before));
+    api.pullSpecies.mockResolvedValue({ ok: true, message: '부엉이(이)가 새로 왔어요!', id: 'owl', isNew: true, hidden: false, count: 1, view: view(after) });
+    el('pull-species').click();
+    await flush();
+    set(view(newer));
+    refresh(); // 연출 중이라 바로 반영하지 못한다
+    await flush(1_000);
+    expect(api.get).toHaveBeenCalledTimes(2); // 처음 한 번 + 연출이 끝난 뒤 한 번
+    expect(el('tickets').textContent).toContain('6장');
+  });
+
   it('히든이 나오면 특별한 모습으로 보여 준다', async () => {
     const after = pullSpecies(base(3), 2, () => 0).collection;
     const { api } = await open(view(base(3)));

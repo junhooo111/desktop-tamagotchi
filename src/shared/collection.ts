@@ -23,7 +23,7 @@ export const DAILY_TICKETS = 1;
 export const CARE_PER_TICKET = 25;
 /** 이미 가진 동물이 또 나오면 그 동물이 받는 경험치 */
 export const DUPLICATE_XP = 30;
-/** 히든 동물 한 종이 나올 확률(%). 6종이라 합쳐서 6%이고, 나머지 94%를 일반 동물 9종이 똑같이 나눠 갖는다. */
+/** 히든 동물 한 종이 나올 확률(%). 6종이라 합쳐서 6%이고, 나머지 94%를 일반 동물이 똑같이 나눠 갖는다(일반 동물 수는 SPECIES 에서 세므로 종류가 늘어도 확률·화면 문구가 저절로 맞춰진다). */
 export const HIDDEN_PERCENT_EACH = 1;
 /** 히든이 안 나온 채로 이만큼 뽑으면 다음 뽑기는 히든이 나온다(천장) */
 export const HIDDEN_PITY = 40;

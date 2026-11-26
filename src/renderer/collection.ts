@@ -34,6 +34,8 @@ const SUSPENSE_MS = 900;
 
 let data: CollectionView;
 let busy = false;
+/** 뽑는 중에 온 새로고침 신호(레벨 보상 등으로 값이 바뀐 경우): 연출이 끝난 뒤에 다시 가져온다 */
+let refreshAfterPull = false;
 
 /** 도트 그림(문자 격자)을 canvas 에 그린다. silhouette 면 한 색으로 칠해 실루엣만 보인다. */
 function drawSprite(canvas: HTMLCanvasElement, rows: readonly string[], palette: Readonly<Record<string, string>>, scale: number, silhouette?: string): void {
@@ -152,6 +154,11 @@ async function pull(kind: 'species' | 'cosmetic'): Promise<void> {
   busy = false;
   render();
   showResult(result);
+  // 뽑기권·뽑은 횟수·천장·확률 문구는 늘 가장 최신 값으로 다시 맞춘다.
+  if (refreshAfterPull) {
+    refreshAfterPull = false;
+    await refresh();
+  }
 }
 
 async function switchTo(id: SpeciesId): Promise<void> {
@@ -165,7 +172,10 @@ async function switchTo(id: SpeciesId): Promise<void> {
 }
 
 async function refresh(): Promise<void> {
-  if (busy) return;
+  if (busy) {
+    refreshAfterPull = true;
+    return;
+  }
   data = await window.collectionApi.get();
   render();
 }
