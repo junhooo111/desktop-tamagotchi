@@ -48,6 +48,8 @@ for info in zin.infolist():
         for key in ('CFBundleExecutable', 'CFBundleName', 'CFBundleDisplayName'):
             if isinstance(plist.get(key), str):
                 plist[key] = plist[key].replace('Electron Helper', f'{EXE} Helper')
+        # 헬퍼의 실행 파일 이름(앱 폴더 이름과 같다)을 분명히 적어 둔다
+        plist['CFBundleExecutable'] = new_name.split('/')[-3][: -len('.app')]
         data = plistlib.dumps(plist)
     ni = zipfile.ZipInfo(new_name, info.date_time)
     ni.external_attr = info.external_attr  # 실행 권한·심볼릭 링크 표시를 그대로 둔다
