@@ -64,6 +64,8 @@ import { FEED_PORT_DEFAULT, startFeedServer, type FeedServer } from './feed-serv
 import { petTargetFor } from './inspect-target.js';
 import { loadGrowth, saveGrowth } from './growth-store.js';
 import { loadSettings, saveSettings } from './settings-store.js';
+import { newsText, pickNews, type NewsItem } from '../shared/news.js';
+import { fetchNews, loadSeen, saveSeen } from './news.js';
 import { UPDATE_EVERY_MS, UPDATE_FIRST_CHECK_MS, UPDATE_REMIND_MS, UpdateController, type AutoUpdaterLike } from './updater.js';
 import {
   confirm,
@@ -137,6 +139,9 @@ let updates: UpdateController | null = null;
 /** 성장 기록: 연속 사용·업적·도감 */
 let growth: Growth = emptyGrowth();
 let growthPath = '';
+let newsPath = '';
+/** 마지막으로 가져온 공지(메뉴에 보여 준다) */
+let newsItems: NewsItem[] = [];
 let codexWin: BrowserWindow | null = null;
 /** 가장 최근 검사에서 찾은 모든 문제(꺼 둔 규칙·무시한 문제 포함). 검사 결과 창이 보여 준다. */
 let lastFindings: Finding[] = [];
@@ -682,6 +687,35 @@ function setupUpdates(): void {
   setInterval(remindUpdate, UPDATE_REMIND_MS);
 }
 
+/** 공지: 시작 1분 뒤와 1시간마다 저장소의 news.json 을 읽어 새 공지를 알린다. */
+const NEWS_FIRST_CHECK_MS = 60_000;
+const NEWS_EVERY_MS = 60 * 60_000;
+const NEWS_GAP_MS = 9_000;
+
+async function checkNews(): Promise<void> {
+  if (!settings.showNews) return;
+  const items = await fetchNews();
+  if (!items) return; // 오프라인이거나 응답이 이상하면 조용히 넘어간다
+  newsItems = items;
+  const { seen, firstRun } = loadSeen(newsPath);
+  const pick = pickNews(items, seen, firstRun);
+  try {
+    saveSeen(newsPath, pick.seen);
+  } catch (error) {
+    console.error('공지 기록 저장 실패', error);
+    return; // 저장하지 못하면 같은 공지를 계속 알리게 되므로 이번엔 알리지 않는다
+  }
+  pick.show.forEach((item, i) => setTimeout(() => say(newsText(item)), i * NEWS_GAP_MS));
+  const first = pick.show[0];
+  if (first && Notification.isSupported()) new Notification({ title: 'Desktop Tamagotchi 공지', body: first.title }).show();
+  updateTray();
+}
+
+function setupNews(): void {
+  setTimeout(() => void checkNews(), NEWS_FIRST_CHECK_MS);
+  setInterval(() => void checkNews(), NEWS_EVERY_MS);
+}
+
 /** 새 버전이 준비돼 있으면 말풍선으로, 가끔은 시스템 알림(눌러서 바로 설치)으로 알린다. */
 function remindUpdate(): void {
   const r = updates?.remind();
@@ -869,7 +903,26 @@ function buildMenu(): Menu {
     { label: '검사 결과…', click: () => openResults() },
     { label: '도감·기록…', click: () => openCodex() },
     { label: '프로필 카드 내보내기…', click: () => void exportCard() },
+    {
+      label: '📢 공지',
+      enabled: newsItems.length > 0,
+      submenu: newsItems.slice(0, 5).flatMap((item) => [
+        { label: `${item.date} ${item.title}`, click: () => say(newsText(item)) },
+        ...(item.url ? [{ label: '    ↗ 자세히 보기', click: () => void shell.openExternal(item.url) }] : []),
+      ]),
+    },
     { label: '설정…', click: () => openSettings() },
+    {
+      // 새 버전이 준비돼 있지 않을 때도 직접 확인할 수 있게 항상 둔다
+      label: app.isPackaged ? `업데이트 확인 (현재 v${app.getVersion()})` : '업데이트 확인 (설치본에서만)',
+      enabled: app.isPackaged,
+      click: () => {
+        say('새 버전이 있는지 확인하고 있어요…');
+        void updates?.check(true).then((text) => {
+          if (text) say(text);
+        });
+      },
+    },
     { label: scanStatus, enabled: false },
     { label: '지금 검사하기', enabled: !egg, click: () => void scanOnce() },
     {
@@ -1184,6 +1237,7 @@ if (!app.requestSingleInstanceLock()) {
     settings = loadSettings(settingsPath);
     growthPath = path.join(app.getPath('userData'), 'growth.json');
     growth = loadGrowth(growthPath);
+    newsPath = path.join(app.getPath('userData'), 'news.json');
     const now = Date.now();
     lastTipAt = now;
     // 처음 실행하면 임의의 종이 든 알로 시작한다. 알은 쓰다듬으면 부화한다.
@@ -1218,6 +1272,7 @@ if (!app.requestSingleInstanceLock()) {
     setTimeout(() => void scanOnce(), 3_000);
     scheduleScan();
     setupUpdates();
+    setupNews();
   });
 
   app.on('before-quit', () => {

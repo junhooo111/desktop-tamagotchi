@@ -21,6 +21,8 @@ export interface Settings {
   tipMinutes: 0 | 10 | 20 | 60;
   /** 새 버전이 있으면 알려 주고 받아 두는지(설치본에서만 동작) */
   autoUpdate: boolean;
+  /** 저장소의 공지(news.json)를 가끔 읽어 와서 새 공지를 알리는지 */
+  showNews: boolean;
   /** 검사하지 않을 규칙(꺼 둔 규칙은 알리지 않는다) */
   disabledRules: RuleId[];
   /** 무시한 문제의 키(주소|규칙|요소 경로). 다시 알리지 않는다. */
@@ -50,6 +52,7 @@ export const DEFAULT_SETTINGS: Settings = {
   scanSeconds: 10,
   tipMinutes: 20,
   autoUpdate: true,
+  showNews: true,
   disabledRules: [],
   ignored: [],
   variant: 'default',
@@ -93,6 +96,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     scanSeconds: pick(r['scanSeconds'], SETTING_CHOICES.scanSeconds, DEFAULT_SETTINGS.scanSeconds),
     tipMinutes: pick(r['tipMinutes'], SETTING_CHOICES.tipMinutes, DEFAULT_SETTINGS.tipMinutes),
     autoUpdate: bool(r['autoUpdate'], DEFAULT_SETTINGS.autoUpdate),
+    showNews: bool(r['showNews'], DEFAULT_SETTINGS.showNews),
     disabledRules: ruleList(r['disabledRules']),
     ignored: keyList(r['ignored']),
     variant: isVariant(r['variant']) ? r['variant'] : DEFAULT_SETTINGS.variant,

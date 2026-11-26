@@ -75,6 +75,7 @@ function render(): void {
   for (const key of Object.keys(SETTING_CHOICES) as ChoiceKey[]) renderChoices(key);
   $<HTMLInputElement>('inspectEnabled').checked = current.inspectEnabled;
   $<HTMLInputElement>('autoUpdate').checked = current.autoUpdate;
+  $<HTMLInputElement>('showNews').checked = current.showNews;
   // 검사를 껐으면 주기 선택은 의미가 없다.
   for (const b of $('scanSeconds').querySelectorAll('button')) (b as HTMLButtonElement).disabled = !current.inspectEnabled;
 }
@@ -95,6 +96,7 @@ async function start(): Promise<void> {
 
   $<HTMLInputElement>('inspectEnabled').addEventListener('change', (e) => void change({ inspectEnabled: (e.target as HTMLInputElement).checked }));
   $<HTMLInputElement>('autoUpdate').addEventListener('change', (e) => void change({ autoUpdate: (e.target as HTMLInputElement).checked }));
+  $<HTMLInputElement>('showNews').addEventListener('change', (e) => void change({ showNews: (e.target as HTMLInputElement).checked }));
   $('rules-all-on').addEventListener('click', () => void change({ disabledRules: [] }));
   $('check-update').addEventListener('click', () => {
     setStatus('확인하는 중…');

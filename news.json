@@ -1,0 +1,11 @@
+{
+  "items": [
+    {
+      "id": "2026-11-26-news",
+      "date": "2026-11-26",
+      "title": "공지 기능이 생겼어요",
+      "body": "앞으로 새 소식이 있으면 이렇게 알려 드릴게요. 설정에서 끌 수 있어요.",
+      "url": "https://github.com/junhooo111/desktop-tamagotchi/releases"
+    }
+  ]
+}

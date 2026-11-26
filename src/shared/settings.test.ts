@@ -10,7 +10,7 @@ describe('sanitizeSettings', () => {
   });
 
   it('유효한 값은 그대로 받는다', () => {
-    const s = { petScale: 2, inspectEnabled: false, scanSeconds: 30, tipMinutes: 0, autoUpdate: false, disabledRules: ['contrast'], ignored: ['http://localhost:3000/|img-alt|img'], variant: 'pastel', accessory: 'crown', petName: '콩이', cardSpecies: 'fox' };
+    const s = { petScale: 2, inspectEnabled: false, scanSeconds: 30, tipMinutes: 0, autoUpdate: false, showNews: false, disabledRules: ['contrast'], ignored: ['http://localhost:3000/|img-alt|img'], variant: 'pastel', accessory: 'crown', petName: '콩이', cardSpecies: 'fox' };
     expect(sanitizeSettings(s)).toEqual(s);
   });
 

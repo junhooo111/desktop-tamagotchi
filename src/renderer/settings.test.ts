@@ -87,6 +87,16 @@ describe('설정 창', () => {
     expect(api.set).toHaveBeenCalledWith({ autoUpdate: false });
   });
 
+  it('공지 체크박스는 기본으로 켜져 있고, 바꾸면 그 항목만 보낸다', async () => {
+    const { api } = await open();
+    const box = el<HTMLInputElement>('showNews');
+    expect(box.checked).toBe(true);
+    box.checked = false;
+    box.dispatchEvent(new Event('change'));
+    await flush();
+    expect(api.set).toHaveBeenCalledWith({ showNews: false });
+  });
+
   it('검사를 끄면 검사 주기 선택이 비활성이 되고, 다시 켜면 풀린다', async () => {
     await open({ ...DEFAULT_SETTINGS, inspectEnabled: false });
     expect([...el('scanSeconds').querySelectorAll('button')].every((b) => (b as HTMLButtonElement).disabled)).toBe(true);
