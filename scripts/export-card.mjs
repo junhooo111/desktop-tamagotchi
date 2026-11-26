@@ -1,4 +1,4 @@
-// 지금 키우는 펫의 프로필 카드(SVG)를 만든다. 앱을 켜 두지 않아도 저장된 상태(%APPDATA%\desktop-tamagotchi)를 읽는다.
+// 지금 키우는 펫이 뛰어다니는 프로필 카드(움직이는 SVG)를 만든다. 앱을 켜 두지 않아도 저장된 상태(%APPDATA%\desktop-tamagotchi)를 읽는다.
 // 사용: npm run card                 ./pet-card.svg 로 저장
 //       npm run card -- <저장할 경로>   예) npm run card -- ..\junhooo111\assets\pet-card.svg
 //
@@ -12,7 +12,6 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 const root = path.join(path.dirname(fileURLToPath(import.meta.url)), '..');
 const load = (p) => import(pathToFileURL(path.join(root, 'dist', p)).href);
 const { renderProfileCard } = await load('shared/card.js');
-const { sanitizeGrowth } = await load('shared/growth.js');
 const { sanitizeSettings } = await load('shared/settings.js');
 
 const dataDir = process.env.PET_DATA_DIR ?? path.join(process.env.APPDATA ?? path.join(os.homedir(), 'AppData', 'Roaming'), 'desktop-tamagotchi');
@@ -30,14 +29,7 @@ if (!pet) {
   process.exit(1);
 }
 const settings = sanitizeSettings(read('settings.json'));
-const progress = read('progress.json');
-const svg = renderProfileCard({
-  pet,
-  growth: sanitizeGrowth(read('growth.json')),
-  style: { variant: settings.variant, accessory: settings.accessory },
-  tipsSeen: Array.isArray(progress?.tipsSeen) ? progress.tipsSeen.length : 0,
-  now: Date.now(),
-});
+const svg = renderProfileCard({ pet, style: { variant: settings.variant, accessory: settings.accessory } });
 
 const out = path.resolve(process.argv[2] ?? 'pet-card.svg');
 fs.mkdirSync(path.dirname(out), { recursive: true });
