@@ -3,6 +3,7 @@ import { resolvePose } from '../shared/animation.js';
 import { BUBBLE_GAP, WINDOW, drawScale, petPixelSize } from '../shared/layout.js';
 import { boundsOf, orientRows } from '../shared/pixel.js';
 import { spriteSet, type FrameName, type SpriteSet } from '../shared/species.js';
+import type { StatusBubble } from '../shared/status.js';
 import type { NoticeBubble, NoticeMessage, PetView, TipBubble } from '../shared/view.js';
 
 interface PetApi {
@@ -16,6 +17,7 @@ interface PetApi {
   onNotice(callback: (message: NoticeMessage) => void): void;
   onView(callback: (view: PetView) => void): void;
   onSay(callback: (text: string) => void): void;
+  onStatus(callback: (status: StatusBubble) => void): void;
   onTip(callback: (tip: TipBubble | null) => void): void;
 }
 
@@ -29,6 +31,8 @@ declare global {
 const CLICK_MOVE_LIMIT = 4;
 const HIT_PADDING = 5;
 const BUBBLE_MS = 4_000;
+/** 상태 보기 말풍선이 떠 있는 시간(막대를 읽을 시간이 필요하다) */
+const STATUS_MS = 7_000;
 /** 문제를 찾았을 때 말풍선이 떠 있는 시간 */
 const NOTICE_MS = 12_000;
 /** 펫에서 마우스가 벗어난 뒤 말풍선을 거두기까지의 시간 */
@@ -229,6 +233,46 @@ function draw(now: number): void {
   }
 }
 
+const statusEl = document.getElementById('status') as HTMLElement;
+let statusTimer: number | undefined;
+
+/** 상태 보기: 이름·단계, 레벨 배지(등급 색), 경험치, 그리고 막대 세 줄. 글자는 textContent 로만 넣는다. */
+function showStatus(s: StatusBubble): void {
+  (document.getElementById('st-title') as HTMLElement).textContent = s.title;
+  const lv = document.getElementById('st-lv') as HTMLElement;
+  lv.textContent = `Lv.${s.level} ${s.tier.name}`;
+  lv.style.setProperty('background', s.tier.color);
+  lv.style.setProperty('color', s.tier.onColor);
+  const box = document.getElementById('st-bars') as HTMLElement;
+  box.textContent = '';
+  for (const b of s.bars) {
+    const row = document.createElement('div');
+    row.className = 'row';
+    const label = document.createElement('span');
+    label.textContent = b.label;
+    const bar = document.createElement('div');
+    bar.className = 'bar';
+    const fill = document.createElement('div');
+    fill.className = `fill ${b.level}`;
+    fill.style.setProperty('width', `${b.value}%`);
+    if (b.color) fill.style.setProperty('background', b.color);
+    bar.append(fill);
+    const num = document.createElement('span');
+    num.className = 'num';
+    num.textContent = b.text;
+    row.append(label, bar, num);
+    row.dataset['kind'] = b.kind;
+    box.append(row);
+  }
+  statusEl.hidden = false;
+  window.clearTimeout(statusTimer);
+  statusTimer = window.setTimeout(() => {
+    statusEl.hidden = true;
+    anchorBubbles();
+  }, STATUS_MS);
+  anchorBubbles();
+}
+
 function showBubble(text: string): void {
   bubble.textContent = text;
   bubble.hidden = false;
@@ -248,7 +292,8 @@ function anchorBubbles(): void {
   const base = WINDOW.height - petTop + BUBBLE_GAP;
   tipEl.style.bottom = `${base}px`;
   noticeEl.style.bottom = `${base}px`;
-  const lower = !tipEl.hidden ? tipEl : !noticeEl.hidden ? noticeEl : null;
+  statusEl.style.bottom = `${base}px`;
+  const lower = !tipEl.hidden ? tipEl : !noticeEl.hidden ? noticeEl : !statusEl.hidden ? statusEl : null;
   const above = lower ? WINDOW.height - lower.getBoundingClientRect().top + 8 : base;
   bubble.style.bottom = `${above}px`;
   document.documentElement.style.setProperty('--shift', `${view.bubbleShift}px`);
@@ -422,6 +467,7 @@ window.petApi.onSay((text) => {
   anchorBubbles();
 });
 window.petApi.onTip(showTip);
+window.petApi.onStatus(showStatus);
 window.petApi.onNotice(onNotice);
 
 void window.petApi.getView().then((initial) => {

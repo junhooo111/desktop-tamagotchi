@@ -3,6 +3,7 @@
  * 규칙(확률·비용·보상)은 메인(shared/collection.ts)이 정하고 여기서는 보여 주기만 한다.
  */
 import type { CollectionEntry, CollectionView } from '../shared/collection.js';
+import { levelTier } from '../shared/pet.js';
 import { spriteSet, type SpeciesId } from '../shared/species.js';
 
 type PullResult =
@@ -69,7 +70,12 @@ function petCard(e: CollectionEntry): HTMLElement {
   meta.className = 'meta';
   if (e.owned) {
     const nick = e.name ? `${e.name} · ` : '';
-    meta.textContent = `${nick}Lv.${e.level} ${STAGE_NAME[e.stage]}${e.count > 1 ? ` ×${e.count}` : ''}`;
+    const tier = levelTier(e.level);
+    const lv = document.createElement('b');
+    lv.className = 'lvc';
+    lv.textContent = `Lv.${e.level}`;
+    lv.style.setProperty('color', tier.color);
+    meta.append(nick, lv, ` ${tier.name} · ${STAGE_NAME[e.stage]}${e.count > 1 ? ` ×${e.count}` : ''}`);
   } else {
     meta.textContent = e.hidden ? '히든 동물' : '아직 없어요';
   }

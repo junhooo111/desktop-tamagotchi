@@ -13,12 +13,12 @@ import { chunky } from './art/chunky.js';
 import { accessoryPalette, DEFAULT_STYLE, tintLook, type PetStyle } from './art/style.js';
 import { birdFrames } from './art/bird-plan.js';
 import { type BirdSpec } from './art/bird.js';
-import { CHICK, DUCK, PENGUIN, PHOENIX } from './art/bird-species.js';
+import { CHICK, DUCK, OWL, PENGUIN, PHOENIX } from './art/bird-species.js';
 import { EGG_LOOK, eggFrames } from './art/egg.js';
 import { type Frames } from './art/frames.js';
 import { quadFrames, type Gait } from './art/quad-plan.js';
 import { type QuadSpec } from './art/quadruped.js';
-import { AZURE, CAT, DOG, DRAGON, FOX, HAMSTER, QILIN, RABBIT, TORTOISE, TURTLE, WHITETIGER } from './art/quad-species.js';
+import { AZURE, BEAR, CAT, DOG, DRAGON, FOX, HAMSTER, PANDA, PIG, QILIN, RABBIT, SHEEP, TORTOISE, TURTLE, WHITETIGER } from './art/quad-species.js';
 import { paletteOf, type Look } from './art/types.js';
 import { SIZE } from './pixel.js';
 
@@ -37,6 +37,11 @@ export type SpeciesId =
   | 'fox'
   | 'hamster'
   | 'penguin'
+  | 'panda'
+  | 'bear'
+  | 'pig'
+  | 'sheep'
+  | 'owl'
   // 히든 동물: 뽑기에서 아주 드물게 나오고, 성체 다음 단계(전설)까지 자란다
   | 'dragon'
   | 'azure'
@@ -76,6 +81,11 @@ const DESIGNS: Record<SpeciesId, Design> = {
   fox: { kind: 'quad', spec: FOX, gait: 'trot', skin: 'f' },
   hamster: { kind: 'quad', spec: HAMSTER, gait: 'trot', skin: 'f' },
   penguin: { kind: 'bird', spec: PENGUIN, skin: 'f' },
+  panda: { kind: 'quad', spec: PANDA, gait: 'trot', skin: 'f' },
+  bear: { kind: 'quad', spec: BEAR, gait: 'trot', skin: 'f' },
+  pig: { kind: 'quad', spec: PIG, gait: 'trot', skin: 'f' },
+  sheep: { kind: 'quad', spec: SHEEP, gait: 'trot', skin: 'f' },
+  owl: { kind: 'bird', spec: OWL, skin: 'f' },
   dragon: { kind: 'quad', spec: DRAGON, gait: 'trot', skin: 'f' },
   azure: { kind: 'quad', spec: AZURE, gait: 'trot', skin: 'f' },
   whitetiger: { kind: 'quad', spec: WHITETIGER, gait: 'trot', skin: 'f' },
@@ -94,6 +104,11 @@ export const SPECIES: readonly Species[] = [
   { id: 'fox', name: '여우' },
   { id: 'hamster', name: '햄스터' },
   { id: 'penguin', name: '펭귄' },
+  { id: 'panda', name: '판다' },
+  { id: 'bear', name: '곰' },
+  { id: 'pig', name: '돼지' },
+  { id: 'sheep', name: '양' },
+  { id: 'owl', name: '부엉이' },
   { id: 'dragon', name: '용', hidden: true },
   { id: 'azure', name: '청룡', hidden: true },
   { id: 'whitetiger', name: '백호', hidden: true },

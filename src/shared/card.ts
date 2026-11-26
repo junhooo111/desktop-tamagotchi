@@ -13,7 +13,7 @@
  * 글자는 영문 대문자·숫자만 쓴다(<img> 로 불러온 SVG 는 웹폰트를 못 쓰고, 한글 글꼴은 보는 사람 PC 에 달려 있다).
  */
 import { buildCodex, emptyGrowth, type CodexView } from './growth.js';
-import { levelOf, stageOf, type PetState, type Stage } from './pet.js';
+import { levelOf, levelTier, stageOf, type PetState, type Stage } from './pet.js';
 import { spriteSet, type PetStyle, type SpeciesId } from './species.js';
 
 export interface CardInput {
@@ -205,6 +205,7 @@ export function renderProfileCard(input: CardInput): string {
   const set = spriteSet(pet.speciesId as SpeciesId, stage, style);
   const level = levelOf(pet.xp);
   const prog = xpProgress(pet.xp);
+  const tier = levelTier(level);
   const name = input.name?.trim() ?? '';
   const label = `${name ? `${name}, ` : ''}${pet.speciesId} ${stage}, level ${level}, walking around its house`;
 
@@ -315,9 +316,9 @@ export function renderProfileCard(input: CardInput): string {
     rect(MARGIN, STRIP_Y + 12, 8, 8, COLORS.accent),
     `<text x="${MARGIN + 14}" y="${STRIP_Y + 20}" font-size="13" font-weight="700" fill="${COLORS.accent}">${esc(name || pet.speciesId.toUpperCase())}</text>`,
     `<text x="${MARGIN + 14 + textWidth(name || pet.speciesId.toUpperCase(), 13) + 8}" y="${STRIP_Y + 20}" font-size="11" fill="${COLORS.mute}">${esc((name ? `${pet.speciesId} ${stage}` : stage).toUpperCase())}</text>`,
-    `<text x="${barX - 8}" y="${STRIP_Y + 20}" text-anchor="end" font-size="13" font-weight="700" fill="${COLORS.violet}">LV ${level}</text>`,
+    `<text x="${barX - 8}" y="${STRIP_Y + 20}" text-anchor="end" font-size="13" font-weight="700" fill="${tier.color}">LV ${level}</text>`,
     rect(barX, STRIP_Y + 12, barW, 8, COLORS.chip),
-    rect(barX, STRIP_Y + 12, Math.max(2, fill), 8, COLORS.violet),
+    rect(barX, STRIP_Y + 12, Math.max(2, fill), 8, tier.color),
     `<text x="${barX + barW + 6}" y="${STRIP_Y + 20}" font-size="9" fill="${COLORS.mute}">${prog.into}/${prog.need}</text>`,
     chipsSvg,
     `<rect x="2" y="2" width="${W - 4}" height="${H - 4}" fill="none" stroke="${COLORS.line}" stroke-width="4"/>`,

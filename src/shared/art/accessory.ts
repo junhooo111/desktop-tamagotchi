@@ -9,9 +9,50 @@
  */
 import { blank, line, part, px, rect, triangle, type Grid } from '../pixel.js';
 
-export type Accessory = 'none' | 'ribbon' | 'glasses' | 'crown' | 'wings' | 'sprout' | 'flower' | 'partyhat' | 'halo';
+export type Accessory =
+  | 'none'
+  | 'ribbon'
+  | 'glasses'
+  | 'crown'
+  | 'wings'
+  | 'sprout'
+  | 'flower'
+  | 'partyhat'
+  | 'halo'
+  // 뽑기 전용
+  | 'cap'
+  | 'witch'
+  | 'chef'
+  | 'santa'
+  // 업적 전용
+  | 'headband'
+  | 'antenna'
+  | 'bunnyears'
+  | 'eyepatch'
+  | 'monocle'
+  | 'star';
 
-export const ACCESSORIES: readonly Accessory[] = ['none', 'ribbon', 'glasses', 'crown', 'wings', 'sprout', 'flower', 'partyhat', 'halo'];
+export const ACCESSORIES: readonly Accessory[] = [
+  'none',
+  'ribbon',
+  'glasses',
+  'crown',
+  'wings',
+  'sprout',
+  'flower',
+  'partyhat',
+  'halo',
+  'cap',
+  'witch',
+  'chef',
+  'santa',
+  'headband',
+  'antenna',
+  'bunnyears',
+  'eyepatch',
+  'monocle',
+  'star',
+];
 
 /** 장식별 색: X 주색, Y 보조색(안경의 Y 는 짙은 렌즈 색이라 선글라스로 보인다) */
 export const ACCESSORY_COLORS: Record<Accessory, { X: string; Y: string }> = {
@@ -24,6 +65,16 @@ export const ACCESSORY_COLORS: Record<Accessory, { X: string; Y: string }> = {
   flower: { X: '#ff9ecb', Y: '#ffd04a' },
   partyhat: { X: '#5ab8ff', Y: '#ff6b8b' },
   halo: { X: '#fff3a0', Y: '#ffd04a' },
+  cap: { X: '#e5484d', Y: '#8f1f27' },
+  witch: { X: '#6a3fc8', Y: '#ffd84a' },
+  chef: { X: '#ffffff', Y: '#cfd6e6' },
+  santa: { X: '#e5484d', Y: '#ffffff' },
+  headband: { X: '#ff6fae', Y: '#ffd84a' },
+  antenna: { X: '#ff4f8b', Y: '#9a2a55' },
+  bunnyears: { X: '#ffffff', Y: '#ffb3c8' },
+  eyepatch: { X: '#2b2b3a', Y: '#2b2b3a' },
+  monocle: { X: '#ffd04a', Y: '#8a6b1c' },
+  star: { X: '#ffe14a', Y: '#ffa62e' },
 };
 
 export interface HeadGeom {
@@ -87,6 +138,85 @@ export function drawHeadAccessory(g: Grid, acc: Accessory | undefined, head: Hea
       const x = even(head.cx) - 6;
       const y = Math.max(2, even(head.cy - head.ry) - 8);
       part(g, (t) => cells(t, x, y, ['.YXXY.', 'X....X', '.YXXY.']), { outline: 'k' });
+      break;
+    }
+    case 'cap': {
+      // 야구모자: 둥근 모자에 앞으로 나온 챙 (14x6)
+      const x = even(head.cx) - 6;
+      const y = Math.max(2, even(head.cy - head.ry) - 4);
+      part(g, (t) => cells(t, x, y, ['.XXXX..', 'XXXXXX.', 'YYYYYYY']), { outline: 'k' });
+      break;
+    }
+    case 'witch': {
+      // 마법사 모자: 뾰족하게 솟은 모자와 넓은 챙, 금빛 띠 (14x12)
+      const x = even(head.cx) - 7;
+      const y = Math.max(2, even(head.cy - head.ry) - 10);
+      part(g, (t) => cells(t, x, y, ['...X...', '...X...', '..XXX..', '..XYX..', '.XXXXX.', 'XXXXXXX']), { outline: 'k' });
+      break;
+    }
+    case 'chef': {
+      // 요리사 모자: 부풀어 오른 하얀 모자 (10x8)
+      const x = even(head.cx) - 5;
+      const y = Math.max(2, even(head.cy - head.ry) - 6);
+      part(g, (t) => cells(t, x, y, ['.XXX.', 'XXXXX', 'XXXXX', 'YYYYY']), { outline: 'k' });
+      break;
+    }
+    case 'santa': {
+      // 산타 모자: 빨간 모자, 하얀 방울과 둘레 (12x8)
+      const x = even(head.cx) - 6;
+      const y = Math.max(2, even(head.cy - head.ry) - 6);
+      part(g, (t) => cells(t, x, y, ['..XXY.', '.XXXX.', 'XXXXXX', 'YYYYYY']), { outline: 'k' });
+      break;
+    }
+    case 'headband': {
+      // 별 머리띠: 머리를 두른 띠 위에 별 하나 (10x6)
+      const x = even(head.cx) - 5;
+      const y = Math.max(2, even(head.cy - head.ry) - 4);
+      part(g, (t) => cells(t, x, y, ['..Y..', '.YYY.', 'XXXXX']), { outline: 'k' });
+      break;
+    }
+    case 'antenna': {
+      // 하트 더듬이: 줄기 끝에 달린 하트 (6x8)
+      const x = even(head.cx - head.rx * 0.2) - 3;
+      const y = Math.max(2, even(head.cy - head.ry) - 6);
+      part(g, (t) => cells(t, x, y, ['X.X', 'XXX', '.Y.', '.Y.']), { outline: 'k' });
+      break;
+    }
+    case 'bunnyears': {
+      // 토끼 귀 머리띠: 안쪽이 분홍인 귀 둘이 갈라져 선다 (14x8)
+      const x = even(head.cx) - 7;
+      const y = Math.max(2, even(head.cy - head.ry) - 6);
+      part(g, (t) => cells(t, x, y, ['XX...XX', 'XY...YX', 'XY...YX', 'XXXXXXX']), { outline: 'k' });
+      break;
+    }
+    case 'eyepatch': {
+      // 안대: 눈을 가리는 까만 천과 뒤로 넘어가는 끈
+      const e = eyes[0];
+      if (!e) break;
+      const ex = e.x - (e.x & 1);
+      const ey = e.y - (e.y & 1);
+      line(g, ex - 2, ey - 1, ex - 9, ey - 6, 'X', 1);
+      rect(g, ex - 2, ey - 2, 6, 6, 'X');
+      break;
+    }
+    case 'monocle': {
+      // 외알 안경: 금테 하나와 아래로 늘어진 사슬
+      const e = eyes[0];
+      if (!e) break;
+      const ex = e.x - (e.x & 1);
+      const ey = e.y - (e.y & 1);
+      rect(g, ex - 3, ey - 3, 8, 2, 'X');
+      rect(g, ex - 3, ey + 3, 8, 2, 'X');
+      rect(g, ex - 3, ey - 1, 2, 4, 'X');
+      rect(g, ex + 3, ey - 1, 2, 4, 'X');
+      line(g, ex + 4, ey + 5, ex + 6, ey + 11, 'Y', 1);
+      break;
+    }
+    case 'star': {
+      // 머리 위에서 반짝이는 별 (10x10)
+      const x = even(head.cx) - 5;
+      const y = Math.max(2, even(head.cy - head.ry) - 8);
+      part(g, (t) => cells(t, x, y, ['..X..', '.XXX.', 'XXYXX', '.XXX.', '..X..']), { outline: 'k' });
       break;
     }
     case 'glasses': {

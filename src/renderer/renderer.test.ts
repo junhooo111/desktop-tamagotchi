@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { BUBBLE_GAP, STAGE_SCALE, WINDOW, petPixelSize } from '../shared/layout.js';
 import { boundsOf } from '../shared/pixel.js';
 import { spriteSet } from '../shared/species.js';
+import type { StatusBubble } from '../shared/status.js';
 import type { NoticeBubble, NoticeMessage, PetView, TipBubble } from '../shared/view.js';
 
 const html = fs.readFileSync(path.join(process.cwd(), 'static', 'index.html'), 'utf8');
@@ -54,6 +55,7 @@ interface Harness {
   emitView: (v: PetView) => void;
   emitSay: (t: string) => void;
   emitTip: (t: TipBubble | null) => void;
+  emitStatus: (s: StatusBubble) => void;
   emitNotice: (n: NoticeBubble | null, show: boolean) => void;
 }
 
@@ -61,6 +63,7 @@ async function start(initial: PetView = view()): Promise<Harness> {
   let onView: (v: PetView) => void = () => {};
   let onSay: (t: string) => void = () => {};
   let onTip: (t: TipBubble | null) => void = () => {};
+  let onStatus: (s: StatusBubble) => void = () => {};
   let onNotice: (m: NoticeMessage) => void = () => {};
   const api = {
     getView: vi.fn(async () => initial),
@@ -74,12 +77,13 @@ async function start(initial: PetView = view()): Promise<Harness> {
     onView: (cb: (v: PetView) => void) => (onView = cb),
     onSay: (cb: (t: string) => void) => (onSay = cb),
     onTip: (cb: (t: TipBubble | null) => void) => (onTip = cb),
+    onStatus: (cb: (s: StatusBubble) => void) => (onStatus = cb),
   };
   (window as unknown as { petApi: typeof api }).petApi = api;
   vi.resetModules();
   await import('./renderer.js');
   await flush();
-  return { api, emitView: (v) => onView(v), emitSay: (t) => onSay(t), emitTip: (t) => onTip(t), emitNotice: (n, show) => onNotice({ notice: n, show }) };
+  return { api, emitView: (v) => onView(v), emitSay: (t) => onSay(t), emitTip: (t) => onTip(t), emitStatus: (s) => onStatus(s), emitNotice: (n, show) => onNotice({ notice: n, show }) };
 }
 
 /** 지식 말풍선의 화면 위치를 흉내 낸다(jsdom 은 레이아웃을 계산하지 않는다). */
@@ -227,6 +231,60 @@ describe('그림 그리기', () => {
       }
     },
   );
+});
+
+describe('상태 보기 말풍선', () => {
+  const status = (over: Partial<StatusBubble> = {}): StatusBubble => ({
+    title: '콩이(병아리) · 새끼',
+    level: 12,
+    tier: { tier: 1, name: '숙련', color: '#3aa55d', onColor: '#ffffff' },
+    xp: 500,
+    bars: [
+      { kind: 'xp', label: '경험치', value: 47, level: 'high', text: '52/110', color: '#3aa55d' },
+      { kind: 'hunger', label: '배부름', value: 67, level: 'high', text: '67/100' },
+      { kind: 'happiness', label: '기분', value: 20, level: 'low', text: '20/100' },
+      { kind: 'clean', label: '청결', value: 99, level: 'high', text: '99/100' },
+    ],
+    ...over,
+  });
+
+  it('이름·단계, 레벨 배지(등급 이름·색), 막대 네 줄(경험치·배부름·기분·청결)을 숫자와 함께 보여 준다', async () => {
+    const h = await start();
+    h.emitStatus(status());
+    expect(el('status').hidden).toBe(false);
+    expect(el('st-title').textContent).toBe('콩이(병아리) · 새끼');
+    expect(el('st-lv').textContent).toBe('Lv.12 숙련');
+    expect(el('st-lv').style.background).toBeTruthy();
+    const rows = [...el('st-bars').querySelectorAll('.row')];
+    expect(rows.map((r) => (r as HTMLElement).dataset['kind'])).toEqual(['xp', 'hunger', 'happiness', 'clean']);
+    expect(rows.map((r) => r.textContent)).toEqual(['경험치52/110', '배부름67/100', '기분20/100', '청결99/100']);
+  });
+
+  it('막대의 찬 정도와 색: 경험치는 등급 색, 나머지는 낮으면 빨강·높으면 초록', async () => {
+    const h = await start();
+    h.emitStatus(status());
+    const fills = [...el('st-bars').querySelectorAll<HTMLElement>('.fill')];
+    expect(fills.map((f) => f.style.width)).toEqual(['47%', '67%', '20%', '99%']);
+    expect(fills[0]!.style.background).toBeTruthy(); // 등급 색
+    expect(fills[2]!.className).toContain('low');
+    expect(fills[1]!.className).toContain('high');
+  });
+
+  it('잠시 뒤 사라지고, 다시 부르면 막대가 쌓이지 않고 새로 그려진다', async () => {
+    const h = await start();
+    h.emitStatus(status());
+    h.emitStatus(status({ title: '다음' }));
+    expect(el('st-bars').querySelectorAll('.row')).toHaveLength(4);
+    vi.advanceTimersByTime(7_100);
+    expect(el('status').hidden).toBe(true);
+  });
+
+  it('글자를 HTML 로 해석하지 않는다', async () => {
+    const h = await start();
+    h.emitStatus(status({ title: '<img src=x onerror=alert(1)>' }));
+    expect(el('st-title').querySelector('img')).toBeNull();
+    expect(el('st-title').textContent).toContain('<img');
+  });
 });
 
 describe('FE 지식 말풍선', () => {

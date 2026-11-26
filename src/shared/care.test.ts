@@ -16,7 +16,7 @@ import {
   wash,
   type PetState,
 } from './pet.js';
-import { POOP_FADE_MS, POOP_LIFE_MS, POOP_SIZE, poopHtml, poopSvg } from './poop.js';
+import { POOP_FADE_MS, POOP_LIFE_MS, POOP_POP_MS, POOP_SIZE, poopHtml, poopSvg } from './poop.js';
 
 const NOW = 1_000_000;
 const adult = (over: Partial<PetState> = {}): PetState => ({ ...createPet('cat', NOW), xp: 300, ...over });
@@ -86,8 +86,24 @@ describe('응가 그림', () => {
 
   it('창에 띄울 HTML 은 마지막 POOP_FADE_MS 동안 흐려지는 애니메이션이 있다', () => {
     const html = poopHtml();
-    expect(html).toContain(`animation:fade ${POOP_FADE_MS}ms linear ${POOP_LIFE_MS - POOP_FADE_MS}ms forwards`);
-    expect(html).not.toContain('<script');
+    expect(html).toContain(`fade ${POOP_FADE_MS}ms linear ${POOP_LIFE_MS - POOP_FADE_MS}ms forwards`);
+    expect(html).toContain('@keyframes pop'); // 통통 튀며 나타난다
+  });
+
+  it('마우스 커서의 절반쯤(약 18x16px)이고 눈·입·볼터치가 있는 모양이다', () => {
+    expect(POOP_SIZE).toEqual({ width: 18, height: 16 });
+    const svg = poopSvg();
+    expect(svg).toContain('#2a1a10'); // 눈·입
+    expect(svg).toContain('#f0a090'); // 볼터치
+  });
+
+  it('누르면 사라진다: mousedown 에서 줄어드는 연출 뒤 창을 닫는 한 줄 스크립트만 있고, 외부 요청은 없다', () => {
+    const html = poopHtml();
+    expect(html.match(/<script>/g)).toHaveLength(1);
+    expect(html).toContain("addEventListener('mousedown'");
+    expect(html).toContain('window.close()');
+    expect(html).toContain(`},${POOP_POP_MS})`);
+    expect(html).not.toMatch(/fetch\(|XMLHttpRequest|https?:\/\/(?!www\.w3\.org)|eval\(/);
   });
 });
 

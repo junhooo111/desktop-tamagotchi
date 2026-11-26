@@ -55,3 +55,17 @@ export const PHOENIX: BirdSpec = {
     eye: '#3b2f2f',
   }),
 };
+
+/** 부엉이: 갈색 깃털, 머리의 귀깃, 크고 노란 눈 */
+export const OWL: BirdSpec = {
+  kind: 'chick',
+  tuft: true,
+  look: makeLook({
+    fur: '#9a7048',
+    outline: '#3a2a1e',
+    belly: tone('#ecd8b0'),
+    accent: tone('#6a4a2c'),
+    beak: tone('#ffb02e'),
+    eye: '#2a1a10',
+  }),
+};

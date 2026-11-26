@@ -58,17 +58,17 @@ describe('뽑기·컬렉션 창', () => {
   it('뽑기권, 가진 동물 수, 비용, 확률, 천장을 보여 준다', async () => {
     await open(view(base(5)));
     expect(el('tickets').textContent).toContain('5장');
-    expect(el('owned-count').textContent).toContain('1/15');
+    expect(el('owned-count').textContent).toContain('1/20');
     expect(el('pull-species').textContent).toContain('3장');
     expect(el('pull-cosmetic').textContent).toContain('2장');
-    expect(el('chances').textContent).toContain('9종');
+    expect(el('chances').textContent).toContain('14종');
     expect(el('chances').textContent).toContain('1%');
     expect(el('pity').textContent).toContain('40번');
   });
 
   it('모든 동물 칸을 보여 준다: 가진 동물은 정보와 꺼내기, 없는 동물은 점선 칸이고 히든은 ???로 숨긴다', async () => {
     await open(view(base(0)));
-    expect(pets()).toHaveLength(15);
+    expect(pets()).toHaveLength(20);
     const cat = pet('cat');
     expect(cat.textContent).toContain('고양이');
     expect(cat.textContent).toContain('Lv.6');
@@ -104,7 +104,7 @@ describe('뽑기·컬렉션 창', () => {
   it('동물 뽑기: 누르면 연출을 하고, 결과(새 동물)와 늘어난 목록을 보여 준다', async () => {
     const after = pullSpecies(base(3), 2, () => 0.99).collection;
     const { api } = await open(view(base(3)));
-    api.pullSpecies.mockResolvedValue({ ok: true, message: '펭귄(이)가 새로 왔어요!', id: 'penguin', isNew: true, hidden: false, count: 1, view: view(after) });
+    api.pullSpecies.mockResolvedValue({ ok: true, message: '부엉이(이)가 새로 왔어요!', id: 'owl', isNew: true, hidden: false, count: 1, view: view(after) });
     el('pull-species').click();
     await flush();
     expect(el('result').hidden).toBe(false);
@@ -112,10 +112,10 @@ describe('뽑기·컬렉션 창', () => {
     expect(el('result-text').textContent).toBe('뽑는 중…');
     await flush(1_000);
     expect(el('result').classList.contains('shaking')).toBe(false);
-    expect(el('result-text').textContent).toContain('펭귄');
+    expect(el('result-text').textContent).toContain('부엉이');
     expect(el('tickets').textContent).toContain('0장');
-    expect(pet('penguin').classList.contains('empty')).toBe(false);
-    expect(pet('penguin').querySelector('button')!.textContent).toBe('꺼내기');
+    expect(pet('owl').classList.contains('empty')).toBe(false);
+    expect(pet('owl').querySelector('button')!.textContent).toBe('꺼내기');
     expect(fillRect).toHaveBeenCalled();
   });
 
@@ -140,12 +140,12 @@ describe('뽑기·컬렉션 창', () => {
   it('꺼내기를 누르면 그 동물만 메인에 보내고, 돌려받은 상태(키우는 중 표시)로 다시 그린다', async () => {
     const two = pullSpecies(base(3), 2, () => 0.99).collection;
     const { api } = await open(view(two));
-    const switched: Collection = { ...two, active: 'penguin' };
+    const switched: Collection = { ...two, active: 'owl' };
     api.switchTo.mockResolvedValue({ ok: true, message: '펭귄(을)를 꺼냈어요', view: view(switched) });
-    pet('penguin').querySelector('button')!.click();
+    pet('owl').querySelector('button')!.click();
     await flush();
-    expect(api.switchTo).toHaveBeenCalledWith('penguin');
-    expect(pet('penguin').classList.contains('active')).toBe(true);
+    expect(api.switchTo).toHaveBeenCalledWith('owl');
+    expect(pet('owl').classList.contains('active')).toBe(true);
     expect(pet('cat').classList.contains('active')).toBe(false);
     expect(pet('cat').querySelector('button')!.textContent).toBe('꺼내기');
     expect(el('result-text').textContent).toContain('꺼냈어요');
@@ -158,7 +158,7 @@ describe('뽑기·컬렉션 창', () => {
     await flush();
     expect(api.get).toHaveBeenCalledTimes(2);
     expect(el('tickets').textContent).toContain('7장');
-    expect(pets()).toHaveLength(15);
+    expect(pets()).toHaveLength(20);
   });
 
   it('닫기 버튼과 Esc 로 닫는다', async () => {

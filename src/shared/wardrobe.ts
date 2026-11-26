@@ -6,7 +6,7 @@
 import { ACHIEVEMENTS, type Growth } from './growth.js';
 import { sanitizePetName } from './settings.js';
 import { isDisplayStage, reachedStages, type DisplayStage, type Stage } from './pet.js';
-import { SPECIES, isHiddenSpecies, type Accessory, type SpeciesId, type Variant } from './species.js';
+import { ACCESSORIES, SPECIES, isHiddenSpecies, type Accessory, type SpeciesId, type Variant } from './species.js';
 
 export const VARIANT_UNLOCK: Partial<Record<Variant, string>> = {
   pastel: 'first-fix',
@@ -24,7 +24,21 @@ export const ACCESSORY_UNLOCK: Partial<Record<Accessory, string>> = {
   flower: 'streak-3',
   partyhat: 'quiz-25',
   halo: 'streak-30',
+  // 업적 전용(뽑기에는 없다)
+  headband: 'care-200',
+  antenna: 'wash-20',
+  bunnyears: 'stroll-10',
+  eyepatch: 'collect-5',
+  monocle: 'pull-10',
+  star: 'hidden-1',
 };
+
+/** 업적으로만 얻는 장식(꾸미기 뽑기에는 나오지 않는다) */
+export const ACHIEVEMENT_ONLY: readonly Accessory[] = ['headband', 'antenna', 'bunnyears', 'eyepatch', 'monocle', 'star'];
+/** 꾸미기 뽑기로만 얻는 장식(업적이 없다) */
+export const GACHA_ONLY: readonly Accessory[] = ['cap', 'witch', 'chef', 'santa'];
+/** 꾸미기 뽑기에 나올 수 있는 장식(업적 전용은 뺀다) */
+export const GACHA_ACCESSORIES: readonly Accessory[] = ACCESSORIES.filter((a) => !ACHIEVEMENT_ONLY.includes(a));
 
 export const VARIANT_NAMES: Record<Variant, string> = { default: '기본', pastel: '파스텔', deep: '진하게', mono: '흑백' };
 export const ACCESSORY_NAMES: Record<Accessory, string> = {
@@ -37,6 +51,16 @@ export const ACCESSORY_NAMES: Record<Accessory, string> = {
   flower: '꽃',
   partyhat: '파티 모자',
   halo: '천사 고리',
+  cap: '야구모자',
+  witch: '마법사 모자',
+  chef: '요리사 모자',
+  santa: '산타 모자',
+  headband: '별 머리띠',
+  antenna: '하트 더듬이',
+  bunnyears: '토끼 귀',
+  eyepatch: '안대',
+  monocle: '외알 안경',
+  star: '반짝 별',
 };
 
 /** 뽑기로 얻은 것과 가진 동물(Collection 에서 뽑아 넘긴다). 없으면 업적으로 연 것만 쓸 수 있다. */
@@ -53,14 +77,26 @@ const NO_EXTRA: Extra = { accessories: [], variants: [], species: [] };
 
 const achievementName = (id: string): string => ACHIEVEMENTS.find((a) => a.id === id)?.name ?? id;
 
-function hintOf(requires: string | undefined): string {
-  return requires ? `업적 '${achievementName(requires)}' 달성하거나 꾸미기 뽑기로 얻어요` : '';
+function hintOf(requires: string | undefined, gacha = true): string {
+  if (!requires) return '';
+  return gacha ? `업적 '${achievementName(requires)}' 달성하거나 꾸미기 뽑기로 얻어요` : `업적 '${achievementName(requires)}' 달성하면 열려요 (뽑기에는 없어요)`;
+}
+
+function accessoryHint(a: Accessory): string {
+  if (a === 'none') return '';
+  if (GACHA_ONLY.includes(a)) return '꾸미기 뽑기로만 얻을 수 있어요 (업적은 없어요)';
+  return hintOf(ACCESSORY_UNLOCK[a], !ACHIEVEMENT_ONLY.includes(a));
 }
 
 const isDone = (g: Growth, requires: string | undefined): boolean => requires === undefined || g.achievements[requires] !== undefined;
 
 export const variantUnlocked = (g: Growth, v: Variant, extra: Extra = NO_EXTRA): boolean => isDone(g, VARIANT_UNLOCK[v]) || extra.variants.includes(v);
-export const accessoryUnlocked = (g: Growth, a: Accessory, extra: Extra = NO_EXTRA): boolean => a === 'none' || isDone(g, ACCESSORY_UNLOCK[a]) || extra.accessories.includes(a);
+export const accessoryUnlocked = (g: Growth, a: Accessory, extra: Extra = NO_EXTRA): boolean => {
+  if (a === 'none') return true;
+  // 업적이 없는 장식(뽑기 전용)은 뽑아야만 열린다.
+  const requires = ACCESSORY_UNLOCK[a];
+  return (requires !== undefined && isDone(g, requires)) || extra.accessories.includes(a);
+};
 
 export interface WardrobeEntry<T extends string> {
   id: T;
@@ -95,7 +131,7 @@ export function buildWardrobe(
     stages: stageList.map((st) => entry(st, STAGE_NAMES[st], st === 'auto' || (reached as string[]).includes(st), '아직 지나오지 않은 단계예요')),
     species: SPECIES.map((s) => entry(s.id, s.name, extra.species.includes(s.id), '뽑기로 얻을 수 있어요')),
     variants: (Object.keys(VARIANT_NAMES) as Variant[]).map((v) => entry(v, VARIANT_NAMES[v], variantUnlocked(g, v, extra), hintOf(VARIANT_UNLOCK[v]))),
-    accessories: (Object.keys(ACCESSORY_NAMES) as Accessory[]).map((a) => entry(a, ACCESSORY_NAMES[a], accessoryUnlocked(g, a, extra), hintOf(a === 'none' ? undefined : ACCESSORY_UNLOCK[a]))),
+    accessories: (Object.keys(ACCESSORY_NAMES) as Accessory[]).map((a) => entry(a, ACCESSORY_NAMES[a], accessoryUnlocked(g, a, extra), accessoryHint(a))),
   };
 }
 

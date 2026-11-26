@@ -193,7 +193,7 @@ describe('sanitizeGrowth', () => {
   it('정상 값은 그대로 받는다', () => {
     const g: Growth = {
       days: ['2026-11-24', '2026-11-25'],
-      counters: { confirms: 3, fixes: 1, quizCorrect: 2, tips: 4, care: 9 },
+      counters: { confirms: 3, fixes: 1, quizCorrect: 2, tips: 4, care: 9, washes: 5, strolls: 2 },
       rules: { 'img-alt': { confirms: 2, fixes: 1 } },
       achievements: { 'first-confirm': 123 },
     };
@@ -203,12 +203,12 @@ describe('sanitizeGrowth', () => {
   it('이상한 항목은 버리거나 0 으로 만든다(음수·소수·문자열·모르는 규칙·모르는 업적·잘못된 날짜)', () => {
     const g = sanitizeGrowth({
       days: ['2026-11-25', 'yesterday', 5, '2026-11-25'],
-      counters: { confirms: -3, fixes: 2.9, quizCorrect: '4', tips: Infinity, care: 7 },
+      counters: { confirms: -3, fixes: 2.9, quizCorrect: '4', tips: Infinity, care: 7, washes: -1 },
       rules: { 'img-alt': { confirms: 'x', fixes: 2 }, hacker: { confirms: 99 } },
       achievements: { 'first-confirm': 5, nope: 6, 'fix-10': 'late' },
     });
     expect(g.days).toEqual(['2026-11-25']);
-    expect(g.counters).toEqual({ confirms: 0, fixes: 2, quizCorrect: 0, tips: 0, care: 7 });
+    expect(g.counters).toEqual({ confirms: 0, fixes: 2, quizCorrect: 0, tips: 0, care: 7, washes: 0, strolls: 0 });
     expect(g.rules).toEqual({ 'img-alt': { confirms: 0, fixes: 2 } });
     expect(g.achievements).toEqual({ 'first-confirm': 5 });
   });

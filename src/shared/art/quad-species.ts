@@ -145,6 +145,111 @@ export const HAMSTER: QuadSpec = {
   bodyScale: { rx: 0.98, ry: 1.3 },
 };
 
+// ---- 일반 동물 추가 5종 중 네발 4종(부엉이는 bird-species.ts) ----
+
+/** 판다: 하얀 몸, 까만 귀·눈 무늬·다리 */
+export const PANDA: QuadSpec = {
+  look: makeLook({
+    fur: '#f6f6f2',
+    outline: '#5a5a6a',
+    belly: tone('#ffffff'),
+    accent: tone('#1c1c24'),
+    inner: tone('#9a9aa8'),
+    nose: '#2b2b33',
+    eye: '#ffffff',
+  }),
+  ears: 'round',
+  tail: 'rabbit',
+  snout: false,
+  whiskers: false,
+  stripes: false,
+  patch: false,
+  shell: false,
+  haunch: false,
+  socks: false,
+  markings: 'panda',
+  darkLegs: true,
+  head: { cx: 20.4, cy: 14.4, rx: 7.4, ry: 6.4 },
+  eyeAt: 0.12,
+  bodyScale: { rx: 1.02, ry: 1.08 },
+};
+
+/** 곰: 갈색 몸, 동글동글 귀, 도톰한 주둥이 */
+export const BEAR: QuadSpec = {
+  look: makeLook({
+    fur: '#a9703b',
+    outline: '#3b2f2f',
+    belly: tone('#e2bd8c'),
+    accent: tone('#7a4a24'),
+    inner: tone('#e2bd8c'),
+    nose: '#3b2f2f',
+    eye: '#3b2f2f',
+  }),
+  ears: 'round',
+  tail: 'rabbit',
+  snout: true,
+  whiskers: false,
+  stripes: false,
+  patch: false,
+  shell: false,
+  haunch: false,
+  socks: false,
+  head: { cx: 20.4, cy: 14.4, rx: 7.2, ry: 6.4 },
+  bodyScale: { rx: 1.08, ry: 1.1 },
+};
+
+/** 돼지: 분홍 몸, 뾰족 귀, 큼직한 코, 동그란 꼬리 */
+export const PIG: QuadSpec = {
+  look: makeLook({
+    fur: '#ffb3c4',
+    outline: '#5a3040',
+    belly: tone('#ffd6df'),
+    accent: tone('#ff8fa8'),
+    inner: tone('#ff8fa8'),
+    nose: '#d9627f',
+    eye: '#3b2f2f',
+  }),
+  ears: 'cat',
+  tail: 'rabbit',
+  snout: true,
+  whiskers: false,
+  stripes: false,
+  patch: false,
+  shell: false,
+  haunch: false,
+  socks: false,
+  head: { cx: 20.6, cy: 14.6, rx: 7.4, ry: 6.4 },
+  eyeAt: 0.12,
+  bodyScale: { rx: 1.06, ry: 1.06 },
+};
+
+/** 양: 뭉게뭉게 하얀 털, 까만 얼굴·다리, 늘어진 귀 */
+export const SHEEP: QuadSpec = {
+  look: makeLook({
+    fur: '#f7f4ea',
+    outline: '#5a5a6e',
+    belly: tone('#ffffff'),
+    accent: tone('#24242c'),
+    inner: tone('#9a9aa8'),
+    nose: '#ff9db0',
+    eye: '#ffffff',
+  }),
+  ears: 'dog',
+  tail: 'rabbit',
+  snout: false,
+  whiskers: false,
+  stripes: false,
+  patch: false,
+  shell: false,
+  haunch: false,
+  socks: false,
+  mane: 'ruff',
+  darkFace: true,
+  darkLegs: true,
+  head: { cx: 20.8, cy: 14.4, rx: 6.6, ry: 6 },
+  bodyScale: { rx: 1.14, ry: 1.16 },
+};
+
 // ---- 히든 동물(뽑기에서만 나온다) ----
 
 /** 용: 붉은 몸, 등의 가시, 곧은 금빛 뿔과 금빛 날개 */

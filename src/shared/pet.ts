@@ -58,6 +58,29 @@ export function stageOf(pet: PetState): Stage {
   return level >= ADULT_LEVEL ? 'adult' : 'baby';
 }
 
+/** 레벨 등급: 10 레벨마다 이름과 색이 바뀐다(레벨 1~9 새내기, 10~19 숙련, …, 50 이상 신화). */
+export interface LevelTier {
+  /** 0 부터 5 까지 */
+  tier: number;
+  name: string;
+  /** 글자·막대에 쓰는 대표 색 */
+  color: string;
+  /** 배지 위의 글자 색 */
+  onColor: string;
+}
+
+export const LEVEL_TIERS: readonly LevelTier[] = [
+  { tier: 0, name: '새내기', color: '#8d7b68', onColor: '#ffffff' },
+  { tier: 1, name: '숙련', color: '#3aa55d', onColor: '#ffffff' },
+  { tier: 2, name: '베테랑', color: '#3a7bd5', onColor: '#ffffff' },
+  { tier: 3, name: '달인', color: '#8a4bd8', onColor: '#ffffff' },
+  { tier: 4, name: '명인', color: '#f08a24', onColor: '#ffffff' },
+  { tier: 5, name: '신화', color: '#e8b400', onColor: '#3b2f2f' },
+];
+
+export const tierIndexOf = (level: number): number => Math.min(LEVEL_TIERS.length - 1, Math.floor(Math.max(1, level) / 10));
+export const levelTier = (level: number): LevelTier => LEVEL_TIERS[tierIndexOf(level)]!;
+
 export const isDirty = (pet: PetState): boolean => pet.clean < DIRTY_BELOW;
 
 /** 꾸미기에서 고르는 모습: auto 는 지금 단계 그대로, 나머지는 이미 지나온 단계로 되돌린 모습 */
@@ -115,7 +138,8 @@ export function gainXp(pet: PetState, amount: number): { pet: PetState; note: st
   const lv = levelOf(after);
   if (lv > levelOf(before)) {
     const evolved = lv === LEGEND_LEVEL && isHiddenSpecies(pet.speciesId) ? ` ${getSpecies(pet.speciesId).name}(이)가 전설의 모습으로 진화했어요!` : '';
-    return { pet: next, note: ` 레벨 ${lv}이 되었어요!${evolved}` };
+    const tier = tierIndexOf(lv) > tierIndexOf(levelOf(before)) ? ` ✨ '${levelTier(lv).name}' 등급이 되었어요!` : '';
+    return { pet: next, note: ` 레벨 ${lv}이 되었어요!${tier}${evolved}` };
   }
   return { pet: next, note: '' };
 }

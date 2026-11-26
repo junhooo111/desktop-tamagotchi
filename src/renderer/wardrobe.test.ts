@@ -63,7 +63,7 @@ describe('꾸미기 창', () => {
     await open(data(emptyGrowth(), { speciesId: 'dog' }));
     expect(document.getElementById('species')).toBeNull();
     expect(buttons('variants')).toHaveLength(4);
-    expect(buttons('accessories')).toHaveLength(9);
+    expect(buttons('accessories')).toHaveLength(19);
     const pressed = (id: string): string[] => buttons(id).filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.dataset['id'] ?? '');
     expect(pressed('variants')).toEqual(['default']);
     expect(pressed('accessories')).toEqual(['none']);

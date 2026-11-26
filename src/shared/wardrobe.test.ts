@@ -4,6 +4,9 @@ import { SPECIES } from './species.js';
 import {
   ACCESSORY_NAMES,
   ACCESSORY_UNLOCK,
+  ACHIEVEMENT_ONLY,
+  GACHA_ACCESSORIES,
+  GACHA_ONLY,
   VARIANT_NAMES,
   VARIANT_UNLOCK,
   accessoryUnlocked,
@@ -26,8 +29,15 @@ describe('해금 규칙의 짜임새', () => {
     }
   });
 
-  it('장식은 전부 업적 보상(뽑기로도 얻는다)이고, 기본 색과 "없음"은 처음부터 쓴다', () => {
-    for (const a of Object.keys(ACCESSORY_NAMES).filter((a) => a !== 'none')) expect(ACCESSORY_UNLOCK[a as keyof typeof ACCESSORY_UNLOCK], a).toBeDefined();
+  it('장식은 업적(+뽑기), 뽑기 전용, 업적 전용 셋 중 하나이고, 기본 색과 "없음"은 처음부터 쓴다', () => {
+    for (const a of Object.keys(ACCESSORY_NAMES).filter((a) => a !== 'none') as (keyof typeof ACCESSORY_UNLOCK)[]) {
+      const hasAchievement = ACCESSORY_UNLOCK[a] !== undefined;
+      expect(hasAchievement, a).toBe(!GACHA_ONLY.includes(a)); // 뽑기 전용만 업적이 없다
+    }
+    for (const a of ACHIEVEMENT_ONLY) expect(GACHA_ACCESSORIES.includes(a), `${a} 는 뽑기에 나오면 안 된다`).toBe(false);
+    for (const a of GACHA_ONLY) expect(GACHA_ACCESSORIES.includes(a), `${a} 는 뽑기에 나와야 한다`).toBe(true);
+    expect(GACHA_ONLY).toHaveLength(4);
+    expect(ACHIEVEMENT_ONLY).toHaveLength(6);
     const g = emptyGrowth();
     expect(variantUnlocked(g, 'default')).toBe(true);
     expect(accessoryUnlocked(g, 'none')).toBe(true);

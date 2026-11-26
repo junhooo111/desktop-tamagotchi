@@ -46,9 +46,10 @@ import {
   type ActionResult,
   type PetState,
 } from '../shared/pet.js';
-import { ACCESSORIES, COMMON_SPECIES, SPECIES, VARIANTS, frameToRgba, getSpecies, isAccessory, isSpeciesId, isVariant, spriteSet, type SpeciesId } from '../shared/species.js';
+import { ACCESSORIES, COMMON_SPECIES, SPECIES, VARIANTS, frameToRgba, getSpecies, isAccessory, isHiddenSpecies, isSpeciesId, isVariant, spriteSet, type SpeciesId } from '../shared/species.js';
 import {
   ACCESSORY_NAMES,
+  GACHA_ACCESSORIES,
   VARIANT_NAMES,
   accessoryUnlocked,
   allowedPatch,
@@ -106,6 +107,7 @@ import { petTargetFor } from './inspect-target.js';
 import { loadGrowth, saveGrowth } from './growth-store.js';
 import { loadSettings, saveSettings } from './settings-store.js';
 import { newsText, pickNews, type NewsItem } from '../shared/news.js';
+import { buildStatus } from '../shared/status.js';
 import { POOP_LIFE_MS, POOP_SIZE, poopHtml } from '../shared/poop.js';
 import { fetchNews, loadSeen, saveSeen } from './news.js';
 import { UPDATE_EVERY_MS, UPDATE_FIRST_CHECK_MS, UPDATE_REMIND_MS, UpdateController, type AutoUpdaterLike } from './updater.js';
@@ -303,6 +305,12 @@ function setNotice(finding: Finding | null, show: boolean): void {
   win.webContents.send('pet:notice', message);
 }
 
+/** 상태 보기: 이름·레벨(등급 색)과 배부름·기분·청결 막대를 말풍선으로 띄운다. */
+function showStatus(): void {
+  if (!win || win.isDestroyed()) return;
+  win.webContents.send('pet:status', buildStatus(applyElapsedInPlace(), settings.petName, settings.displayStage));
+}
+
 function say(text: string): void {
   if (text && win && !win.isDestroyed()) win.webContents.send('pet:say', text);
 }
@@ -470,9 +478,20 @@ function ruleIdOfKey(key: string): RuleId | null {
   return (RULE_IDS as readonly string[]).includes(id ?? '') ? (id as RuleId) : null;
 }
 
+/** 업적 계산에 쓰는 바깥 정보: 읽은 지식 수와 컬렉션 현황 */
+function growthCtx(): { tipsSeen: number; collected: number; pulls: number; hiddenOwned: number } {
+  const owned = collection ? ownedIds(collection) : [];
+  return {
+    tipsSeen: progress.tipsSeen.length,
+    collected: owned.length,
+    pulls: collection?.pulls ?? 0,
+    hiddenOwned: owned.filter((id) => isHiddenSpecies(id)).length,
+  };
+}
+
 /** 한 일을 성장 기록에 남기고, 새로 달성한 업적이 있으면 경험치를 주고 펫이 알린다. */
 function recordGrowth(event: GrowthEvent): void {
-  const result = applyEvent(growth, event, Date.now(), { tipsSeen: progress.tipsSeen.length });
+  const result = applyEvent(growth, event, Date.now(), growthCtx());
   growth = result.growth;
   if (event.kind === 'care' && collectionPath) {
     const care = claimCare(collection, growth.counters.care);
@@ -660,7 +679,7 @@ async function exportCard(): Promise<void> {
     stage: cardId === collection.active ? effectiveStage(stageOf(current), settings.displayStage) : undefined,
     name: cardId === collection.active ? settings.petName : (entry?.name ?? ''),
     style: { variant: settings.variant, accessory: settings.accessory },
-    codex: buildCodex(growth, { tipsSeen: progress.tipsSeen.length }, Date.now()),
+    codex: buildCodex(growth, growthCtx(), Date.now()),
   });
   const result = await dialog.showSaveDialog({
     title: '프로필 카드 저장',
@@ -929,7 +948,7 @@ function spawnPoop(): void {
     show: false,
   });
   w.setAlwaysOnTop(true, 'screen-saver');
-  w.setIgnoreMouseEvents(true);
+  // 누르면 사라지는 응가: 클릭을 받아야 하므로 클릭 통과는 켜지 않는다(창이 응가 크기뿐이라 방해되지 않는다).
   w.once('ready-to-show', () => w.showInactive());
   void w.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(poopHtml()));
   poopWins.add(w);
@@ -1027,7 +1046,7 @@ function closeCollection(): void {
 
 /** 꾸미기 뽑기로 아직 얻을 수 있는 장식·색 수 */
 function cosmeticLeft(): number {
-  const a = ACCESSORIES.filter((x) => x !== 'none' && !accessoryUnlocked(growth, x, wardrobeExtra())).length;
+  const a = GACHA_ACCESSORIES.filter((x) => x !== 'none' && !accessoryUnlocked(growth, x, wardrobeExtra())).length;
   const v = VARIANTS.filter((x) => x !== 'default' && !variantUnlocked(growth, x, wardrobeExtra())).length;
   return a + v;
 }
@@ -1049,6 +1068,7 @@ function doPullSpecies() {
   persist();
   updateTray();
   sendView();
+  recordGrowth({ kind: 'sync' }); // 모은 동물·뽑기 횟수가 늘었으니 업적을 다시 본다
   const sp = getSpecies(r.result.id);
   const message = r.result.isNew
     ? `${sp.name}(이)가 새로 왔어요!${r.result.hidden ? ' ✨히든 동물!' : ''}`
@@ -1062,7 +1082,7 @@ function doPullCosmetic() {
     accessories: new Set(ACCESSORIES.filter((a) => a !== 'none' && accessoryUnlocked(growth, a))),
     variants: new Set(VARIANTS.filter((v) => v !== 'default' && variantUnlocked(growth, v))),
   };
-  const r = pullCosmetic(collection, { accessories: ACCESSORIES, variants: VARIANTS }, achieved, Math.random);
+  const r = pullCosmetic(collection, { accessories: GACHA_ACCESSORIES, variants: VARIANTS }, achieved, Math.random);
   collection = r.collection;
   if (!r.result.ok) return { ok: false as const, message: r.result.reason, view: collectionData() };
   saveCollectionSafe();
@@ -1169,7 +1189,7 @@ function buildMenu(): Menu {
     ...(updates?.ready
       ? [{ label: '🆕 새 버전 ' + updates.ready + ' 설치하고 다시 시작', click: () => void updates?.installNow() }, { type: 'separator' as const }]
       : []),
-    { label: '상태 보기', click: () => say(statusText(applyElapsedInPlace(), settings.petName)) },
+    { label: '상태 보기', click: () => showStatus() },
     { label: '검사 결과…', click: () => openResults() },
     { label: '도감·기록…', click: () => openCodex() },
     { label: '🎟 뽑기·컬렉션… (' + collection.tickets + '장)', click: () => openCollection() },
@@ -1385,7 +1405,7 @@ function updateStroll(now: number): void {
     say(result.message);
     persist();
     updateTray();
-    recordGrowth({ kind: 'care', care: 'play' });
+    recordGrowth({ kind: 'stroll' });
   }
   wasStrolling = strolling;
 }
@@ -1502,7 +1522,7 @@ function setupIpc(): void {
     if (isKey(key)) applySettings({ ignored: settings.ignored.filter((k) => k !== key) });
   });
   ipcMain.on('results:close', () => closeResults());
-  ipcMain.handle('codex:get', () => buildCodex(growth, { tipsSeen: progress.tipsSeen.length }, Date.now()));
+  ipcMain.handle('codex:get', () => buildCodex(growth, growthCtx(), Date.now()));
   ipcMain.on('codex:close', () => closeCodex());
   ipcMain.handle('settings:get', () => settings);
   ipcMain.handle('settings:set', (_event, patch: unknown) => applySettings(patch));
@@ -1574,6 +1594,7 @@ if (!app.requestSingleInstanceLock()) {
       setTimeout(() => say(`🎟 새 기능! 뽑기권 ${collection.tickets}장을 드렸어요.\n메뉴의 '뽑기·컬렉션…'에서 새 동물을 뽑아 보세요`), 6_000);
     }
     setTimeout(() => checkDaily(), 9_000);
+    setTimeout(() => recordGrowth({ kind: 'sync' }), 12_000); // 이미 조건을 채운 업적(예전 사용자) 확인
     setInterval(() => checkDaily(), 30 * 60_000);
 
     petSize = petPixelSize(stageOf(pet), settings.petScale);

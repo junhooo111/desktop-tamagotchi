@@ -62,6 +62,10 @@ export interface QuadSpec {
   streamers?: boolean;
   /** 발굽(기린): 다리 끝을 어두운 무늬색으로 칠한다 */
   hooves?: boolean;
+  /** 얼굴 전체를 무늬색으로(양) */
+  darkFace?: boolean;
+  /** 다리를 무늬색으로(판다·양) */
+  darkLegs?: boolean;
 }
 
 const GROUND = 30;
@@ -122,8 +126,9 @@ function drawLeg(
     g,
     (t) => {
       const shade = far && r.spec.legScale === undefined;
-      rect(t, left, top, width, h, shade ? 'F' : 'f');
-      rect(t, left + width, bottom, 1, 1, shade ? 'F' : 'f'); // 발끝이 앞으로 살짝 나온다
+      const c = r.spec.darkLegs ? (shade ? 'A' : 'a') : shade ? 'F' : 'f';
+      rect(t, left, top, width, h, c);
+      rect(t, left + width, bottom, 1, 1, c); // 발끝이 앞으로 살짝 나온다
       if (r.spec.socks && h > 3) rect(t, left, bottom - 1, width + 1, 2, far ? 'B' : 'b'); // 양말
       if (r.spec.hooves && h > 3) rect(t, left, bottom - 1, width + 1, 2, far ? 'A' : 'a'); // 발굽
     },
@@ -311,7 +316,7 @@ function drawHead(g: Grid, r: Rig, pose: Pose, hc: HeadDims): void {
   part(
     g,
     (t) => {
-      ellipse(t, head.cx, head.cy, head.rx, head.ry, 'f');
+      ellipse(t, head.cx, head.cy, head.rx, head.ry, spec.darkFace ? 'a' : 'f');
       // 햄스터: 아래쪽 양옆이 불룩한 볼
       if (spec.cheeks) ellipse(t, head.cx + head.rx * 0.1, head.cy + head.ry * 0.5, head.rx * 1.02, head.ry * 0.62, 'f');
       if (spec.snout) ellipse(t, head.cx + head.rx * 0.78, head.cy + head.ry * 0.3, head.rx * 0.52, head.ry * 0.42, 'f');

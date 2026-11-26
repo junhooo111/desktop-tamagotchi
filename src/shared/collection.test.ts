@@ -40,11 +40,11 @@ const seq = (...values: number[]) => {
 };
 
 describe('확률', () => {
-  it('히든 6종은 각 1%(합 6%), 일반 9종은 94%를 똑같이 나눈다', () => {
+  it('히든 6종은 각 1%(합 6%), 일반 14종은 94%를 똑같이 나눈다', () => {
     expect(hiddenPercent()).toBe(6);
     expect(HIDDEN_PERCENT_EACH).toBe(1);
-    expect(commonPercentEach()).toBeCloseTo(94 / 9);
-    expect(COMMON_SPECIES).toHaveLength(9);
+    expect(commonPercentEach()).toBeCloseTo(94 / 14);
+    expect(COMMON_SPECIES).toHaveLength(14);
     expect(HIDDEN_SPECIES).toHaveLength(6);
   });
 
@@ -54,17 +54,17 @@ describe('확률', () => {
     expect(rollSpecies(() => 0.0101, 0).id).toBe('azure');
     expect(rollSpecies(() => 0.0599, 0)).toEqual({ id: 'qilin', hidden: true });
     expect(rollSpecies(() => 0.0601, 0)).toEqual({ id: 'rabbit', hidden: false });
-    expect(rollSpecies(() => 0.9999, 0)).toEqual({ id: 'penguin', hidden: false });
+    expect(rollSpecies(() => 0.9999, 0)).toEqual({ id: 'owl', hidden: false }); // 일반 동물의 마지막
   });
 
-  it('난수를 고르게 뿌리면 일반 동물 9종이 거의 같은 비율로, 히든은 약 6% 나온다', () => {
+  it('난수를 고르게 뿌리면 일반 동물 14종이 거의 같은 비율로, 히든은 약 6% 나온다', () => {
     const counts: Record<string, number> = {};
     const N = 94_000;
     for (let i = 0; i < N; i++) {
       const r = rollSpecies(() => (i + 0.5) / N, 0);
       counts[r.id] = (counts[r.id] ?? 0) + 1;
     }
-    for (const s of COMMON_SPECIES) expect(counts[s.id]! / N, s.id).toBeCloseTo(0.94 / 9, 3);
+    for (const s of COMMON_SPECIES) expect(counts[s.id]! / N, s.id).toBeCloseTo(0.94 / COMMON_SPECIES.length, 3);
     for (const s of HIDDEN_SPECIES) expect(counts[s.id]! / N, s.id).toBeCloseTo(0.01, 3);
   });
 
@@ -85,13 +85,13 @@ describe('동물 뽑기', () => {
 
   it('처음 나온 동물은 새끼로 컬렉션에 들어오고, 뽑기권과 횟수가 바뀐다', () => {
     const c = withTickets(start(), 5);
-    const { collection, result } = pullSpecies(c, NOW, () => 0.99); // 펭귄
-    expect(result).toMatchObject({ ok: true, id: 'penguin', isNew: true, hidden: false, count: 1, xpBonus: 0 });
+    const { collection, result } = pullSpecies(c, NOW, () => 0.99); // 부엉이(일반 동물의 마지막)
+    expect(result).toMatchObject({ ok: true, id: 'owl', isNew: true, hidden: false, count: 1, xpBonus: 0 });
     expect(collection.tickets).toBe(5 - COST.species);
     expect(collection.pulls).toBe(1);
-    expect(collection.owned.penguin).toMatchObject({ count: 1, name: '' });
-    expect(collection.owned.penguin!.pet.xp).toBe(PULLED_START_XP);
-    expect(stageOf(collection.owned.penguin!.pet)).toBe('baby'); // 알이 아니라 바로 새끼로 나온다
+    expect(collection.owned.owl).toMatchObject({ count: 1, name: '' });
+    expect(collection.owned.owl!.pet.xp).toBe(PULLED_START_XP);
+    expect(stageOf(collection.owned.owl!.pet)).toBe('baby'); // 알이 아니라 바로 새끼로 나온다
     expect(collection.active).toBe('cat'); // 꺼내는 건 따로 한다
   });
 
@@ -99,9 +99,9 @@ describe('동물 뽑기', () => {
     const c = withTickets(start(), 10);
     const first = pullSpecies(c, NOW, () => 0.99).collection;
     const { collection, result } = pullSpecies(first, NOW, () => 0.99);
-    expect(result).toMatchObject({ ok: true, id: 'penguin', isNew: false, count: 2, xpBonus: DUPLICATE_XP });
-    expect(collection.owned.penguin!.count).toBe(2);
-    expect(collection.owned.penguin!.pet.xp).toBe(PULLED_START_XP + DUPLICATE_XP);
+    expect(result).toMatchObject({ ok: true, id: 'owl', isNew: false, count: 2, xpBonus: DUPLICATE_XP });
+    expect(collection.owned.owl!.count).toBe(2);
+    expect(collection.owned.owl!.pet.xp).toBe(PULLED_START_XP + DUPLICATE_XP);
   });
 
   it('히든이 나오면 천장 카운터가 0 으로 돌아가고, 아니면 늘어난다', () => {
@@ -186,7 +186,7 @@ describe('뽑기권을 버는 길', () => {
 
   it('동물마다 레벨 보상을 따로 센다(새로 뽑은 동물의 낮은 레벨에는 보상이 없다)', () => {
     const c = pullSpecies(withTickets(start(), 3), NOW, () => 0.99).collection;
-    expect(levelRewards(c, 'penguin').tickets).toBe(0);
+    expect(levelRewards(c, 'owl').tickets).toBe(0);
   });
 
   it('출석 보상은 하루에 한 번이다', () => {
@@ -234,7 +234,7 @@ describe('시작과 옮겨 오기', () => {
 });
 
 describe('한 마리만 꺼내기', () => {
-  const two = (): Collection => pullSpecies(withTickets(start(), 6), NOW, () => 0.99).collection; // 고양이 + 펭귄
+  const two = (): Collection => pullSpecies(withTickets(start(), 6), NOW, () => 0.99).collection; // 고양이 + 부엉이
 
   it('가진 동물만 꺼낼 수 있다', () => {
     expect(switchActive(two(), 'dragon', createPet('cat', NOW), '', NOW)).toBeNull();
@@ -243,11 +243,11 @@ describe('한 마리만 꺼내기', () => {
   it('바꾸면 지금 동물의 상태·이름이 저장되고, 꺼낸 동물은 자기 상태·이름으로 나온다', () => {
     const c = two();
     const cat = { ...c.owned.cat!.pet, xp: 777, hunger: 12 };
-    const r = switchActive(c, 'penguin', cat, '야옹이', NOW + 5_000)!;
-    expect(r.collection.active).toBe('penguin');
+    const r = switchActive(c, 'owl', cat, '야옹이', NOW + 5_000)!;
+    expect(r.collection.active).toBe('owl');
     expect(r.collection.owned.cat).toMatchObject({ name: '야옹이' });
     expect(r.collection.owned.cat!.pet).toMatchObject({ xp: 777, hunger: 12 }); // 넣어 둔 동안 상태가 그대로다
-    expect(r.pet.speciesId).toBe('penguin');
+    expect(r.pet.speciesId).toBe('owl');
     expect(r.pet.xp).toBe(PULLED_START_XP);
     expect(r.pet.lastTickAt).toBe(NOW + 5_000); // 꺼낸 순간부터 시간이 흐른다
     expect(r.name).toBe('');
@@ -276,11 +276,11 @@ describe('화면에 보여 줄 값', () => {
   it('모든 동물을 보여 주고 가진 것·꺼낸 것을 표시하며, 천장까지 남은 수를 센다', () => {
     const c = pullSpecies(withTickets(start(), 3), NOW, () => 0.99).collection;
     const v = buildCollectionView(c, 5);
-    expect(v.entries).toHaveLength(15);
+    expect(v.entries).toHaveLength(20);
     expect(v.ownedCount).toBe(2);
-    expect(v.total).toBe(15);
+    expect(v.total).toBe(20);
     expect(v.entries.find((e) => e.id === 'cat')).toMatchObject({ owned: true, active: true, level: 6, stage: 'adult' });
-    expect(v.entries.find((e) => e.id === 'penguin')).toMatchObject({ owned: true, active: false, stage: 'baby', count: 1 });
+    expect(v.entries.find((e) => e.id === 'owl')).toMatchObject({ owned: true, active: false, stage: 'baby', count: 1 });
     expect(v.entries.find((e) => e.id === 'dragon')).toMatchObject({ owned: false, hidden: true });
     expect(v.untilPity).toBe(HIDDEN_PITY - 1);
     expect(v.cosmeticLeft).toBe(5);

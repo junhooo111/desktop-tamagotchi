@@ -22,9 +22,9 @@ const cases: [string, SpeciesId, SpriteStage][] = IDS.flatMap((id) =>
 const all: [string, SpeciesId, SpriteStage][] = [...cases, ['egg', 'cat', 'egg']];
 
 describe('종 목록', () => {
-  it('일반 동물 9종과 히든 동물 6종이 모두 있다', () => {
-    expect(SPECIES.map((s) => s.name)).toEqual(['토끼', '고양이', '강아지', '거북이', '병아리', '오리', '여우', '햄스터', '펭귄', '용', '청룡', '백호', '현무', '주작', '기린']);
-    expect(COMMON_SPECIES).toHaveLength(9);
+  it('일반 동물 14종과 히든 동물 6종이 모두 있다', () => {
+    expect(SPECIES.map((s) => s.name)).toEqual(['토끼', '고양이', '강아지', '거북이', '병아리', '오리', '여우', '햄스터', '펭귄', '판다', '곰', '돼지', '양', '부엉이', '용', '청룡', '백호', '현무', '주작', '기린']);
+    expect(COMMON_SPECIES).toHaveLength(14);
     expect(HIDDEN_SPECIES.map((s) => s.id)).toEqual(['dragon', 'azure', 'whitetiger', 'tortoise', 'phoenix', 'qilin']);
     expect(isHiddenSpecies('dragon')).toBe(true);
     expect(isHiddenSpecies('cat')).toBe(false);

@@ -13,7 +13,11 @@ export type GrowthEvent =
   | { kind: 'confirm'; ruleId: RuleId; correct: boolean }
   | { kind: 'fix'; ruleId: RuleId }
   | { kind: 'tip' }
-  | { kind: 'care'; care: CareKind };
+  | { kind: 'care'; care: CareKind }
+  /** 산책을 마쳤다 */
+  | { kind: 'stroll' }
+  /** 컬렉션이 바뀌었다(뽑기·꺼내기): 숫자는 올리지 않고 업적만 다시 본다 */
+  | { kind: 'sync' };
 
 export interface RuleStat {
   confirms: number;
@@ -23,7 +27,7 @@ export interface RuleStat {
 export interface Growth {
   /** 앱으로 무언가를 한 날(로컬 날짜 'YYYY-MM-DD'), 오래된 순, 최근 400일까지 */
   days: string[];
-  counters: { confirms: number; fixes: number; quizCorrect: number; tips: number; care: number };
+  counters: { confirms: number; fixes: number; quizCorrect: number; tips: number; care: number; washes: number; strolls: number };
   rules: Partial<Record<RuleId, RuleStat>>;
   /** 업적 id → 달성한 시각(ms) */
   achievements: Record<string, number>;
@@ -31,7 +35,7 @@ export interface Growth {
 
 export const emptyGrowth = (): Growth => ({
   days: [],
-  counters: { confirms: 0, fixes: 0, quizCorrect: 0, tips: 0, care: 0 },
+  counters: { confirms: 0, fixes: 0, quizCorrect: 0, tips: 0, care: 0, washes: 0, strolls: 0 },
   rules: {},
   achievements: {},
 });
@@ -86,7 +90,7 @@ export function streakOf(days: readonly string[], today: string): { current: num
 
 // ---- 업적 ----
 
-export type Metric = 'confirms' | 'fixes' | 'quizCorrect' | 'rulesLearned' | 'tipsSeen' | 'streak' | 'care';
+export type Metric = 'confirms' | 'fixes' | 'quizCorrect' | 'rulesLearned' | 'tipsSeen' | 'streak' | 'care' | 'washes' | 'strolls' | 'collected' | 'pulls' | 'hiddenOwned';
 
 export interface Achievement {
   id: string;
@@ -116,11 +120,21 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   { id: 'streak-7', name: '일주일 연속', description: '7일 연속으로 펫과 함께했어요', metric: 'streak', goal: 7, xp: 30 },
   { id: 'streak-30', name: '한 달 연속', description: '30일 연속으로 펫과 함께했어요', metric: 'streak', goal: 30, xp: 100 },
   { id: 'care-50', name: '다정한 친구', description: '쓰다듬고, 밥 주고, 놀아 준 횟수가 50번이에요', metric: 'care', goal: 50, xp: 10 },
+  { id: 'care-200', name: '금손 집사', description: '돌봐 준 횟수가 200번이에요', metric: 'care', goal: 200, xp: 60 },
+  { id: 'wash-20', name: '깔끔쟁이', description: '펫을 20번 씻겼어요', metric: 'washes', goal: 20, xp: 30 },
+  { id: 'stroll-10', name: '산책 친구', description: '산책을 10번 다녀왔어요', metric: 'strolls', goal: 10, xp: 30 },
+  { id: 'collect-5', name: '동물 수집가', description: '서로 다른 동물을 5종 모았어요', metric: 'collected', goal: 5, xp: 40 },
+  { id: 'pull-10', name: '뽑기 단골', description: '동물 뽑기를 10번 했어요', metric: 'pulls', goal: 10, xp: 40 },
+  { id: 'hidden-1', name: '전설의 만남', description: '히든 동물을 처음 만났어요', metric: 'hiddenOwned', goal: 1, xp: 80 },
 ];
 
 /** 업적 계산에 필요한 바깥 정보(읽은 지식 수는 progress 가 갖고 있다) */
 export interface GrowthContext {
   tipsSeen: number;
+  /** 모은 동물 수·동물 뽑기 횟수·가진 히든 동물 수(컬렉션에서 온다). 모르면 0 으로 본다. */
+  collected?: number;
+  pulls?: number;
+  hiddenOwned?: number;
 }
 
 export function rulesLearned(g: Growth): number {
@@ -143,6 +157,16 @@ export function metricValue(g: Growth, ctx: GrowthContext, metric: Metric, today
       return streakOf(g.days, today).best;
     case 'care':
       return g.counters.care;
+    case 'washes':
+      return g.counters.washes;
+    case 'strolls':
+      return g.counters.strolls;
+    case 'collected':
+      return ctx.collected ?? 0;
+    case 'pulls':
+      return ctx.pulls ?? 0;
+    case 'hiddenOwned':
+      return ctx.hiddenOwned ?? 0;
   }
 }
 
@@ -179,6 +203,13 @@ export function applyEvent(g: Growth, event: GrowthEvent, now: number, ctx: Grow
       break;
     case 'care':
       counters.care++;
+      if (event.care === 'wash') counters.washes++;
+      break;
+    case 'stroll':
+      counters.strolls++;
+      counters.care++; // 산책도 돌봄이다
+      break;
+    case 'sync':
       break;
   }
   const next: Growth = { ...g, days: addDay(g.days, localDay(now)), counters, rules };
@@ -272,7 +303,7 @@ export function sanitizeGrowth(raw: unknown): Growth {
   const days = Array.isArray(r['days']) ? [...new Set((r['days'] as unknown[]).filter(isDay))].sort().slice(-MAX_DAYS) : [];
   return {
     days,
-    counters: { confirms: count(c['confirms']), fixes: count(c['fixes']), quizCorrect: count(c['quizCorrect']), tips: count(c['tips']), care: count(c['care']) },
+    counters: { confirms: count(c['confirms']), fixes: count(c['fixes']), quizCorrect: count(c['quizCorrect']), tips: count(c['tips']), care: count(c['care']), washes: count(c['washes']), strolls: count(c['strolls']) },
     rules,
     achievements,
   };

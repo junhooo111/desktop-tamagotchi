@@ -23,6 +23,7 @@ body {
 /* 말풍선은 펫 머리 위에 붙는다. 아래 위치(bottom)와 옆으로 미는 거리(--shift)는 renderer.ts 가 정한다. */
 #bubble,
 #tip,
+#status,
 #notice {
   position: absolute;
   left: calc(50% + var(--shift));
@@ -49,6 +50,7 @@ body {
 /* 말풍선 아래쪽 꼬리 */
 #bubble::after,
 #tip::after,
+#status::after,
 #notice::after {
   content: '';
   position: absolute;
@@ -60,6 +62,69 @@ body {
   border-right: 2px solid #3b2f2f;
   border-bottom: 2px solid #3b2f2f;
   transform: translateX(-50%) rotate(45deg);
+}
+
+/* 상태 보기: 이름·레벨(등급 색)과 배부름·기분·청결을 한 줄에 하나씩 막대와 숫자로 보여 준다 */
+#status {
+  z-index: 1;
+  width: 210px;
+  padding: 7px 10px 8px;
+  pointer-events: none;
+}
+
+#status .st-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+#status .lv {
+  padding: 0 8px;
+  border-radius: 10px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+#status .row {
+  display: grid;
+  grid-template-columns: 44px 1fr 50px;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+#status .st-head {
+  margin-bottom: 2px;
+}
+
+#status .bar {
+  height: 8px;
+  overflow: hidden;
+  background: #efe6d2;
+  border: 1.5px solid #3b2f2f;
+  border-radius: 5px;
+}
+
+#status .fill {
+  height: 100%;
+}
+
+#status .fill.low {
+  background: #e8504a;
+}
+
+#status .fill.mid {
+  background: #f0b43a;
+}
+
+#status .fill.high {
+  background: #5bbf6a;
+}
+
+#status .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 /* 찾은 문제 말풍선: 클릭은 받지 않고(펫을 눌러 카드를 연다), 위치·고치는 법을 보여 준다 */
@@ -188,6 +253,7 @@ body {
 }
 
 #bubble[hidden],
+#status[hidden],
 #tip[hidden],
 #notice[hidden],
 #tip [hidden] {
