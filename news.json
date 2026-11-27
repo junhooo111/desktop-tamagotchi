@@ -1,6 +1,17 @@
 {
   "items": [
     {
+      "id": "v0.12.4-fewer-false-alarms",
+      "date": "2026-11-27",
+      "title": "검사 오탐을 줄였어요",
+      "body": "실제 사이트 10곳으로 점검해서 잘못 알리던 검사(이름 있는 버튼, 숨긴 링크, 작은 버튼 간격 등)를 고쳤어요.",
+      "en": {
+        "title": "Fewer false alarms in inspections",
+        "body": "I tested against 10 real sites and fixed checks that wrongly reported named buttons, hidden links, small-button spacing, and more."
+      },
+      "url": "https://github.com/junhooo111/desktop-tamagotchi/releases/tag/v0.12.4"
+    },
+    {
       "id": "v0.12.3-card-sales-updates",
       "date": "2026-11-27",
       "title": "풍성한 프로필 카드, 판매 알림",

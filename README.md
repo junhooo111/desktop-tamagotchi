@@ -7,7 +7,7 @@
 
 ![바탕화면을 돌아다니는 펫들: 일반 동물 14종과, 뽑기에서만 만날 수 있는 히든 동물 6종의 실루엣](docs/images/hero.svg)
 
-> 🐣 **v0.12.3** · Windows 10/11 · macOS 시험판 · 무료(MIT) · [최신 버전 받기](https://github.com/junhooo111/desktop-tamagotchi/releases/latest)
+> 🐣 **v0.12.4** · Windows 10/11 · macOS 시험판 · 무료(MIT) · [최신 버전 받기](https://github.com/junhooo111/desktop-tamagotchi/releases/latest)
 
 ## 내 펫을 GitHub 프로필에 붙이기 (1분)
 
