@@ -5,11 +5,19 @@
  * 규칙(주소 검사·저장 형식)은 순수 함수로 두어 Electron 없이 테스트한다.
  */
 import fs from 'node:fs';
+import http from 'node:http';
 import path from 'node:path';
 import { createClient, type Session, type SupabaseClient } from '@supabase/supabase-js';
 
 export const AUTH_SCHEME = 'desktop-tamagotchi';
 export const AUTH_REDIRECT = `${AUTH_SCHEME}://auth`;
+/**
+ * 로그인 후 돌아오는 주소. 브라우저가 사용자 동작 없이 앱 전용 주소(desktop-tamagotchi://)를 여는 것을 막는 경우가 많아서,
+ * 기본은 내 PC 안에서만 열리는 임시 주소(127.0.0.1)로 돌려받는다(데스크톱 앱의 표준 방식). 앱 전용 주소는 보조로 남긴다.
+ * 이 주소는 Supabase 의 Redirect URLs 에 등록해 둔다.
+ */
+export const LOOPBACK_PORT = 47832;
+export const LOOPBACK_REDIRECT = `http://127.0.0.1:${LOOPBACK_PORT}/auth/callback`;
 
 export interface BackendConfig {
   url: string;
@@ -31,7 +39,9 @@ export function parseAuthCallback(raw: string): CallbackResult {
   } catch {
     return { kind: 'ignore' };
   }
-  if (url.protocol !== `${AUTH_SCHEME}:` || url.hostname !== 'auth') return { kind: 'ignore' };
+  const isDeepLink = url.protocol === `${AUTH_SCHEME}:` && url.hostname === 'auth';
+  const isLoopback = url.protocol === 'http:' && url.hostname === '127.0.0.1' && url.port === String(LOOPBACK_PORT) && url.pathname === '/auth/callback';
+  if (!isDeepLink && !isLoopback) return { kind: 'ignore' };
   const error = url.searchParams.get('error_description') ?? url.searchParams.get('error');
   if (error) return { kind: 'error', message: error.slice(0, 200) };
   const code = url.searchParams.get('code');
@@ -111,10 +121,45 @@ export function toAuthUser(session: Session | null): AuthUser | null {
   };
 }
 
+/** 127.0.0.1 에서 로그인 결과 한 번을 받는 임시 서버. 받으면(또는 시간이 지나면) 스스로 닫는다. */
+export function startLoopback(onUrl: (url: string) => void, timeoutMs = 5 * 60_000): Promise<{ close(): void }> {
+  return new Promise((resolve, reject) => {
+    const server = http.createServer((req, res) => {
+      const raw = `http://127.0.0.1:${LOOPBACK_PORT}${req.url ?? ''}`;
+      const parsed = parseAuthCallback(raw);
+      if (parsed.kind === 'ignore') {
+        res.writeHead(404).end();
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+      res.end(
+        parsed.kind === 'code'
+          ? '<!doctype html><meta charset="utf-8"><title>로그인 완료</title><body style="font-family:sans-serif;text-align:center;margin-top:20vh"><h2>로그인이 끝났어요</h2><p>이 창은 닫아도 돼요. 펫에게 돌아가 보세요.</p>'
+          : '<!doctype html><meta charset="utf-8"><title>로그인 실패</title><body style="font-family:sans-serif;text-align:center;margin-top:20vh"><h2>로그인하지 못했어요</h2><p>이 창을 닫고 펫 메뉴에서 다시 시도해 주세요.</p>',
+      );
+      onUrl(raw);
+      close();
+    });
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const close = (): void => {
+      if (timer) clearTimeout(timer);
+      server.close();
+      server.closeAllConnections?.();
+    };
+    server.once('error', reject);
+    server.listen(LOOPBACK_PORT, '127.0.0.1', () => {
+      timer = setTimeout(close, timeoutMs);
+      resolve({ close });
+    });
+  });
+}
+
 export interface AuthDeps {
   config: BackendConfig;
   storage: EncryptedFileStorage;
   openExternal: (url: string) => Promise<void> | void;
+  /** 시험에서 임시 서버 대신 끼우는 자리 */
+  startLoopback?: typeof startLoopback;
   /** 시험에서 가짜 클라이언트를 끼우기 위한 자리 */
   makeClient?: (config: BackendConfig, storage: EncryptedFileStorage) => SupabaseClient;
 }
@@ -123,6 +168,13 @@ export class AuthService {
   private client: SupabaseClient | null = null;
   private current: AuthUser | null = null;
   private listeners: Array<(user: AuthUser | null) => void> = [];
+  private loopback: { close(): void } | null = null;
+  private callbackListeners: Array<(r: { handled: boolean; ok: boolean; message?: string }) => void> = [];
+
+  /** 임시 서버로 돌아온 로그인 결과(성공·실패)를 받는다. 앱이 말풍선을 띄우는 데 쓴다. */
+  onCallbackResult(cb: (r: { handled: boolean; ok: boolean; message?: string }) => void): void {
+    this.callbackListeners.push(cb);
+  }
 
   constructor(private readonly deps: AuthDeps) {
     if (isConfigured(deps.config)) {
@@ -157,11 +209,23 @@ export class AuthService {
   /** 기본 브라우저로 GitHub 로그인 페이지를 연다. */
   async signIn(): Promise<void> {
     if (!this.client) throw new Error('로그인 서버가 아직 설정되지 않았어요');
+    this.loopback?.close();
+    this.loopback = null;
+    try {
+      this.loopback = await (this.deps.startLoopback ?? startLoopback)((url) => {
+        void this.handleCallback(url).then((r) => this.callbackListeners.forEach((cb) => cb(r)));
+      });
+    } catch {
+      throw new Error(`로그인 응답을 받을 자리(${LOOPBACK_PORT})를 열지 못했어요. 다른 프로그램이 쓰고 있을 수 있어요`);
+    }
     const { data, error } = await this.client.auth.signInWithOAuth({
       provider: 'github',
-      options: { redirectTo: AUTH_REDIRECT, skipBrowserRedirect: true, scopes: 'read:user' },
+      options: { redirectTo: LOOPBACK_REDIRECT, skipBrowserRedirect: true, scopes: 'read:user' },
     });
-    if (error || !data.url) throw new Error(error?.message ?? '로그인 주소를 만들지 못했어요');
+    if (error || !data.url) {
+      this.loopback.close();
+      throw new Error(error?.message ?? '로그인 주소를 만들지 못했어요');
+    }
     await this.deps.openExternal(data.url);
   }
 

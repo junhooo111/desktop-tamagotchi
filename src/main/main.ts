@@ -1293,9 +1293,12 @@ async function openDemo(): Promise<void> {
 /** 딥링크(desktop-tamagotchi://auth?code=…)로 돌아온 로그인 결과를 처리한다. */
 async function handleAuthUrl(url: string): Promise<void> {
   if (!auth) return;
-  const r = await auth.handleCallback(url);
+  announceAuth(await auth.handleCallback(url));
+}
+
+function announceAuth(r: { handled: boolean; ok: boolean; message?: string }): void {
   if (!r.handled) return;
-  if (r.ok) say(`GitHub 로그인 완료! ${auth.user?.login ?? ''} 님, 어느 PC에서든 같은 계정이에요`);
+  if (r.ok) say(`GitHub 로그인 완료! ${auth?.user?.login ?? ''} 님, 어느 PC에서든 같은 계정이에요`);
   else say('로그인하지 못했어요' + (r.message ? ': ' + r.message : ''));
 }
 
@@ -1744,6 +1747,7 @@ if (!app.requestSingleInstanceLock()) {
       openExternal: (u) => shell.openExternal(u),
     });
     auth.onChange(() => tray?.setContextMenu(buildMenu()));
+    auth.onCallbackResult(announceAuth);
     void auth.restore();
     const startUrl = process.argv.find((a) => a.startsWith(AUTH_SCHEME + '://'));
     if (startUrl) setTimeout(() => void handleAuthUrl(startUrl), 2_000);

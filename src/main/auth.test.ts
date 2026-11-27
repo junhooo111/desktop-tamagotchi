@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import type { Session, SupabaseClient } from '@supabase/supabase-js';
-import { AuthService, EncryptedFileStorage, isConfigured, parseAuthCallback, toAuthUser, type Crypto } from './auth.js';
+import { AuthService, EncryptedFileStorage, LOOPBACK_PORT, isConfigured, parseAuthCallback, startLoopback, toAuthUser, type Crypto } from './auth.js';
 
 const fakeCrypto = (available = true): Crypto => ({
   isAvailable: () => available,
@@ -24,6 +24,14 @@ describe('isConfigured', () => {
 describe('parseAuthCallback', () => {
   it('우리 주소의 코드를 꺼낸다', () => {
     expect(parseAuthCallback('desktop-tamagotchi://auth?code=abc123')).toEqual({ kind: 'code', code: 'abc123' });
+  });
+  it('내 PC 안의 임시 주소(127.0.0.1)로 돌아온 코드도 받는다', () => {
+    expect(parseAuthCallback(`http://127.0.0.1:${LOOPBACK_PORT}/auth/callback?code=abc`)).toEqual({ kind: 'code', code: 'abc' });
+  });
+  it('다른 포트·다른 호스트·다른 경로의 http 주소는 무시한다', () => {
+    expect(parseAuthCallback('http://127.0.0.1:9999/auth/callback?code=abc')).toEqual({ kind: 'ignore' });
+    expect(parseAuthCallback(`http://evil.example:${LOOPBACK_PORT}/auth/callback?code=abc`)).toEqual({ kind: 'ignore' });
+    expect(parseAuthCallback(`http://127.0.0.1:${LOOPBACK_PORT}/other?code=abc`)).toEqual({ kind: 'ignore' });
   });
   it('오류는 메시지로 돌려준다', () => {
     expect(parseAuthCallback('desktop-tamagotchi://auth?error=access_denied&error_description=denied')).toEqual({ kind: 'error', message: 'denied' });
@@ -64,6 +72,26 @@ describe('EncryptedFileStorage', () => {
     const file = tmpFile();
     fs.writeFileSync(file, 'garbage');
     expect(new EncryptedFileStorage(file, fakeCrypto()).getItem('k')).toBeNull();
+  });
+});
+
+describe('startLoopback', () => {
+  it('로그인 결과를 한 번 받고 닫힌다', async () => {
+    const got: string[] = [];
+    const h = await startLoopback((u) => got.push(u), 5_000);
+    const ok = await fetch(`http://127.0.0.1:${LOOPBACK_PORT}/auth/callback?code=abc123`);
+    expect(ok.status).toBe(200);
+    expect(await ok.text()).toContain('로그인이 끝났어요');
+    expect(got).toEqual([`http://127.0.0.1:${LOOPBACK_PORT}/auth/callback?code=abc123`]);
+    await expect(fetch(`http://127.0.0.1:${LOOPBACK_PORT}/auth/callback?code=again`)).rejects.toThrow();
+    h.close();
+  });
+  it('엉뚱한 요청은 404 로 무시하고 계속 기다린다', async () => {
+    const got: string[] = [];
+    const h = await startLoopback((u) => got.push(u), 5_000);
+    expect((await fetch(`http://127.0.0.1:${LOOPBACK_PORT}/favicon.ico`)).status).toBe(404);
+    expect(got).toEqual([]);
+    h.close();
   });
 });
 
@@ -109,7 +137,7 @@ describe('AuthService', () => {
   const make = (cfg = config) => {
     const { client, calls } = fakeClient();
     const openExternal = vi.fn();
-    const svc = new AuthService({ config: cfg, storage: new EncryptedFileStorage(tmpFile(), fakeCrypto()), openExternal, makeClient: () => client });
+    const svc = new AuthService({ config: cfg, storage: new EncryptedFileStorage(tmpFile(), fakeCrypto()), openExternal, makeClient: () => client, startLoopback: async () => ({ close() {} }) });
     return { svc, calls, openExternal };
   };
 
