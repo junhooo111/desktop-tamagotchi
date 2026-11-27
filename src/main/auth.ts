@@ -9,6 +9,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { createClient, type Session, type SupabaseClient } from '@supabase/supabase-js';
 import type { SyncRpc } from './account-sync.js';
+import type { ServerRpc } from './server-game.js';
 
 export const AUTH_SCHEME = 'desktop-tamagotchi';
 export const AUTH_REDIRECT = `${AUTH_SCHEME}://auth`;
@@ -249,6 +250,25 @@ export class AuthService {
       saveGet: async () => fix(await client.rpc('save_get')),
       savePut: async (data, schemaVersion, expectedVersion, device) =>
         fix(await client.rpc('save_put', { p_data: data, p_schema_version: schemaVersion, p_expected_version: expectedVersion, p_device: device })),
+    };
+  }
+
+  /** 서버 판정 게임(뽑기·뽑기권·컬렉션)을 부르는 통로. 서버가 설정되지 않았으면 null. */
+  get serverRpc(): ServerRpc | null {
+    const client = this.client;
+    if (!client) return null;
+    const wrap = <T,>(r: { data: unknown; error: { message: string; hint?: string } | null }) => ({ data: r.data as T | null, error: r.error ? { message: r.error.message, hint: r.error.hint } : null });
+    // 네트워크 오류는 예외로 올라올 수 있어서 같은 모양의 오류 결과로 바꾼다.
+    const guard = async <T,>(run: () => PromiseLike<{ data: unknown; error: { message: string; hint?: string } | null }>) => {
+      try {
+        return wrap<T>(await run());
+      } catch (e) {
+        return { data: null, error: { message: e instanceof Error ? e.message : String(e) } };
+      }
+    };
+    return {
+      call: <T,>(fn: string, args?: Record<string, unknown>) => guard<T>(() => client.rpc(fn, args)),
+      select: <T,>(table: string, columns: string) => guard<T[]>(() => client.from(table).select(columns)),
     };
   }
 

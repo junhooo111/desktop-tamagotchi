@@ -15,6 +15,7 @@ import { scanLocalPages, type Finding } from '../inspect/scan.js';
 import { renderProfileCard } from '../shared/card.js';
 import { BACKEND } from '../shared/backend.js';
 import { AccountSync, type Choice, type ConflictInfo } from './account-sync.js';
+import { ServerGame, applyServerPull, mirrorCollection, type Grant } from './server-game.js';
 import { AUTH_SCHEME, AuthService, EncryptedFileStorage } from './auth.js';
 import { applyEvent, buildCodex, emptyGrowth, localDay, type Growth, type GrowthEvent } from '../shared/growth.js';
 import { LESSONS, RULE_IDS, type RuleId } from '../shared/lessons.js';
@@ -187,6 +188,9 @@ let settings: Settings = { ...DEFAULT_SETTINGS };
 let auth: AuthService | null = null;
 /** 로그인한 계정과 이 PC의 저장 파일을 맞춘다(첫 로그인 때 기존 진행을 올리고, 다른 PC에서는 받아 온다). */
 let accountSync: AccountSync | null = null;
+/** 로그인하면 뽑기·뽑기권·컬렉션은 서버가 기준이다(로그인하지 않으면 지금처럼 로컬). */
+let serverGame: ServerGame | null = null;
+const serverOn = (): boolean => Boolean(auth?.user && serverGame?.ready);
 let settingsPath = '';
 let settingsWin: BrowserWindow | null = null;
 let scanTimer: ReturnType<typeof setInterval> | undefined;
@@ -339,7 +343,9 @@ function persist(): void {
   collection = syncActive(collection, pet, settings.petName);
   const reward = levelRewards(collection, collection.active);
   collection = reward.collection;
-  if (reward.tickets > 0) announceTickets(`레벨 ${reward.level} 보상! 뽑기권 +${reward.tickets}장`);
+  if (reward.tickets > 0 && !serverAward('level', reward.tickets, reward.tickets, `${collection.active}:${reward.level}`, (g) => `레벨 ${reward.level} 보상! 뽑기권 +${g}장`)) {
+    announceTickets(`레벨 ${reward.level} 보상! 뽑기권 +${reward.tickets}장`);
+  }
   saveCollectionSafe();
 }
 
@@ -350,6 +356,30 @@ function saveCollectionSafe(): void {
     console.error('컬렉션 저장 실패', error);
   }
   refreshCollection();
+}
+
+/**
+ * 로그인(서버 기준) 상태에서 앱이 로컬로 올린 뽑기권을 되돌리고, 서버에 획득을 보내 서버가 인정한 만큼만 받는다.
+ * 서버에 닿지 않으면 대기열에 두었다가 다시 보낸다. 서버 기준이 아니면 아무것도 하지 않고 false 를 돌려준다(호출한 쪽이 로컬로 처리).
+ */
+function serverAward(kind: Grant['kind'], count: number, perCall: number, keyBase: string, text: (granted: number) => string): boolean {
+  const game = serverGame;
+  if (!serverOn() || !game || count <= 0) return false;
+  collection = { ...collection, tickets: Math.max(0, collection.tickets - count) };
+  saveCollectionSafe();
+  void (async () => {
+    let granted = 0;
+    for (let i = 0; i < Math.ceil(count / perCall); i++) {
+      const r = await game.grant({ kind, amount: Math.min(perCall, count - i * perCall), key: `${keyBase}:${i}` });
+      if (r) {
+        granted += r.granted;
+        collection = { ...collection, tickets: r.tickets };
+      }
+    }
+    saveCollectionSafe();
+    if (granted > 0) announceTickets(text(granted));
+  })();
+  return true;
 }
 
 /** 뽑기권을 받았다고 알린다(방금 한 일의 말풍선이 지나간 뒤에). */
@@ -418,6 +448,7 @@ function resolveGift(): void {
   if (result.kind === 'ticket') {
     collection = { ...collection, tickets: collection.tickets + result.tickets };
     saveCollectionSafe();
+    serverAward('gift', result.tickets, 1, `gift:${Date.now()}`, (g) => `선물 상자에서 뽑기권 +${g}장!`);
   } else if (result.kind === 'xp') {
     const gained = gainXp(applyElapsedInPlace(), result.xp);
     pet = gained.pet;
@@ -457,13 +488,25 @@ function accrueUptime(): void {
   collection = r.collection;
   if (r.tickets > 0) {
     saveCollectionSafe();
-    announceTickets(`함께 있어 줘서 고마워요! 뽑기권 +${r.tickets}장`);
+    if (!serverAward('uptime', r.tickets, 1, localDay(now), (g) => `함께 있어 줘서 고마워요! 뽑기권 +${g}장`)) {
+      announceTickets(`함께 있어 줘서 고마워요! 뽑기권 +${r.tickets}장`);
+    }
   }
 }
 
 /** 오늘 처음 켰으면 출석 보상을 준다. */
 function checkDaily(): void {
   if (!collectionPath) return;
+  if (serverOn() && serverGame) {
+    // 서버 기준: 하루 한 번 서버가 정한 만큼 받는다(로컬 출석 기록은 건드리지 않는다).
+    void serverGame.claimDaily().then((r) => {
+      if (!r) return;
+      collection = { ...collection, tickets: r.tickets };
+      saveCollectionSafe();
+      if (r.granted > 0) announceTickets(`오늘의 출석 보상! 뽑기권 +${r.granted}장`);
+    });
+    return;
+  }
   const r = claimDaily(collection, localDay(Date.now()));
   if (r.tickets === 0) return;
   collection = r.collection;
@@ -615,7 +658,9 @@ function recordGrowth(event: GrowthEvent): void {
     if (care.tickets > 0) {
       collection = care.collection;
       saveCollectionSafe();
-      announceTickets(`열심히 돌봐 줘서 뽑기권 +${care.tickets}장!`);
+      if (!serverAward('care', care.tickets, 1, `care:${collection.careTicketsGiven - care.tickets}`, (g) => `열심히 돌봐 줘서 뽑기권 +${g}장!`)) {
+        announceTickets(`열심히 돌봐 줘서 뽑기권 +${care.tickets}장!`);
+      }
     }
   }
   try {
@@ -1174,8 +1219,33 @@ function collectionData() {
   return buildCollectionView(collection, cosmeticLeft());
 }
 
-/** 동물 뽑기. 이미 가진 동물이 나오면 그 동물이 경험치를 받는다. */
-function doPullSpecies() {
+/** 동물 뽑기: 로그인(서버 기준)이면 서버가 뽑고 결과만 앱에 반영한다. 서버에 닿지 않으면 뽑지 않고 안내한다. */
+async function doPullSpecies() {
+  if (auth?.user && serverGame) {
+    if (!serverGame.ready) return { ok: false as const, message: '아직 서버와 연결되지 않았어요. 잠시 뒤에 다시 해 주세요', view: collectionData() };
+    const r = await serverGame.pullSpecies();
+    if (!r.ok) return { ok: false as const, message: r.message, view: collectionData() };
+    collection = syncActive(collection, applyElapsedInPlace(), settings.petName);
+    const applied = applyServerPull(collection, r.result, Date.now());
+    if (!applied) return { ok: false as const, message: '알 수 없는 동물이 나왔어요. 앱을 업데이트해 주세요', view: collectionData() };
+    collection = applied.collection;
+    const activeOwned = collection.owned[collection.active];
+    if (activeOwned) pet = activeOwned.pet;
+    persist();
+    updateTray();
+    sendView();
+    recordGrowth({ kind: 'sync' });
+    const sp = getSpecies(r.result.speciesId as Parameters<typeof getSpecies>[0]);
+    const message = applied.isNew
+      ? `${sp.name}(이)가 새로 왔어요!${applied.hidden ? ' ✨히든 동물!' : ''}`
+      : `${sp.name}(이)가 또 나왔어요! (${applied.count}번째) 경험치 +${DUPLICATE_XP}`;
+    return { ok: true as const, message, id: r.result.speciesId as Parameters<typeof getSpecies>[0], isNew: applied.isNew, hidden: applied.hidden, count: applied.count, view: collectionData() };
+  }
+  return doPullSpeciesLocal();
+}
+
+/** 동물 뽑기(로컬). 이미 가진 동물이 나오면 그 동물이 경험치를 받는다. */
+function doPullSpeciesLocal() {
   const now = Date.now();
   collection = syncActive(collection, applyElapsedInPlace(), settings.petName);
   const r = pullSpecies(collection, now, Math.random);
@@ -1195,8 +1265,29 @@ function doPullSpecies() {
   return { ok: true as const, message, id: r.result.id, isNew: r.result.isNew, hidden: r.result.hidden, count: r.result.count, view: collectionData() };
 }
 
-/** 꾸미기 뽑기: 아직 못 가진 장식·색 중 하나를 같은 확률로 뽑는다. */
-function doPullCosmetic() {
+/** 꾸미기 뽑기: 로그인(서버 기준)이면 서버가 뽑는다. */
+async function doPullCosmetic() {
+  if (auth?.user && serverGame) {
+    if (!serverGame.ready) return { ok: false as const, message: '아직 서버와 연결되지 않았어요. 잠시 뒤에 다시 해 주세요', view: collectionData() };
+    const r = await serverGame.pullCosmetic();
+    if (!r.ok) return { ok: false as const, message: r.message, view: collectionData() };
+    const { kind, itemId } = r.result;
+    collection = {
+      ...collection,
+      tickets: r.result.tickets,
+      accessories: kind === 'accessory' && !collection.accessories.includes(itemId as never) ? [...collection.accessories, itemId as never] : collection.accessories,
+      variants: kind === 'variant' && !collection.variants.includes(itemId as never) ? [...collection.variants, itemId as never] : collection.variants,
+    };
+    saveCollectionSafe();
+    refreshWardrobe();
+    const name = kind === 'accessory' ? ACCESSORY_NAMES[itemId as keyof typeof ACCESSORY_NAMES] : VARIANT_NAMES[itemId as keyof typeof VARIANT_NAMES] + ' 색';
+    return { ok: true as const, message: `${name}(을)를 얻었어요!`, kind, itemId: itemId as never, view: collectionData() };
+  }
+  return doPullCosmeticLocal();
+}
+
+/** 꾸미기 뽑기(로컬): 아직 못 가진 장식·색 중 하나를 같은 확률로 뽑는다. */
+function doPullCosmeticLocal() {
   const achieved = {
     accessories: new Set(ACCESSORIES.filter((a) => a !== 'none' && accessoryUnlocked(growth, a))),
     variants: new Set(VARIANTS.filter((v) => v !== 'default' && variantUnlocked(growth, v))),
@@ -1297,6 +1388,35 @@ async function openDemo(): Promise<void> {
 async function handleAuthUrl(url: string): Promise<void> {
   if (!auth) return;
   announceAuth(await auth.handleCallback(url));
+}
+
+/** 로그인하고 저장분 동기화가 끝난 뒤: 기존 진행을 서버로 한 번 가져오고, 서버 상태를 앱의 컬렉션에 반영한다. */
+async function activateServer(): Promise<void> {
+  if (!serverGame || !auth?.user) return;
+  const r = await serverGame.activate();
+  if (!r.ok || !serverGame.state) {
+    say(r.message ?? '서버와 연결하지 못했어요. 뽑기는 연결된 뒤에 할 수 있어요');
+    return;
+  }
+  collection = mirrorCollection(collection, serverGame.state, Date.now());
+  // 업데이트 선물: 서버가 버전마다 한 번만 인정한다(앱이 시작할 때 로컬로 받은 것은 서버 기준으로 덮어쓰였을 수 있어 여기서 다시 확인한다).
+  if (app.isPackaged) {
+    const gift = await serverGame.grant({ kind: 'update', amount: 2, key: app.getVersion() });
+    if (gift) collection = { ...collection, tickets: gift.tickets };
+  }
+  saveCollectionSafe();
+  say(`서버와 연결됐어요. 뽑기권 ${collection.tickets}장 · 어느 PC에서든 같은 계정이에요`);
+}
+
+/** 연결이 없어서 대기 중이던 뽑기권 획득을 다시 보낸다. */
+async function flushServerGrants(): Promise<void> {
+  if (!serverGame || !serverOn() || serverGame.pendingCount === 0) return;
+  const r = await serverGame.flushPending();
+  if (r.tickets !== null) {
+    collection = { ...collection, tickets: r.tickets };
+    saveCollectionSafe();
+    if (r.granted > 0) announceTickets(`연결이 돌아와서 뽑기권 +${r.granted}장을 받았어요`);
+  }
 }
 
 /** 이 PC와 계정에 서로 다른 진행이 있을 때 어느 쪽을 쓸지 묻는다. 어느 쪽을 골라도 덮어쓰이는 쪽은 백업된다. */
@@ -1771,7 +1891,8 @@ if (!app.requestSingleInstanceLock()) {
     });
     auth.onChange((user) => {
       tray?.setContextMenu(buildMenu());
-      if (user) void accountSync?.reconcile(user.id);
+      if (user) void accountSync?.reconcile(user.id).then(() => activateServer());
+      else serverGame?.deactivate();
     });
     auth.onCallbackResult(announceAuth);
     const rpc = auth.syncRpc;
@@ -1793,8 +1914,10 @@ if (!app.requestSingleInstanceLock()) {
         },
         say: (t) => say(t),
       });
+      serverGame = new ServerGame(auth.serverRpc!, app.getPath('userData'));
       setInterval(() => {
         if (auth?.user) void accountSync?.tick(auth.user.id);
+        void flushServerGrants();
       }, 10 * 60_000);
     }
     void auth.restore();

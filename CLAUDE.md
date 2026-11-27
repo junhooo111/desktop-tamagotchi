@@ -36,3 +36,4 @@
 - **Supabase 무료 플랜은 한 주 동안 DB 활동이 거의 없으면 일시정지**된다. `.github/workflows/supabase-keepalive.yml` 이 이틀에 한 번 공개 테이블을 읽는다.
 - **CLI 로 올리는 DB**: 0001~0003 은 SQL Editor 로 올렸고 `supabase migration repair --status applied 0001 0002 0003` 으로 기록했다. 새 PC 는 `npx supabase login` → `link --project-ref bqsidhjdxoxtrmmymwej`.
 - 개발 실행 중 `safeStorage.isEncryptionAvailable` 등이 deprecated 경고를 낸다. 동작에는 문제없고, 나중에 비동기 API 로 바꾼다.
+- **서버 기준 모드(C2)**: 로그인하면(`serverOn()`) 뽑기·꾸미기 뽑기·뽑기권 획득은 서버가 한다. 로컬 상수를 바꾸면 서버 함수(0005·0007)도 같이 바꾸고, SQL 시험이 앱 상수와 같은 값인지 비교한다. 뽑기권을 로컬에서 올리는 곳을 새로 만들면 `serverAward` 를 거치게 한다(안 그러면 로그인 사용자의 뽑기권이 서버와 어긋난다). 서버에 닿지 않을 때 로컬로 대신 뽑지 않는다(서버 기준이 갈라진다).
