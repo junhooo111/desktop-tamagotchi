@@ -54,3 +54,45 @@ describe('창 화면 영어 전환', () => {
     setUiLang('ko');
   });
 });
+
+const hangul = /[가-힣]/;
+describe('모든 창의 고정 글자가 영어에서 한글 없이 나온다', () => {
+  it.each(['settings.html', 'market.html', 'ranking.html', 'card.html', 'codex.html', 'collection.html', 'results.html', 'wardrobe.html', 'index.html'])('%s', (name) => {
+    document.body.innerHTML = body(name);
+    setUiLang('en');
+    localize();
+    const leftovers: string[] = [];
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT | NodeFilter.SHOW_ELEMENT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      if (n.nodeType === Node.TEXT_NODE) {
+        if (hangul.test(n.textContent ?? '') && n.parentElement?.tagName !== 'SCRIPT') leftovers.push((n.textContent ?? '').trim());
+      } else {
+        for (const a of ['aria-label', 'placeholder', 'title']) {
+          const v = (n as Element).getAttribute(a);
+          if (v && hangul.test(v)) leftovers.push(`${a}=${v}`);
+        }
+      }
+    }
+    // 언어 선택 칸은 한/영을 함께 적어 둔 것이라 제외한다
+    expect(leftovers.filter((t) => !t.includes('Language') && !t.includes('Default follows'))).toEqual([]);
+    setUiLang('ko');
+    localize();
+  });
+
+  it('업적 이름·설명, 규칙 제목·고치는 법, 등급·장식 이름이 번역된다', async () => {
+    const { ACHIEVEMENTS } = await import('../shared/growth.js');
+    const { LESSONS, RULE_IDS } = await import('../shared/lessons.js');
+    for (const a of ACHIEVEMENTS) {
+      expect(translateUi(a.name), a.id).not.toMatch(hangul);
+      expect(translateUi(a.description), a.id).not.toMatch(hangul);
+    }
+    for (const id of RULE_IDS) {
+      expect(translateUi(LESSONS[id].title), id).not.toMatch(hangul);
+      expect(translateUi(LESSONS[id].fix), id).not.toMatch(hangul);
+    }
+    expect(translateUi('🔒 왕관')).toBe('🔒 Crown');
+    expect(translateUi("업적 '도감 완성' 달성하거나 꾸미기 뽑기로 얻어요")).toContain("'Codex complete'");
+    expect(translateUi(' · 확인 3회 · 고침 1회')).toContain('Confirmed 3×');
+    expect(translateUi('새 문제 2 · 확인함 1 · 나중에 0 · 무시함 3 · 규칙 꺼짐 1')).toBe('New 2 · Confirmed 1 · Later 0 · Ignored 3 · Rule off 1');
+  });
+});

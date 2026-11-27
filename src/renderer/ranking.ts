@@ -111,6 +111,7 @@ function init(): void {
     b.dataset['metric'] = m.id;
     b.setAttribute('role', 'tab');
     b.textContent = m.label;
+    if (m.id === 'cosmetics') b.dataset['en'] = 'Cosmetics'; // '꾸미기' 는 꾸미기 창에서는 Customize 라서 따로 정한다
     b.addEventListener('click', () => void load(m.id));
     tabs.append(b);
   }

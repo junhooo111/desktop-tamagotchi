@@ -2,6 +2,8 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('collectionApi', {
+  // 지금 쓸 언어('ko' | 'en'). 메인이 설정과 PC 언어·지역으로 정한다.
+  lang: () => ipcRenderer.invoke('lang:get'),
   get: () => ipcRenderer.invoke('collection:get'),
   pullSpecies: () => ipcRenderer.invoke('collection:pull-species'),
   pullCosmetic: () => ipcRenderer.invoke('collection:pull-cosmetic'),

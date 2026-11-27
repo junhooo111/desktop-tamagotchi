@@ -2,9 +2,11 @@
 import { resolvePose } from '../shared/animation.js';
 import { BUBBLE_GAP, WINDOW, drawScale, petPixelSize } from '../shared/layout.js';
 import { boundsOf, orientRows } from '../shared/pixel.js';
+import type { Lang } from '../shared/i18n.js';
 import { spriteSet, type FrameName, type SpriteSet } from '../shared/species.js';
 import type { StatusBubble } from '../shared/status.js';
 import type { NoticeBubble, NoticeMessage, PetView, TipBubble } from '../shared/view.js';
+import { localize, setUiLang, startUiLocalization } from './dom-i18n.js';
 
 interface PetApi {
   getView(): Promise<PetView>;
@@ -19,6 +21,8 @@ interface PetApi {
   onSay(callback: (text: string) => void): void;
   onStatus(callback: (status: StatusBubble) => void): void;
   onTip(callback: (tip: TipBubble | null) => void): void;
+  lang?(): Promise<Lang>;
+  onLang?(callback: (lang: Lang) => void): void;
 }
 
 declare global {
@@ -485,3 +489,10 @@ void window.petApi.getView().then((initial) => {
   window.__petReady = true;
 });
 window.setInterval(() => draw(Date.now()), 50);
+
+// 한/영: 시작할 때 언어를 받아 말풍선 틀(제목·버튼)을 번역하고, 설정에서 바꾸면 바로 따라간다.
+void startUiLocalization(window.petApi.lang?.bind(window.petApi));
+window.petApi.onLang?.((lang) => {
+  setUiLang(lang);
+  localize();
+});

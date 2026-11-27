@@ -323,3 +323,10 @@
 - 새 규칙 12종: img-dimensions, img-lazy-below-fold, render-blocking-script, font-display-missing, large-dom(성능), multiple-h1, og-missing(SEO), mixed-content(보안), viewport-fixed-width, input-font-small(반응형), button-type-missing, deprecated-tags(코드 품질). 분류에 `security`(보안)·`quality`(코드 품질)를 더했다. 모두 한/영 카드·퀴즈 포함.
 - 레이아웃이 있어야 판정되는 것(img-lazy-below-fold, input-font-small, scroll-no-focus 등)은 jsdom 시험에서 건너뛴다. 실제 크롬에서 시험 페이지에 수집기를 주입해 새 규칙이 동작하는 것을 확인했다.
 - 시험 도우미 `run()` 이 이미지 크기·og 태그·main 을 채워 주도록 바뀌었다. 새 규칙을 추가하면 그 규칙이 기존 시험 페이지를 오탐하지 않는지 같이 확인한다.
+
+## 2026-11-27 — 영어 모드 3단계와 v0.12.0 릴리스
+
+- 도감·뽑기·꾸미기·검사 결과 창과 펫 화면(말풍선 틀)을 영어로: 창마다 `startUiLocalization`(자동 번역 관찰)을 켜고, 사전에 업적 이름·설명, 규칙 제목·고치는 법(LESSONS_EN 에서 자동), 등급·장식 이름, 숫자 문장 규칙을 더했다. 같은 한국어가 곳곳에서 뜻이 다른 경우(랭킹의 '꾸미기' = Cosmetics)는 요소의 `data-en` 으로 따로 정한다. 모든 창의 고정 글자가 영어에서 한글 없이 나오는지 시험한다.
+- 언어를 바꾸면 펫 화면에 `pet:lang` 으로 알려 바로 따라간다.
+- 한계: 프로필 카드 SVG 글자, 검사가 알려 주는 일부 상세 문구(`th 없음` 등), 지식 코드 예시 속 한국어, README 영어판은 아직 한국어.
+- v0.12.0 릴리스(2026-11-27): 영어 지원, 검사 규칙 50종, FE 지식 69개, 선물 상자 중앙 대기. Windows 설치 파일만 올림(맥은 Python 3 없음). 공지 `v0.12.0-english-and-tools` 추가.

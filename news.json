@@ -1,6 +1,13 @@
 {
   "items": [
     {
+      "id": "v0.12.0-english-and-tools",
+      "date": "2026-11-27",
+      "title": "영어 지원, 검사 규칙 50종, FE 지식 69개",
+      "body": "설정에서 한국어·English를 고를 수 있어요(기본은 PC 언어). 검사 규칙이 50종으로, FE 지식이 69개로 늘고 선물 상자는 화면 중앙에서 기다려요.",
+      "url": "https://github.com/junhooo111/desktop-tamagotchi/releases/tag/v0.12.0"
+    },
+    {
       "id": "v0.11.0-market",
       "date": "2026-11-27",
       "title": "경매장과 게임머니가 생겼어요",

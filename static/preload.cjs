@@ -2,6 +2,9 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('petApi', {
+  // 지금 쓸 언어('ko' | 'en'). 메인이 설정과 PC 언어·지역으로 정한다.
+  lang: () => ipcRenderer.invoke('lang:get'),
+  onLang: (callback) => ipcRenderer.on('pet:lang', (_event, lang) => callback(lang)),
   getView: () => ipcRenderer.invoke('pet:get-view'),
   act: (type) => ipcRenderer.invoke('pet:act', type),
   setInteractive: (value) => ipcRenderer.send('pet:interactive', value),

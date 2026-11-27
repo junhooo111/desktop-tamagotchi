@@ -640,6 +640,7 @@ function applySettings(patch: unknown): Settings {
   } catch (error) {
     console.error('설정 저장 실패', error);
   }
+  if (settings.language !== before.language && win && !win.isDestroyed()) win.webContents.send('pet:lang', currentLang());
   if (settings.scanSeconds !== before.scanSeconds) scheduleScan();
   queue = visibleFindings(queue, settings);
   if (notice && isMuted(notice, settings)) setNotice(null, false);

@@ -1,4 +1,6 @@
-import { nameEn } from '../shared/en-text.js';
+import { ACH_DESC_EN, NAMES_EN, nameEn } from '../shared/en-text.js';
+import { LESSONS_EN } from '../shared/lessons-en.js';
+import { LESSONS, RULE_IDS } from '../shared/lessons.js';
 
 /** 설정·경매장·랭킹 창의 영어 사전. 한국어 글자 그대로를 키로 쓴다(dom-i18n.ts 가 바꿔 끼운다). */
 export const UI_EN: Record<string, string> = {
@@ -49,6 +51,81 @@ export const UI_EN: Record<string, string> = {
   나중에: 'Later',
   확인했어요: 'Got it',
   '지금 확인할 내용이 없어요.': 'Nothing to check right now.',
+  // 도감·기록
+  '도감·기록': 'Codex & records',
+  기록: 'Records',
+  도감: 'Codex',
+  '배움 카드를 확인하면 그 문제 종류가 도감에 채워져요. 고치면 한 단계 더 빛나요.': 'Confirm a learning card to fill that problem type in the codex. Fix it and it shines one level brighter.',
+  업적: 'Achievements',
+  아직: 'Not yet',
+  배움: 'Learned',
+  고침: 'Fixed',
+  '연속 사용': 'Streak',
+  '최고 연속': 'Best streak',
+  '함께한 날': 'Days together',
+  '배운 문제 종류': 'Problem types learned',
+  '읽은 지식': 'Tips read',
+  '고친 문제': 'Problems fixed',
+  달성: 'Done',
+  // 뽑기·컬렉션
+  '뽑기·컬렉션': 'Gacha & Collection',
+  '뽑은 결과': 'Pull result',
+  '가진 동물': 'Animals you own',
+  '한 번에 한 마리만 꺼내서 키울 수 있어요. 꺼내 두지 않은 동물은 시간이 멈춰 있어요.': 'You can raise one animal at a time. Animals you have not taken out have their time stopped.',
+  '뽑기권은 이렇게 받아요: 매일 처음 켜면 1장 · 돌봐 주기 25번마다 1장 · 레벨 5의 배수(5·10·15…)에 2장, 8·13·18…에 1장. 병을 고치지 않고 돌보기만 해도 모여요.': 'How to get tickets: 1 on your first launch each day · 1 per 25 care actions · 2 at multiples of level 5 (5, 10, 15…) and 1 at 8, 13, 18… They also build up from caring alone, without fixing problems.',
+  '히든 동물': 'Hidden animal',
+  '아직 없어요': 'Not owned yet',
+  '키우는 중': 'Raising',
+  꺼내기: 'Take out',
+  '꾸미기를 모두 모았어요': 'You have every cosmetic',
+  '뽑는 중…': 'Pulling…',
+  // 검사 결과
+  '검사 결과': 'Inspection results',
+  '무시한 문제': 'Ignored problems',
+  '여기서 해제하면 그 문제를 다시 알려 줘요.': 'Remove it here and I will mention that problem again.',
+  '새 문제': 'New',
+  확인함: 'Confirmed',
+  '규칙 꺼짐': 'Rule off',
+  무시함: 'Ignored',
+  '고치는 법': 'How to fix',
+  '무시 해제': 'Unignore',
+  해제: 'Remove',
+  '지금 열려 있는 로컬 페이지에서 찾은 문제가 없어요!': 'No problems found on the local pages open right now!',
+  '연결된 localhost 페이지가 없어요. 크롬 확장을 켜거나 검사용 브라우저로 페이지를 열어 주세요.': 'No localhost page is connected. Turn on the Chrome extension or open a page in the inspection browser.',
+  '지금 열린 페이지에는 없어요': 'Not on the page that is open now',
+  // 꾸미기
+  꾸미기: 'Customize',
+  '업적을 달성하면 색과 장식이 열려요. 도감을 채우면 왕관, 문제를 많이 고치면 날개, 연속으로 오면 꽃과 천사 고리를 받아요. 뽑기권으로 꾸미기를 뽑을 수도 있어요(메뉴의 뽑기·컬렉션). 동물은 뽑기로 얻고 거기서 바꿔요.': 'Achievements unlock colors and accessories. Fill the codex for the crown, fix many problems for wings, and keep a streak for the flower and halo. You can also pull cosmetics with tickets (Gacha & Collection in the menu). Animals come from gacha and you switch them there.',
+  미리보기: 'Preview',
+  이름: 'Name',
+  '이름을 지어 주세요': 'Give it a name',
+  '펫 이름': 'Pet name',
+  저장: 'Save',
+  모습: 'Appearance',
+  '이미 지나온 단계로만 돌릴 수 있어요(알은 고를 수 없어요). 경험치·레벨은 그대로이고 모습만 바뀌어요.': 'You can only go back to stages you have already passed (not the egg). XP and level stay; only the look changes.',
+  '보여 줄 모습 고르기': 'Choose appearance',
+  색: 'Color',
+  '색 고르기': 'Choose color',
+  장식: 'Accessories',
+  '장식 고르기': 'Choose accessory',
+  '프로필 카드에 보여 줄 펫': 'Pet shown on the profile card',
+  '프로필 카드에 보여 줄 펫 고르기': 'Choose the pet for the profile card',
+  '메뉴의 `프로필 카드 내보내기…` 로 저장하는 카드에 나올 동물이에요. 색과 장식은 지금 입은 그대로 들어가요.': "This is the animal that appears on the card you save with the menu's 'Export profile card…'. Its color and accessory are exactly what it wears now.",
+  '아직 지나오지 않은 단계예요': 'You have not reached this stage yet',
+  '뽑기로 얻을 수 있어요': 'You can get it by gacha',
+  '꾸미기 뽑기로만 얻을 수 있어요 (업적은 없어요)': 'Only available from cosmetic gacha (no achievement)',
+  // 펫 화면(말풍선)
+  '문제 발견': 'Problem found',
+  '이렇게 고쳐요': 'How to fix',
+  '펫을 누르면 자세히 알려 줄게요': 'Click me for details',
+  'FE 지식': 'FE tip',
+  '코드 보기': 'Show code',
+  '코드 접기': 'Hide code',
+  확인: 'OK',
+  경험치: 'XP',
+  배부름: 'Fullness',
+  기분: 'Mood',
+  청결: 'Cleanliness',
   // 경매장
   경매장: 'Auction house',
   사기: 'Buy',
@@ -74,7 +151,6 @@ export const UI_EN: Record<string, string> = {
   '펫 수': 'Pets',
   '최고 레벨': 'Top level',
   뽑기: 'Pulls',
-  꾸미기: 'Cosmetics',
   '아직 이 항목에 기록이 있는 사람이 없어요': 'Nobody has a record in this category yet',
   '점수는 서버가 가진 데이터로 계산해요. 이름과 점수만 보여요(이메일·재화는 보이지 않아요).': 'Scores are calculated from data on the server. Only names and scores are shown (no email or currency).',
   '랭킹을 불러오지 못했어요': 'Could not load rankings',
@@ -85,6 +161,26 @@ const RARITY_EN: Record<string, string> = { 일반: 'Common', 히든: 'Hidden' }
 
 /** 숫자가 들어 있는 문장 규칙 */
 export const UI_RULES: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
+  [/^(\d+)일$/, (m) => `${m[1]} days`],
+  [/^확인 (\d+)회$/, (m) => `Confirmed ${m[1]}×`],
+  [/^고침 (\d+)회$/, (m) => `Fixed ${m[1]}×`],
+  [/^새 문제 (\d+)$/, (m) => `New ${m[1]}`],
+  [/^확인함 (\d+)$/, (m) => `Confirmed ${m[1]}`],
+  [/^나중에 (\d+)$/, (m) => `Later ${m[1]}`],
+  [/^무시함 (\d+)$/, (m) => `Ignored ${m[1]}`],
+  [/^규칙 꺼짐 (\d+)$/, (m) => `Rule off ${m[1]}`],
+  [/^확인 \(\+(\d+)\)$/, (m) => `OK (+${m[1]})`],
+  [/^🎟 뽑기권 (\d+)장$/, (m) => `🎟 ${m[1]} ticket(s)`],
+  [/^가진 동물 (\d+)\/(\d+)$/, (m) => `Animals owned ${m[1]}/${m[2]}`],
+  [/^동물 뽑기 \((\d+)장\)$/, (m) => `Pull an animal (${m[1]})`],
+  [/^꾸미기 뽑기 \((\d+)장 · 남은 (\d+)종\)$/, (m) => `Pull a cosmetic (${m[1]} · ${m[2]} left)`],
+  [/^확률: 일반 동물 (\d+)종 각 ([\d.]+)% · 히든 동물 (\d+)종 각 ([\d.]+)% \(합쳐서 ([\d.]+)%\)\. 이미 가진 동물이 나오면 그 동물이 경험치를 받아요\.$/, (m) => `Odds: ${m[1]} common animals at ${m[2]}% each · ${m[3]} hidden animals at ${m[4]}% each (${m[5]}% combined). If you pull an animal you already have, it gets XP.`],
+  [/^히든이 안 나오면 (\d+)번 안에 반드시 나와요 \(지금까지 (\d+)번 뽑음\)$/, (m) => `If no hidden animal appears, one is guaranteed within ${m[1]} pulls (${m[2]} pulled so far)`],
+  [/^(.+) ×(\d+)$/, (m) => `${nameEn(m[1] ?? '')} ×${m[2]}`],
+  [/^🔒 (.+)$/, (m) => `🔒 ${nameEn(m[1] ?? '')}`],
+  [/^업적 '(.+)' 달성하거나 꾸미기 뽑기로 얻어요$/, (m) => `Earn the achievement '${nameEn(m[1] ?? '')}' or get it from cosmetic gacha`],
+  [/^업적 '(.+)' 달성하면 열려요 \(뽑기에는 없어요\)$/, (m) => `Unlocks with the achievement '${nameEn(m[1] ?? '')}' (not in gacha)`],
+  [/^(\d+)\/(\d+)$/, (m) => `${m[1]}/${m[2]}`],
   [/^확인했어요 \(\+(\d+)\)$/, (m) => `Got it (+${m[1]})`],
   [/^정답이에요! \(\+(\d+) 보너스\) ([\s\S]*)$/, (m) => `Correct! (+${m[1]} bonus) ${m[2]}`],
   [/^아쉬워요\. ([\s\S]*)$/, (m) => `Not quite. ${m[1]}`],
@@ -103,3 +199,11 @@ export const UI_RULES: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^내 기록: (\d+)(종|마리|레벨|회|개) · (\d+)위$/, (m) => `My record: ${m[1]} ${UNIT_EN[m[2] ?? ''] ?? ''} · #${m[3]}`],
   [/^(일반|히든)$/, (m) => RARITY_EN[m[1] ?? ''] ?? (m[1] ?? '')],
 ];
+
+for (const [ko, en] of Object.entries(NAMES_EN)) if (!(ko in UI_EN)) UI_EN[ko] = en;
+for (const [ko, en] of Object.entries(ACH_DESC_EN)) if (!(ko in UI_EN)) UI_EN[ko] = en;
+for (const id of RULE_IDS) {
+  const ko = LESSONS[id];
+  const en = LESSONS_EN[id];
+  for (const k of ['title', 'bubble', 'problem', 'why', 'fix'] as const) if (!(ko[k] in UI_EN)) UI_EN[ko[k]] = en[k];
+}

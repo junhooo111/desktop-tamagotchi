@@ -2,6 +2,8 @@
  * 뽑기·컬렉션 창: 뽑기권으로 동물·꾸미기를 뽑고, 가진 동물 중 한 마리를 꺼낸다.
  * 규칙(확률·비용·보상)은 메인(shared/collection.ts)이 정하고 여기서는 보여 주기만 한다.
  */
+import type { Lang } from '../shared/i18n.js';
+import { startUiLocalization } from './dom-i18n.js';
 import type { CollectionEntry, CollectionView } from '../shared/collection.js';
 import { levelTier } from '../shared/pet.js';
 import { spriteSet, type SpeciesId } from '../shared/species.js';
@@ -13,6 +15,7 @@ type PullResult =
 
 interface CollectionApi {
   get(): Promise<CollectionView>;
+  lang?(): Promise<Lang>;
   pullSpecies(): Promise<PullResult>;
   pullCosmetic(): Promise<PullResult>;
   switchTo(id: SpeciesId): Promise<{ ok: boolean; message: string; view: CollectionView }>;
@@ -187,4 +190,5 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') window.collectionApi.close();
 });
 window.collectionApi.onRefresh(() => void refresh());
+void startUiLocalization(window.collectionApi.lang?.bind(window.collectionApi));
 void refresh();

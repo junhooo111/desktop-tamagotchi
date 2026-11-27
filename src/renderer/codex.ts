@@ -2,10 +2,13 @@
  * 도감·기록 창 화면: 연속 사용 기록, 배운 문제 종류(도감), 업적.
  * 값은 메인이 계산해서(buildCodex) 넘겨 주고, 여기서는 textContent 로만 그린다.
  */
+import type { Lang } from '../shared/i18n.js';
+import { startUiLocalization } from './dom-i18n.js';
 import type { CodexView } from '../shared/growth.js';
 
 interface CodexApi {
   get(): Promise<CodexView>;
+  lang?(): Promise<Lang>;
   onRefresh(callback: () => void): void;
   close(): void;
 }
@@ -83,4 +86,5 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') window.codexApi.close();
 });
 window.codexApi.onRefresh(() => void refresh());
+void startUiLocalization(window.codexApi.lang?.bind(window.codexApi));
 void refresh();

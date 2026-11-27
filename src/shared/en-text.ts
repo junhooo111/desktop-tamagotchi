@@ -29,6 +29,37 @@ export const NAMES_EN: Record<string, string> = {
 
 /** 동물·장식·업적·등급 이름의 영어(없으면 그대로). */
 export const nameEn = (ko: string): string => NAMES_EN[ko] ?? ko;
+/** 업적 설명(growth.ts 의 description)의 영어. 도감 창이 쓴다. */
+export const ACH_DESC_EN: Record<string, string> = {
+  '배움 카드를 처음 확인했어요': 'You confirmed a learning card for the first time',
+  '배움 카드를 10번 확인했어요': 'You confirmed learning cards 10 times',
+  '배움 카드를 50번 확인했어요': 'You confirmed learning cards 50 times',
+  '확인 퀴즈를 5번 맞혔어요': 'You answered 5 check quizzes correctly',
+  '확인 퀴즈를 25번 맞혔어요': 'You answered 25 check quizzes correctly',
+  '펫이 찾은 문제를 처음 고쳤어요': 'You fixed a problem the pet found for the first time',
+  '찾은 문제를 10개 고쳤어요': 'You fixed 10 problems',
+  '찾은 문제를 30개 고쳤어요': 'You fixed 30 problems',
+  '서로 다른 문제 5종을 배웠어요': 'You learned 5 different problem types',
+  '서로 다른 문제 10종을 배웠어요': 'You learned 10 different problem types',
+  '모든 종류의 문제를 한 번씩 배웠어요': 'You learned every problem type once',
+  'FE 지식을 10개 읽었어요': 'You read 10 FE tips',
+  '모든 FE 지식을 읽었어요': 'You read every FE tip',
+  '3일 연속으로 펫과 함께했어요': 'You spent 3 days in a row with your pet',
+  '7일 연속으로 펫과 함께했어요': 'You spent 7 days in a row with your pet',
+  '30일 연속으로 펫과 함께했어요': 'You spent 30 days in a row with your pet',
+  '쓰다듬고, 밥 주고, 놀아 준 횟수가 50번이에요': 'You petted, fed, and played 50 times',
+  '돌봐 준 횟수가 200번이에요': 'You took care of your pet 200 times',
+  '펫을 20번 씻겼어요': 'You washed your pet 20 times',
+  '산책을 10번 다녀왔어요': 'You went on 10 walks',
+  '서로 다른 동물을 5종 모았어요': 'You collected 5 different animals',
+  '동물 뽑기를 10번 했어요': 'You pulled for animals 10 times',
+  '히든 동물을 처음 만났어요': 'You met a hidden animal for the first time',
+};
+
+NAMES_EN['없음'] = 'None';
+NAMES_EN['자동(지금 단계)'] = 'Auto (current stage)';
+NAMES_EN['지금 키우는 펫'] = 'Current pet';
+
 const N = nameEn;
 
 /** 앞에서부터 맞는 규칙 하나로 한 문장 조각을 바꾼다. */

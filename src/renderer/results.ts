@@ -2,10 +2,13 @@
  * 검사 결과 창: 지금 열려 있는 로컬 페이지에서 찾은 문제를 한눈에 보고, 무시하거나 되돌린다.
  * 내용은 textContent 로만 넣는다(페이지에서 가져온 글자가 섞여 있으므로 HTML 로 해석하지 않는다).
  */
+import type { Lang } from '../shared/i18n.js';
+import { startUiLocalization } from './dom-i18n.js';
 import type { ResultItem, ResultState, ResultsView } from '../shared/results.js';
 
 interface ResultsApi {
   get(): Promise<ResultsView>;
+  lang?(): Promise<Lang>;
   ignore(key: string): Promise<void>;
   unignore(key: string): Promise<void>;
   onRefresh(callback: () => void): void;
@@ -115,4 +118,5 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') window.resultsApi.close();
 });
 window.resultsApi.onRefresh(() => void refresh());
+void startUiLocalization(window.resultsApi.lang?.bind(window.resultsApi));
 void refresh();

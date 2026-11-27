@@ -3,6 +3,8 @@
  * 업적으로 아직 안 열린 것은 점선으로 보이고, 눌러도 바뀌지 않고 여는 방법을 알려 준다.
  * 실제로 적용할 수 있는지는 메인이 다시 검증한다.
  */
+import type { Lang } from '../shared/i18n.js';
+import { startUiLocalization } from './dom-i18n.js';
 import type { DisplayStage } from '../shared/pet.js';
 import { spriteSet, type Accessory, type SpeciesId, type Variant } from '../shared/species.js';
 import type { WardrobeEntry, WardrobePatch, WardrobeView } from '../shared/wardrobe.js';
@@ -14,6 +16,7 @@ export interface WardrobeData extends WardrobeView {
 
 interface WardrobeApi {
   get(): Promise<WardrobeData>;
+  lang?(): Promise<Lang>;
   set(patch: WardrobePatch): Promise<WardrobeData>;
   onRefresh(callback: () => void): void;
   close(): void;
@@ -108,4 +111,5 @@ document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') window.wardrobeApi.close();
 });
 window.wardrobeApi.onRefresh(() => void refresh());
+void startUiLocalization(window.wardrobeApi.lang?.bind(window.wardrobeApi));
 void refresh();

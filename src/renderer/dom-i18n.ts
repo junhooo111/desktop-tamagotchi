@@ -28,6 +28,7 @@ export function translateUi(ko: string): string {
     const m = ko.match(re);
     if (m) return fn(m);
   }
+  if (ko.startsWith('· ')) return '· ' + translateUi(ko.slice(2));
   if (ko.includes(' · ')) return ko.split(' · ').map((part) => translateUi(part)).join(' · ');
   return toEnglish(ko);
 }
@@ -52,7 +53,9 @@ export function localize(root: ParentNode = document.body): void {
         // 우리가 바꿔 놓은 글자가 아닌 새 글자면 그것을 원본으로 본다.
         const base = known !== undefined && (text.data === known || text.data === translateKeepingSpace(known)) ? known : text.data;
         originalText.set(text, base);
-        const next = lang === 'en' ? translateKeepingSpace(base) : base;
+        // 이 글자만 영어를 따로 정해 둔 요소(data-en)는 그것을 쓴다(같은 한국어가 곳곳에서 뜻이 다를 때).
+        const forced = node.parentElement?.dataset['en'];
+        const next = lang === 'en' ? (forced !== undefined && node.parentElement?.childNodes.length === 1 ? forced : translateKeepingSpace(base)) : base;
         if (text.data !== next) text.data = next;
       }
     } else {
@@ -84,4 +87,29 @@ export async function initUiLang(getLang: (() => Promise<Lang>) | undefined): Pr
   } catch {
     lang = 'ko';
   }
+}
+
+let observer: MutationObserver | null = null;
+let scheduled = false;
+
+/**
+ * 창이 열릴 때 한 번: 언어를 받아 적용하고, 이후 화면이 다시 그려질 때마다 자동으로 번역한다
+ * (창마다 그린 뒤에 localize 를 부르지 않아도 된다). 번역하다가 생기는 변화는 무시해서 되풀이하지 않는다.
+ */
+export async function startUiLocalization(getLang: (() => Promise<Lang>) | undefined): Promise<void> {
+  await initUiLang(getLang);
+  localize();
+  if (typeof MutationObserver === 'undefined' || !document.body) return;
+  observer?.disconnect();
+  observer = new MutationObserver(() => {
+    if (scheduled) return;
+    scheduled = true;
+    queueMicrotask(() => {
+      scheduled = false;
+      observer?.disconnect();
+      localize();
+      observer?.observe(document.body, { childList: true, subtree: true, characterData: true });
+    });
+  });
+  observer.observe(document.body, { childList: true, subtree: true, characterData: true });
 }
