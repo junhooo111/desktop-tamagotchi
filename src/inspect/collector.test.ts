@@ -442,6 +442,71 @@ describe('collectPage 규칙: 검색·성능·링크 3종', () => {
     expect(rules(run('<img src="http://example.com/a.png" alt="가" width="1" height="1"><input aria-label="a" style="font-size:10px">'))).toEqual([]);
   });
 
+  it('오탐 점검(실제 사이트에서 발견): 안쪽 aria-label·뒤쪽 이미지 alt 가 이름이 되고, aria-hidden 장식 링크·이미지는 이름·alt 가 필요 없다', () => {
+    const found = run(
+      `<button><span><svg aria-label="검색 보내기"></svg></span></button>
+       <a href="/home"><img alt="" aria-hidden="true" src="/i.svg"><span><img alt="홈페이지" src="/w.svg"></span></a>
+       <a href="/video" aria-hidden="true" tabindex="-1"></a>
+       <div aria-hidden="true"><img src="/deco.png"></div>
+       <button id="bad"></button>`,
+    );
+    expect(found.map((f) => [f.ruleId, f.selector])).toEqual([['button-name', 'button#bad']]);
+  });
+
+  describe('누르는 영역: 크기 예외(WCAG 2.2 의 2.5.8)', () => {
+    const rectOf = new Map<Element, DOMRect>();
+    const original = Element.prototype.getBoundingClientRect;
+    const layout = (html: string, rects: Record<string, [number, number, number, number]>) => {
+      document.documentElement.lang = 'ko';
+      document.head.innerHTML = '<title>t</title><meta name="viewport" content="width=device-width"><meta name="description" content="d">' + OG;
+      document.body.innerHTML = html + '<main hidden></main>';
+      rectOf.clear();
+      for (const [id, [x, y, w, h]] of Object.entries(rects)) {
+        const el = document.getElementById(id)!;
+        rectOf.set(el, { x, y, left: x, top: y, width: w, height: h, right: x + w, bottom: y + h, toJSON: () => ({}) } as DOMRect);
+      }
+      Element.prototype.getBoundingClientRect = function (this: Element) {
+        return rectOf.get(this) ?? original.call(this);
+      };
+      try {
+        return collectPage({ requireLayout: true }).findings.filter((f) => f.ruleId === 'touch-target').map((f) => f.selector);
+      } finally {
+        Element.prototype.getBoundingClientRect = original;
+      }
+    };
+
+    it('눈에 안 보이게 숨긴 1px 건너뛰기 링크는 제외한다', () => {
+      expect(layout('<a id="skip" href="#main">본문으로</a>', { skip: [0, 0, 1, 1] })).toEqual([]);
+    });
+
+    it('작은 버튼이 서로 붙어 있으면 찾고, 24px 원이 겹치지 않을 만큼 떨어져 있으면 통과한다', () => {
+      const html = '<button id="a">가</button><button id="b">나</button>';
+      expect(layout(html, { a: [0, 0, 20, 20], b: [20, 0, 20, 20] })).toEqual(['button#a', 'button#b']);
+      expect(layout(html, { a: [0, 0, 20, 20], b: [60, 0, 20, 20] })).toEqual([]);
+    });
+
+    it('목록의 22px 높이 링크는 위아래로 맞닿으면 찾고, 간격이 있으면 통과한다', () => {
+      const html = '<nav><a id="n1" href="/a" style="display:block">하나</a><a id="n2" href="/b" style="display:block">둘</a></nav>';
+      expect(layout(html, { n1: [0, 0, 300, 22], n2: [0, 22, 300, 22] })).toEqual(['a#n1', 'a#n2']);
+      expect(layout(html, { n1: [0, 0, 300, 22], n2: [0, 44, 300, 22] })).toEqual([]);
+    });
+
+    it('보조 기술에서 숨기고 Tab 에서도 뺀 장식용 링크는 제외한다', () => {
+      const html = '<a id="d" href="/v" aria-hidden="true" tabindex="-1" style="display:block">영상</a><button id="x">닫기</button>';
+      expect(layout(html, { d: [0, 0, 20, 20], x: [10, 0, 20, 20] })).toEqual(['button#x']);
+    });
+  });
+
+  it('contrast: 눈에 안 보이는 글자(text-indent 로 밀어낸 것, 투명, 크기 0)는 따지지 않고, 보이는 연한 글자는 찾는다', () => {
+    const found = run(
+      `<p style="color:#aaa;background:#fff;text-indent:-9999px">밀어낸 글자</p>
+       <p style="color:rgba(0,0,0,0);background:#fff">투명 글자</p>
+       <p style="color:#aaa;background:#fff;font-size:0">크기 0</p>
+       <p id="real" style="color:#aaa;background:#fff">보이는 연한 글자</p>`,
+    );
+    expect(found.map((f) => [f.ruleId, f.selector])).toEqual([['contrast', 'p#real']]);
+  });
+
   it('img-oversized: 레이아웃이 없는 환경에서는 건너뛰고 오류도 내지 않는다', () => {
     expect(run('<img src="/big.png" alt="큰 그림" width="100" height="50">')).toEqual([]);
   });

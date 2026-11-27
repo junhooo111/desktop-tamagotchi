@@ -99,15 +99,23 @@ export function collectPage(opts: { requireLayout: boolean }): PageSnapshot {
     if (own) return own;
     const title = (el.getAttribute('title') ?? '').trim();
     if (title) return title;
-    const img = el.querySelector('img[alt]');
-    const alt = (img?.getAttribute('alt') ?? '').trim();
-    if (alt) return alt;
-    return (el.querySelector('svg title')?.textContent ?? '').trim();
+    // 안쪽 이미지 중 alt 가 있는 것(장식용 빈 alt 가 앞에 있어도 뒤의 이미지 alt 를 찾는다)
+    for (const img of Array.from(el.querySelectorAll('img[alt]'))) {
+      const alt = (img.getAttribute('alt') ?? '').trim();
+      if (alt) return alt;
+    }
+    const svgTitle = (el.querySelector('svg title')?.textContent ?? '').trim();
+    if (svgTitle) return svgTitle;
+    // 안쪽 요소가 aria-label 을 가지면 그것이 이름이 된다(버튼 안의 <svg aria-label="검색"> 등)
+    return (el.querySelector('[aria-label]')?.getAttribute('aria-label') ?? '').trim();
   };
+
+  /** 보조 기술에서 숨긴 요소(aria-hidden="true" 이거나 그 안)인지: 장식용 중복 링크·이미지는 이름·대체 텍스트가 필요 없다 */
+  const hiddenFromAt = (el: Element): boolean => el.closest('[aria-hidden="true"]') !== null;
 
   // 1. 이미지 alt
   doc.querySelectorAll('img:not([alt]), input[type="image"]:not([alt]):not([aria-label])').forEach((img) => {
-    if (isShown(img)) add('img-alt', img, (img.getAttribute('src') ?? '').slice(0, 60));
+    if (isShown(img) && !hiddenFromAt(img)) add('img-alt', img, (img.getAttribute('src') ?? '').slice(0, 60));
   });
 
   // 2. 버튼·링크 이름
@@ -116,7 +124,7 @@ export function collectPage(opts: { requireLayout: boolean }): PageSnapshot {
     .forEach((el) => {
       // value 없는 submit 은 브라우저가 "제출" 같은 기본 이름을 붙여 주므로 문제가 아니다.
       const defaultNamed = el instanceof HTMLInputElement && el.type === 'submit';
-      if (isShown(el) && !defaultNamed && !nameOf(el)) add('button-name', el, el.tagName.toLowerCase());
+      if (isShown(el) && !hiddenFromAt(el) && !defaultNamed && !nameOf(el)) add('button-name', el, el.tagName.toLowerCase());
     });
 
   // 3. 입력칸 라벨
@@ -151,17 +159,32 @@ export function collectPage(opts: { requireLayout: boolean }): PageSnapshot {
   });
 
   // 8. 누르는 영역 크기 (글 사이의 인라인 링크는 기준에서 제외)
+  //    예외(WCAG 2.2 의 2.5.8): 눈에 보이지 않게 숨긴 요소(1~2px, 건너뛰기 링크 등), 보조 기술에서 숨기고 Tab 에서도 뺀 요소,
+  //    그리고 작아도 주변의 다른 누를 것과 24px 원이 겹치지 않을 만큼 떨어져 있는 요소.
   if (opts.requireLayout) {
-    doc
-      .querySelectorAll('button, input:not([type="hidden"]), select, textarea, [role="button"], a[href]')
-      .forEach((el) => {
-        if (full('touch-target') || !isShown(el)) return;
-        if (el.tagName === 'A' && getComputedStyle(el).display === 'inline') return;
-        const r = el.getBoundingClientRect();
-        if (Math.min(r.width, r.height) < 24) {
-          add('touch-target', el, `${Math.round(r.width)}x${Math.round(r.height)}px`);
-        }
+    const targetEls = Array.from(
+      doc.querySelectorAll('button, input:not([type="hidden"]), select, textarea, [role="button"], a[href]'),
+    )
+      .filter((el) => isShown(el) && !(el.tagName === 'A' && getComputedStyle(el).display === 'inline'))
+      .slice(0, 600);
+    const rects = targetEls.map((el) => el.getBoundingClientRect());
+    targetEls.forEach((el, i) => {
+      if (full('touch-target')) return;
+      const r = rects[i] as DOMRect;
+      if (Math.min(r.width, r.height) >= 24) return;
+      if (r.width <= 2 && r.height <= 2) return; // 눈에 보이지 않게 숨긴 요소
+      if (hiddenFromAt(el) && el.getAttribute('tabindex') === '-1') return; // 닿을 수 없는 장식용 중복 링크
+      const cx = r.left + r.width / 2;
+      const cy = r.top + r.height / 2;
+      const crowded = targetEls.some((other, j) => {
+        if (j === i || other.contains(el) || el.contains(other)) return false;
+        const o = rects[j] as DOMRect;
+        const dx = Math.max(o.left - cx, 0, cx - o.right);
+        const dy = Math.max(o.top - cy, 0, cy - o.bottom);
+        return Math.hypot(dx, dy) < 12;
       });
+      if (crowded) add('touch-target', el, `${Math.round(r.width)}x${Math.round(r.height)}px`);
+    });
 
     // 9. 가로 넘침: 오른쪽 끝을 넘는 가장 바깥 요소를 찾는다.
     const root = doc.documentElement;
@@ -223,7 +246,15 @@ export function collectPage(opts: { requireLayout: boolean }): PageSnapshot {
     const hasText = Array.from(el.childNodes).some((n) => n.nodeType === 3 && (n.textContent ?? '').trim() !== '');
     if (!hasText || !isShown(el) || el.closest('[disabled]')) continue;
     const style = getComputedStyle(el);
+    // 눈에 보이지 않는 글자는 대비를 따지지 않는다: 1~2px 로 숨긴 보조 기술용 글자, 화면 밖으로 밀어낸 글자(text-indent),
+    // 크기 0 글자, 투명 글자.
+    if (opts.requireLayout) {
+      const box = el.getBoundingClientRect();
+      if (box.width <= 2 && box.height <= 2) continue;
+    }
+    if (parseFloat(style.textIndent) <= -100 || parseFloat(style.fontSize) < 1) continue;
     const fg = parseColor(style.color);
+    if (fg && fg.a === 0) continue;
     const bg = backgroundOf(el);
     if (!fg || !bg) continue;
     const text = fg.a < 1 ? over(fg, bg) : fg;
@@ -322,7 +353,7 @@ export function collectPage(opts: { requireLayout: boolean }): PageSnapshot {
   // 19. 뜻 없는 링크 글자("여기", "click here" 등)
   const vagueLinks = ['여기', '여기를클릭', '여기를클릭하세요', '여기클릭', '클릭', '링크', 'clickhere', 'here', 'link', 'thislink', 'click'];
   doc.querySelectorAll('a[href]').forEach((a) => {
-    if (full('vague-link') || !isShown(a)) return;
+    if (full('vague-link') || !isShown(a) || hiddenFromAt(a)) return;
     const name = nameOf(a);
     const plain = name.replace(/[\s.!…·>»]+/g, '').toLowerCase();
     if (plain !== '' && vagueLinks.includes(plain)) add('vague-link', a, `"${name.slice(0, 30)}"`);
