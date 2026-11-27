@@ -95,100 +95,96 @@ function cells(t: Grid, x: number, y: number, rows: readonly string[]): void {
   });
 }
 
-/** 머리에 쓰는 장식: 리본·왕관은 머리 위에, 안경은 눈 둘레에 그린다. eyes 는 눈(2x2)의 왼쪽 위 칸이다. */
+/**
+ * 머리 위에 얹는 장식 한 점. 장식의 "아랫단"이 머리 윗선(머리 맨 위)에 오도록 밑에서부터 자리를 잡는다.
+ * 어른은 머리가 그림 맨 위에 가까워서 위쪽 빈 칸이 모자라는데, 예전에는 모자란 만큼 장식을 아래로 눌러 놓아서
+ * 키 큰 모자가 얼굴을 덮었다. 이제는 빈 칸이 모자라면 가운데 줄을 빼서 키를 줄인다(아랫단·윗단은 남는다).
+ * overlap: 아랫단이 머리 안으로 겹치는 칸 수(기본 2, 음수면 머리에서 떠 있다). dx: 가로로 옮기는 정도(머리 반폭 비율).
+ */
+function placeOnHead(g: Grid, head: HeadGeom, rows: readonly string[], opts: { overlap?: number; dx?: number } = {}): void {
+  const overlap = opts.overlap ?? 2;
+  const bottom = even(head.cy - head.ry) + overlap;
+  const room = Math.max(2, Math.floor(bottom / 2)); // 위쪽에 남은 줄 수(한 줄 = 2칸)
+  const fitted = [...rows];
+  while (fitted.length > room && fitted.length > 2) fitted.splice(Math.floor((fitted.length - 1) / 2), 1);
+  const width = (fitted[0]?.length ?? 0) * 2;
+  const x = even(head.cx + head.rx * (opts.dx ?? 0)) - Math.round(width / 2);
+  const y = Math.max(0, bottom - fitted.length * 2);
+  part(g, (t) => cells(t, x, y, fitted), { outline: 'k' });
+}
+
+/** 중심 (cx, cy) 에서 반지름이 rIn~rOut 사이인 2x2 칸을 채운다(둥근 테·머리띠용). keep 이 있으면 true 인 칸만. */
+function ringBlocks(t: Grid, cx: number, cy: number, rIn: number, rOut: number, ch: string, keep?: (x: number, y: number) => boolean): void {
+  const r = Math.ceil(rOut / 2) * 2 + 2;
+  for (let y = even(cy) - r; y <= even(cy) + r; y += 2) {
+    for (let x = even(cx) - r; x <= even(cx) + r; x += 2) {
+      const d = Math.hypot(x + 1 - cx, y + 1 - cy);
+      if (d >= rIn && d <= rOut && (!keep || keep(x, y))) rect(t, x, y, 2, 2, ch);
+    }
+  }
+}
+
+/** 머리에 쓰는 장식: 모자류는 머리 위에, 안경류는 눈 둘레에 그린다. eyes 는 눈(2x2)의 왼쪽 위 칸이다. */
 export function drawHeadAccessory(g: Grid, acc: Accessory | undefined, head: HeadGeom, eyes: readonly { x: number; y: number }[]): void {
   switch (acc) {
-    case 'crown': {
-      // 왕관: 뾰족한 끝 셋과 가운데 보석 (10x6)
-      const x = even(head.cx) - 5;
-      const y = Math.max(2, even(head.cy - head.ry) - 4);
-      part(g, (t) => cells(t, x, y, ['X.X.X', 'XXXXX', 'XXYXX']), { outline: 'k' });
+    case 'crown':
+      // 왕관: 뾰족한 끝 셋과 보석 셋이 박힌 띠 (14x6). 끝 사이는 4칸을 비워야 윤곽선에 묻히지 않는다.
+      placeOnHead(g, head, ['X..X..X', 'XXXXXXX', 'XYXYXYX']);
       break;
-    }
-    case 'ribbon': {
-      // 머리 위쪽 뒤편에 단 큰 리본: 좌우 고리와 가운데 매듭, 매듭 위아래는 비어 나비 모양이 된다 (12x6)
-      const x = even(head.cx - head.rx * 0.35) - 6;
-      const y = Math.max(2, even(head.cy - head.ry) - 4);
-      part(g, (t) => cells(t, x, y, ['XX..XX', 'XXYYXX', 'XX..XX']), { outline: 'k' });
+    case 'ribbon':
+      // 머리 위쪽 뒤편에 단 큰 리본: 좌우 고리와 가운데 매듭 (12x6)
+      placeOnHead(g, head, ['XX..XX', 'XXYYXX', 'XX..XX'], { dx: -0.35 });
       break;
-    }
-    case 'sprout': {
+    case 'sprout':
       // 새싹: 가는 줄기 위로 잎 둘이 V 자로 갈라져 돋는다 (14x10)
-      const x = even(head.cx) - 7;
-      const y = Math.max(2, even(head.cy - head.ry) - 8);
-      part(g, (t) => cells(t, x, y, ['XX...XX', 'XXX.XXX', '.XXYXX.', '...Y...', '...Y...']), { outline: 'k' });
+      placeOnHead(g, head, ['XX...XX', 'XXX.XXX', '.XXYXX.', '...Y...', '...Y...']);
       break;
-    }
-    case 'flower': {
+    case 'flower':
       // 머리 위쪽 뒤편의 꽃: 꽃잎 다섯과 노란 가운데 (10x10)
-      const x = even(head.cx - head.rx * 0.35) - 5;
-      const y = Math.max(2, even(head.cy - head.ry) - 8);
-      part(g, (t) => cells(t, x, y, ['.X.X.', 'XXXXX', 'XXYXX', 'XXXXX', '.X.X.']), { outline: 'k' });
+      placeOnHead(g, head, ['.X.X.', 'XXXXX', 'XXYXX', 'XXXXX', '.X.X.'], { dx: -0.35 });
       break;
-    }
-    case 'partyhat': {
+    case 'partyhat':
       // 뾰족한 파티 모자: 끝에 방울, 줄무늬, 아래로 갈수록 넓어진다 (10x10)
-      const x = even(head.cx) - 5;
-      const y = Math.max(2, even(head.cy - head.ry) - 8);
-      part(g, (t) => cells(t, x, y, ['..Y..', '..X..', '.XYX.', '.XXX.', 'XYXYX']), { outline: 'k' });
+      placeOnHead(g, head, ['..Y..', '..X..', '.XYX.', '.XXX.', 'XYXYX']);
       break;
-    }
-    case 'halo': {
+    case 'halo':
       // 머리 위에 떠 있는 금빛 고리 (12x6)
-      const x = even(head.cx) - 6;
-      const y = Math.max(2, even(head.cy - head.ry) - 8);
-      part(g, (t) => cells(t, x, y, ['.YXXY.', 'X....X', '.YXXY.']), { outline: 'k' });
+      placeOnHead(g, head, ['.YXXY.', 'X....X', '.YXXY.'], { overlap: -2 });
       break;
-    }
-    case 'cap': {
+    case 'cap':
       // 야구모자: 둥근 모자에 앞으로 나온 챙 (14x6)
-      const x = even(head.cx) - 6;
-      const y = Math.max(2, even(head.cy - head.ry) - 4);
-      part(g, (t) => cells(t, x, y, ['.XXXX..', 'XXXXXX.', 'YYYYYYY']), { outline: 'k' });
+      placeOnHead(g, head, ['.XXXX..', 'XXXXXX.', 'YYYYYYY']);
       break;
-    }
-    case 'witch': {
+    case 'witch':
       // 마법사 모자: 뾰족하게 솟은 모자와 넓은 챙, 금빛 띠 (14x12)
-      const x = even(head.cx) - 7;
-      const y = Math.max(2, even(head.cy - head.ry) - 10);
-      part(g, (t) => cells(t, x, y, ['...X...', '...X...', '..XXX..', '..XYX..', '.XXXXX.', 'XXXXXXX']), { outline: 'k' });
+      placeOnHead(g, head, ['...X...', '...X...', '..XXX..', '..XYX..', '.XXXXX.', 'XXXXXXX']);
       break;
-    }
-    case 'chef': {
-      // 요리사 모자: 부풀어 오른 하얀 모자 (10x8)
-      const x = even(head.cx) - 5;
-      const y = Math.max(2, even(head.cy - head.ry) - 6);
-      part(g, (t) => cells(t, x, y, ['.XXX.', 'XXXXX', 'XXXXX', 'YYYYY']), { outline: 'k' });
+    case 'chef':
+      // 요리사 모자: 위가 두 덩이로 부풀어 오른 높은 흰 모자와 아래 띠 (10x10)
+      placeOnHead(g, head, ['.X.X.', 'XXXXX', 'XXXXX', 'XXXXX', 'YYYYY']);
       break;
-    }
-    case 'santa': {
+    case 'santa':
       // 산타 모자: 빨간 모자, 하얀 방울과 둘레 (12x8)
-      const x = even(head.cx) - 6;
-      const y = Math.max(2, even(head.cy - head.ry) - 6);
-      part(g, (t) => cells(t, x, y, ['..XXY.', '.XXXX.', 'XXXXXX', 'YYYYYY']), { outline: 'k' });
+      placeOnHead(g, head, ['..XXY.', '.XXXX.', 'XXXXXX', 'YYYYYY']);
       break;
-    }
     case 'headband': {
-      // 별 머리띠: 머리를 두른 띠 위에 별 하나 (10x6)
-      const x = even(head.cx) - 5;
-      const y = Math.max(2, even(head.cy - head.ry) - 4);
-      part(g, (t) => cells(t, x, y, ['..Y..', '.YYY.', 'XXXXX']), { outline: 'k' });
+      // 별 머리띠: 머리 윗선을 따라 두른 굽은 띠 위에 별 하나
+      part(
+        g,
+        (t) => ringBlocks(t, head.cx, head.cy, Math.min(head.rx, head.ry) - 1.2, Math.max(head.rx, head.ry) + 0.8, 'X', (_x, y) => y + 1 < head.cy - head.ry * 0.25 && y + 1 > head.cy - head.ry - 3),
+        { outline: 'k' },
+      );
+      placeOnHead(g, head, ['..Y..', '.YYY.', '..Y..'], { dx: 0.15, overlap: 0 });
       break;
     }
-    case 'antenna': {
-      // 하트 더듬이: 줄기 끝에 달린 하트 (6x8)
-      const x = even(head.cx - head.rx * 0.2) - 3;
-      const y = Math.max(2, even(head.cy - head.ry) - 6);
-      part(g, (t) => cells(t, x, y, ['X.X', 'XXX', '.Y.', '.Y.']), { outline: 'k' });
+    case 'antenna':
+      // 하트 더듬이: 가는 줄기 끝에 달린 하트(가운데가 파인 모양) (6x10)
+      placeOnHead(g, head, ['X.X', 'XXX', '.X.', '.Y.', '.Y.'], { dx: -0.2 });
       break;
-    }
-    case 'bunnyears': {
+    case 'bunnyears':
       // 토끼 귀 머리띠: 안쪽이 분홍인 귀 둘이 갈라져 선다 (14x8)
-      const x = even(head.cx) - 7;
-      const y = Math.max(2, even(head.cy - head.ry) - 6);
-      part(g, (t) => cells(t, x, y, ['XX...XX', 'XY...YX', 'XY...YX', 'XXXXXXX']), { outline: 'k' });
+      placeOnHead(g, head, ['XX...XX', 'XY...YX', 'XY...YX', 'XXXXXXX']);
       break;
-    }
     case 'eyepatch': {
       // 안대: 눈을 가리는 까만 천과 뒤로 넘어가는 끈
       const e = eyes[0];
@@ -200,41 +196,35 @@ export function drawHeadAccessory(g: Grid, acc: Accessory | undefined, head: Hea
       break;
     }
     case 'monocle': {
-      // 외알 안경: 금테 하나와 아래로 늘어진 사슬
+      // 외알 안경: 눈 하나를 둘러싼 둥근 금테와, 뒤로 늘어진 사슬
       const e = eyes[0];
       if (!e) break;
       const ex = e.x - (e.x & 1);
       const ey = e.y - (e.y & 1);
-      rect(g, ex - 3, ey - 3, 8, 2, 'X');
-      rect(g, ex - 3, ey + 3, 8, 2, 'X');
-      rect(g, ex - 3, ey - 1, 2, 4, 'X');
-      rect(g, ex + 3, ey - 1, 2, 4, 'X');
-      line(g, ex + 4, ey + 5, ex + 6, ey + 11, 'Y', 1);
+      part(g, (t) => ringBlocks(t, ex + 1, ey + 1, 3, 5.4, 'X'), { outline: 'k' });
+      // 사슬: 테 아래쪽에서 뒤쪽 아래로 이어지는 짧은 점선
+      for (const [dx, dy] of [[-2, 6], [-4, 8], [-4, 10], [-2, 12]] as const) rect(g, ex + dx, ey + dy, 2, 2, 'Y');
       break;
     }
     case 'star': {
-      // 머리 위에서 반짝이는 별 (10x10)
-      const x = even(head.cx) - 5;
-      const y = Math.max(2, even(head.cy - head.ry) - 8);
-      part(g, (t) => cells(t, x, y, ['..X..', '.XXX.', 'XXYXX', '.XXX.', '..X..']), { outline: 'k' });
+      // 머리 위에서 반짝이는 별과, 양옆의 작은 반짝임 (10x10)
+      placeOnHead(g, head, ['..X..', '.XXX.', 'XXYXX', '.XXX.', '..X..'], { overlap: 0 });
+      const top = even(head.cy - head.ry);
+      const sx = even(head.cx);
+      rect(g, sx - 10, Math.max(0, top - 8), 2, 2, 'Y');
+      rect(g, sx + 8, Math.max(0, top - 6), 2, 2, 'Y');
       break;
     }
     case 'glasses': {
-      const rings = eyes.map((e) => ({ x: e.x - (e.x & 1), y: e.y - (e.y & 1) }));
-      for (const r of rings) {
-        // 눈(2x2)을 둘러싼 6x6 테
-        rect(g, r.x - 2, r.y - 2, 6, 2, 'Y');
-        rect(g, r.x - 2, r.y + 2, 6, 2, 'Y');
-        rect(g, r.x - 2, r.y, 2, 2, 'Y');
-        rect(g, r.x + 2, r.y, 2, 2, 'Y');
-      }
-      // 눈이 둘이면(정면) 가운데를 코걸이로 잇는다
-      const [a, b] = rings;
-      if (a && b) {
-        const left = Math.min(a.x, b.x) + 4;
-        const right = Math.max(a.x, b.x) - 2;
-        if (right > left) rect(g, left, a.y, right - left, 2, 'Y');
-      }
+      // 선글라스: 눈을 통째로 가리는 짙은 렌즈 하나(옆모습), 윗테의 반짝임, 귀 쪽으로 뻗는 다리
+      const e = eyes[0];
+      if (!e) break;
+      const ex = e.x - (e.x & 1);
+      const ey = e.y - (e.y & 1);
+      rect(g, ex - 2, ey - 2, 10, 2, 'X'); // 윗테(밝은 색)
+      rect(g, ex - 2, ey, 10, 4, 'Y'); // 렌즈
+      rect(g, ex, ey + 1, 2, 1, 'X'); // 렌즈 반짝임
+      rect(g, ex - 8, ey - 2, 6, 2, 'Y'); // 다리: 눈에서 귀 쪽으로
       break;
     }
     default:
@@ -284,6 +274,13 @@ export function drawBackWings(g: Grid, acc: WingKind | undefined, x: number, y: 
   const s = Math.max(0.7, size) * 1.05; // 작은 화면에서도 보이게 크게
   const bx = even(x);
   const by = even(y);
+  if (acc === 'wings') {
+    // 꾸미기 날개: 어깨에서 위·뒤로 펼친 깃털 날개. 깃이 한 겹씩 계단처럼 늘어나고 Y 색 깃줄이 보인다(2칸 단위 도트).
+    const rows = ['XXY....', 'XXXY...', 'XYXXY..', '.XXYXXY', '..XXYXX', '...XXXX'];
+    part(g, (t) => cells(t, bx - 12, Math.max(0, by - 11), rows), { outline: 'k' });
+    void s;
+    return;
+  }
   part(
     g,
     (t) => {
