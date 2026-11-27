@@ -18,6 +18,17 @@ export interface ServerRpc {
   invoke?<T>(name: string): Promise<RpcResult<T>>;
 }
 
+/** 경매장에서 팔린 내 펫 한 건(my_sales) */
+export interface SaleRow {
+  listing_id: string;
+  price: number;
+  species_id: string;
+  species_name: string;
+  level: number;
+  buyer_login: string;
+  sold_at: string;
+}
+
 export interface ServerState {
   tickets: number;
   /** 게임머니(경매장에서 쓰는 재화) */
@@ -213,6 +224,12 @@ export class ServerGame {
     if (r.error || !r.data || typeof r.data.granted !== 'number') return null;
     if (this.state) this.state = { ...this.state, coins: r.data.coins };
     return r.data;
+  }
+
+  /** 내가 올렸다가 since 이후에 팔린 펫들(팔린 순). 서버에 닿지 않으면 null. */
+  async mySales(since: string): Promise<SaleRow[] | null> {
+    const r = await this.rpc.call<SaleRow[]>('my_sales', { p_since: since });
+    return r.error || !Array.isArray(r.data) ? null : r.data;
   }
 
   /** 학습 이벤트(배움 카드 확인·고침·지식 읽기)를 서버에 보고한다. 게임머니는 서버가 정한 양만큼 받는다. */

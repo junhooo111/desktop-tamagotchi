@@ -1582,6 +1582,54 @@ async function activateServer(): Promise<void> {
   saveCollectionSafe();
   say(L(`서버와 연결됐어요. 뽑기권 ${collection.tickets}장 · 어느 PC에서든 같은 계정이에요`, `Connected to the server. ${collection.tickets} ticket(s) · same account on any PC`));
   setTimeout(() => void syncGithubCommits(false), 8_000);
+  setTimeout(() => void checkSales(), 20_000);
+}
+
+/**
+ * 내 펫이 경매장에서 팔렸는지 서버에 물어서 펫이 말해 준다(로그인했을 때만, 5분마다).
+ * 어디까지 알렸는지는 사용자별로 market-seen.json 에 적어 둔다. 처음에는 지금 시각부터 시작해서 옛 판매를 쏟아 내지 않는다.
+ */
+async function checkSales(): Promise<void> {
+  const game = serverGame;
+  const user = auth?.user;
+  if (!serverOn() || !game || !user) return;
+  const file = path.join(app.getPath('userData'), 'market-seen.json');
+  let seen: Record<string, string> = {};
+  try {
+    seen = JSON.parse(fs.readFileSync(file, 'utf8')) as Record<string, string>;
+  } catch {
+    seen = {};
+  }
+  const save = (iso: string): void => {
+    try {
+      fs.writeFileSync(file, JSON.stringify({ ...seen, [user.id]: iso }));
+    } catch (error) {
+      console.error('판매 확인 기록 저장 실패', error);
+    }
+  };
+  const since = seen[user.id];
+  if (!since) return save(new Date().toISOString());
+  const rows = await game.mySales(since);
+  if (!rows || rows.length === 0) return;
+  save(rows[rows.length - 1]!.sold_at);
+  await game.refresh(); // 게임머니와 가진 동물을 서버 기준으로 다시 읽는다(판 펫은 사라진다)
+  if (game.state) {
+    collection = mirrorCollection(collection, game.state, Date.now());
+    saveCollectionSafe();
+    persist();
+    updateTray();
+    sendView();
+  }
+  const total = rows.reduce((n, r) => n + r.price, 0);
+  const first = rows[0]!;
+  say(
+    rows.length === 1
+      ? L(
+          `💰 ${first.buyer_login} 님이 ${first.species_name} Lv.${first.level} 을(를) ${first.price} 게임머니에 샀어요!`,
+          `💰 ${first.buyer_login} bought your ${nameEn(first.species_name)} Lv.${first.level} for ${first.price} game money!`,
+        )
+      : L(`💰 경매장에서 펫 ${rows.length}마리가 팔렸어요! 게임머니 +${total}`, `💰 ${rows.length} pets sold in the auction house! Game money +${total}`),
+  );
 }
 
 /** GitHub 기여를 게임머니로 바꾼다(서버가 읽는다). 로그인 직후와 1시간마다. */
@@ -2141,6 +2189,7 @@ if (!app.requestSingleInstanceLock()) {
         void flushServerGrants();
       }, 10 * 60_000);
       setInterval(() => void syncGithubCommits(false), 60 * 60_000);
+      setInterval(() => void checkSales(), 5 * 60_000);
     }
     void auth.restore();
     const startUrl = process.argv.find((a) => a.startsWith(AUTH_SCHEME + '://'));

@@ -157,6 +157,21 @@ describe('뽑기권 획득 대기열', () => {
   });
 });
 
+describe('내 판매 조회', () => {
+  const sale = { listing_id: 'l1', price: 40, species_id: 'cat', species_name: '고양이', level: 3, buyer_login: 'kim', sold_at: '2026-11-27T10:00:00Z' };
+
+  it('since 이후 팔린 건을 서버에 묻고 그대로 돌려준다', async () => {
+    const { rpc, calls } = fakeRpc({ my_sales: () => ok([sale]) });
+    expect(await new ServerGame(rpc, tmpDir()).mySales('2026-11-27T09:00:00Z')).toEqual([sale]);
+    expect(calls).toEqual([{ fn: 'my_sales', args: { p_since: '2026-11-27T09:00:00Z' } }]);
+  });
+
+  it('서버 오류이거나 모양이 이상하면 null', async () => {
+    expect(await new ServerGame(fakeRpc({ my_sales: () => fail('boom') }).rpc, tmpDir()).mySales('x')).toBeNull();
+    expect(await new ServerGame(fakeRpc({ my_sales: () => ok({ not: 'array' }) }).rpc, tmpDir()).mySales('x')).toBeNull();
+  });
+});
+
 describe('배움 보고(게임머니)', () => {
   it('이벤트를 서버에 보내고 서버가 인정한 만큼만 반영한다', async () => {
     const calls: unknown[] = [];
