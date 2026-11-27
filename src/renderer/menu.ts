@@ -6,6 +6,30 @@
 import type { MenuItem, MenuModel } from '../shared/menu.js';
 import { iconSvg } from './menu-icons.js';
 
+/** 바탕(#fff4d6)에서 글자로 읽을 수 있게(대비 4.5:1 이상) 등급 색을 어둡게 만든다. */
+export function readableColor(hex: string, paper = '#fff4d6'): string {
+  const parse = (h: string): [number, number, number] => {
+    const m = /^#?([0-9a-f]{6})$/i.exec(h);
+    const n = m ? parseInt(m[1] as string, 16) : 0x3b2a20;
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  };
+  const lum = ([r, g, b]: [number, number, number]): number => {
+    const f = (v: number): number => {
+      const s = v / 255;
+      return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+    };
+    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+  };
+  const bg = lum(parse(paper));
+  let rgb = parse(hex);
+  for (let i = 0; i < 20; i++) {
+    const l = lum(rgb);
+    if ((Math.max(l, bg) + 0.05) / (Math.min(l, bg) + 0.05) >= 4.5) break;
+    rgb = [Math.round(rgb[0] * 0.88), Math.round(rgb[1] * 0.88), Math.round(rgb[2] * 0.88)];
+  }
+  return '#' + rgb.map((v) => v.toString(16).padStart(2, '0')).join('');
+}
+
 interface MenuApi {
   get(): Promise<MenuModel | null>;
   ready(height: number): void;
@@ -54,7 +78,7 @@ function row(item: MenuItem): HTMLButtonElement {
   if (item.checked !== undefined) b.setAttribute('aria-checked', String(item.checked));
   if (item.enabled === false) b.setAttribute('aria-disabled', 'true');
   if (item.children) b.setAttribute('aria-haspopup', 'true');
-  b.append(item.icon ? iconSvg(item.icon, 24) : el('span', 'icon-gap'));
+  b.append(item.icon ? iconSvg(item.icon, 32) : el('span', 'icon-gap'));
   const text = el('span', 'text');
   text.append(el('span', 'label', item.label));
   if (item.hint) text.append(el('span', 'hint', item.hint));
@@ -73,7 +97,7 @@ function bigButton(item: MenuItem, cls: string): HTMLButtonElement {
   b.dataset['id'] = item.id;
   if (item.enabled === false) b.setAttribute('aria-disabled', 'true');
   if (item.children) b.setAttribute('aria-haspopup', 'true');
-  if (item.icon) b.append(iconSvg(item.icon, cls === 'care' ? 32 : 24));
+  if (item.icon) b.append(iconSvg(item.icon, 32));
   b.append(el('span', 'label', item.label));
   b.addEventListener('click', () => press(item));
   return b;
@@ -85,7 +109,9 @@ function header(m: NonNullable<MenuModel['header']>): HTMLElement {
   top.append(el('span', 'name', m.name));
   const lv = el('span', 'lv', `Lv.${m.level}`);
   lv.style.setProperty('background', m.tierColor);
-  top.append(lv, el('span', 'tier', m.tierName));
+  const tier = el('span', 'tier', m.tierName);
+  tier.style.setProperty('color', readableColor(m.tierColor)); // 등급 단계마다 그 등급의 색으로
+  top.append(lv, tier);
   h.append(top);
   if (m.sub) h.append(el('div', 'sub', m.sub));
   const bars = el('div', 'bars');
@@ -116,7 +142,7 @@ function render(): void {
     const back = el('button', 'back');
     back.type = 'button';
     back.setAttribute('aria-label', m.text.back);
-    back.append(iconSvg('back', 24), el('span', 'label', m.text.back));
+    back.append(iconSvg('back', 16), el('span', 'label', m.text.back));
     back.addEventListener('click', goBack);
     top.append(back, el('span', 'subtitle', page.title));
     root.append(top);
