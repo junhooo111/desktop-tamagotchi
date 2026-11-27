@@ -96,3 +96,16 @@ describe('모든 창의 고정 글자가 영어에서 한글 없이 나온다', 
     expect(translateUi('새 문제 2 · 확인함 1 · 나중에 0 · 무시함 3 · 규칙 꺼짐 1')).toBe('New 2 · Confirmed 1 · Later 0 · Ignored 3 · Rule off 1');
   });
 });
+
+describe('직접 지은 이름은 번역하지 않는다', () => {
+  it('data-no-translate 아래의 글자는 영어 모드에서도 그대로고, 종 이름은 번역된다', () => {
+    document.body.innerHTML = '<div><span id="mine" data-no-translate>토끼</span> <span id="species">토끼</span> <b data-no-translate><i id="deep">고양이</i></b></div>';
+    setUiLang('en');
+    localize();
+    expect(document.getElementById('mine')?.textContent).toBe('토끼'); // 사용자가 '토끼'라고 이름 붙인 펫
+    expect(document.getElementById('species')?.textContent).toBe('Rabbit');
+    expect(document.getElementById('deep')?.textContent).toBe('고양이');
+    setUiLang('ko');
+    localize();
+  });
+});

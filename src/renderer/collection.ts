@@ -74,7 +74,10 @@ function petCard(e: CollectionEntry): HTMLElement {
   const meta = document.createElement('div');
   meta.className = 'meta';
   if (e.owned) {
-    const nick = e.name ? `${e.name} · ` : '';
+    // 사용자가 지어 준 이름은 번역하지 않는다(data-no-translate)
+    const nick = document.createElement('span');
+    nick.setAttribute('data-no-translate', '');
+    nick.textContent = e.name ? `${e.name} · ` : '';
     const tier = levelTier(e.level);
     const lv = document.createElement('b');
     lv.className = 'lvc';

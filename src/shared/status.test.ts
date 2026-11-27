@@ -39,6 +39,8 @@ describe('상태 보기 값', () => {
   it('제목·레벨·등급과 막대 네 줄(경험치·배부름·기분·청결)을 만든다', () => {
     const s = buildStatus(pet(), '콩이');
     expect(s.name).toBe('콩이');
+    expect(s.named).toBe(true); // 직접 지은 이름은 영어 모드에서도 번역하지 않는다
+    expect(buildStatus(pet()).named).toBe(false); // 종 이름이면 번역된다
     expect(s.sub).toBe('병아리 · 성체');
     expect(s.level).toBe(6);
     expect(s.tier.name).toBe('새내기');

@@ -25,6 +25,8 @@ export interface StatusBar {
 export interface StatusBubble {
   /** 첫 줄 이름: 지어 준 이름, 없으면 종 이름(알이면 '알'). 레벨 배지가 이 옆에 붙는다. */
   name: string;
+  /** name 이 사용자가 직접 지어 준 이름인지(그렇다면 영어 모드에서도 번역하지 않는다) */
+  named?: boolean;
   /** 둘째 줄: 이름이 있으면 `병아리 · 새끼`, 없으면 단계(`새끼`), 알이면 빈 문자열 */
   sub: string;
   level: number;
@@ -57,6 +59,7 @@ export function buildStatus(pet: PetState, petName = '', display: DisplayStage =
   const xpBar: StatusBar = { kind: 'xp', label: '경험치', value: Math.min(100, Math.round((prog.into / prog.need) * 100)), level: 'high', text: `${into}/${prog.need}`, color: tier.color };
   return {
     name,
+    named,
     sub,
     level,
     tier,

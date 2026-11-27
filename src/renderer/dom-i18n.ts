@@ -47,7 +47,7 @@ export function localize(root: ParentNode = document.body): void {
   while (node) {
     if (node.nodeType === Node.TEXT_NODE) {
       const parent = node.parentElement?.tagName;
-      if (parent !== 'SCRIPT' && parent !== 'STYLE') {
+      if (parent !== 'SCRIPT' && parent !== 'STYLE' && node.parentElement?.closest('[data-no-translate]') == null) {
         const text = node as Text;
         const known = originalText.get(text);
         // 우리가 바꿔 놓은 글자가 아닌 새 글자면 그것을 원본으로 본다.

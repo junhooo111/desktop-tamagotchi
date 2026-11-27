@@ -249,7 +249,11 @@ let statusTimer: number | undefined;
 
 /** 상태 보기: 이름·단계, 레벨 배지(등급 색), 경험치, 그리고 막대 세 줄. 글자는 textContent 로만 넣는다. */
 function showStatus(s: StatusBubble): void {
-  (document.getElementById('st-name') as HTMLElement).textContent = s.name;
+  const stName = document.getElementById('st-name') as HTMLElement;
+  stName.textContent = s.name;
+  // 사용자가 지어 준 이름은 번역하지 않는다(종 이름일 때만 영어 모드에서 번역).
+  if (s.named) stName.setAttribute('data-no-translate', '');
+  else stName.removeAttribute('data-no-translate');
   (document.getElementById('st-sub') as HTMLElement).textContent = s.sub;
   const lv = document.getElementById('st-lv') as HTMLElement;
   lv.textContent = `Lv.${s.level} ${s.tier.name}`;
