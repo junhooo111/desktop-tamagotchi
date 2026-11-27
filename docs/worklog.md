@@ -220,3 +220,10 @@
 - 구현: `src/main/auth.ts`(PKCE + 딥링크 `desktop-tamagotchi://auth`, 세션은 safeStorage 로 암호화 저장), `src/shared/backend.ts`(주소·anon 키 자리, 비어 있으면 로그인 꺼짐), 메뉴에 계정 항목, 딥링크 등록(second-instance·open-url). 시험 18건 추가(전체 1218건 통과).
 - 한계: Supabase 프로젝트와 GitHub OAuth App 이 아직 없어서 **실제 로그인은 시험하지 못했다.** 사용자가 [backend-setup.md](backend-setup.md) 순서대로 만든 뒤 주소·키를 넣고 확인한다.
 - 다음: 프로젝트 생성 → 마이그레이션 적용 → 로그인 확인 → 서버의 장착 펫 표시(P1 나머지).
+
+## 2026-11-27 — 계정 저장분(0004): 기존 사용자의 로컬 진행을 잃지 않게
+
+- 요청: 로그인하면 지금까지 한 진행이 그대로 이전되고, 어느 PC에서든 같은 계정 정보를 가진다. 앞으로 앱을 바꾸면 Supabase DB도 맞춰서 바꾼다.
+- 한계 발견: 서버 DB(0001~0003)는 펫 6종·코인 방식이고, 앱은 9종+히든 6종·꾸미기·뽑기권·도감까지 로컬에서 판정한다. 서버가 판정하는 구조로 옮기려면 앱 규칙 전체를 옮겨야 해서, 먼저 **계정 저장분(save snapshot)** 을 징검다리로 둔다.
+- 구현: `0004_account_save.sql` — `account_saves`(계정당 1행, jsonb), `save_get()` / `save_put(data, schema_version, expected_version, device)`. 낙관적 잠금(version_conflict), 덮어쓸 때마다 백업 10개 보관, 크기 300KB 상한, 클라이언트는 테이블 직접 쓰기 불가. SQL 시험 10건 추가(전체 92건 통과).
+- 다음: 앱의 첫 로그인 흐름(로컬 백업 → 서버에 올리기 → 다른 PC는 받아 오기, 충돌은 사용자에게 묻기).
