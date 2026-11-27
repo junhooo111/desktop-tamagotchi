@@ -31,6 +31,8 @@
 - **저장 후 재시작**: 받아 온 저장분을 쓴 뒤 `app.exit(0)` 로 바로 끝낸다. `app.quit()` 는 `before-quit` 에서 메모리의 낡은 상태를 다시 파일에 써서 받아 온 진행을 덮어쓴다.
 - **개발 실행과 설치본은 한 번에 하나만 뜬다**(단일 실행 잠금). 개발 실행 전에 설치본을 종료해야 한다.
 - **마이그레이션은 순서가 중요하다**: 제약(check)을 바꿀 때는 기존 행을 먼저 지우거나 바꾼 뒤에 새 제약을 건다(0005 에서 겪음).
+- **SQL 시험을 먼저 돌리는 이유**: `insert … select` 에서 열 수가 안 맞는 것 같은 오류는 PGlite 시험에서만 잡힌다(운영에 올린 뒤에는 늦다). 마이그레이션은 시험 통과 전에 `db push` 하지 않는다.
+- **가져오기(0006)**: 서버는 앱이 보낸 값이 아니라 **0004 에 올라간 계정 저장분**을 읽어 변환한다. 한 계정에 한 번(`account_imports`), 서버에 펫이 이미 있으면 안 한다. 앱(C 단계)은 로그인 후 저장분 동기화가 끝난 다음에 부른다.
 - **Supabase 무료 플랜은 한 주 동안 DB 활동이 거의 없으면 일시정지**된다. `.github/workflows/supabase-keepalive.yml` 이 이틀에 한 번 공개 테이블을 읽는다.
 - **CLI 로 올리는 DB**: 0001~0003 은 SQL Editor 로 올렸고 `supabase migration repair --status applied 0001 0002 0003` 으로 기록했다. 새 PC 는 `npx supabase login` → `link --project-ref bqsidhjdxoxtrmmymwej`.
 - 개발 실행 중 `safeStorage.isEncryptionAvailable` 등이 deprecated 경고를 낸다. 동작에는 문제없고, 나중에 비동기 API 로 바꾼다.
