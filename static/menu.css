@@ -235,17 +235,13 @@ button:focus-visible {
 }
 .label {
   font-weight: 700;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 .hint {
   font-size: 12px;
   font-weight: 400;
   color: #6b563f;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 .badge {
   padding: 0 6px;
