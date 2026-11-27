@@ -157,6 +157,16 @@ describe('뽑기권 획득 대기열', () => {
   });
 });
 
+describe('프로필 카드 값 올리기', () => {
+  it('값을 set_card_extras 로 보내고 성공 여부를 돌려준다', async () => {
+    const { rpc, calls } = fakeRpc({ set_card_extras: () => ok(null) });
+    const extras = { variant: 'pastel', accessory: 'crown', streak: 3 };
+    expect(await new ServerGame(rpc, tmpDir()).pushCardExtras(extras)).toBe(true);
+    expect(calls).toEqual([{ fn: 'set_card_extras', args: { p_extras: extras } }]);
+    expect(await new ServerGame(fakeRpc({ set_card_extras: () => fail('boom') }).rpc, tmpDir()).pushCardExtras(extras)).toBe(false);
+  });
+});
+
 describe('내 판매 조회', () => {
   const sale = { listing_id: 'l1', price: 40, species_id: 'cat', species_name: '고양이', level: 3, buyer_login: 'kim', sold_at: '2026-11-27T10:00:00Z' };
 

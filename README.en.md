@@ -22,7 +22,7 @@ Log in with your GitHub account and **your pet moves on your GitHub profile.** I
 3. On GitHub, paste it into the `README.md` of **your profile repository** (`yourname/yourname`, a public repo with a README) and save. If this is your first time, see [Creating your profile README](https://docs.github.com/en/account-and-profile/setting-up-and-managing-your-github-profile/customizing-your-profile/managing-your-profile-readme).
 
 - The card is **drawn by the server**, so it updates with your latest level and pet even when the app is closed (GitHub caches images for a few minutes).
-- The card shows only your GitHub name and equipped pet. No email and no currency. To hide it, turn off **"Show my name in rankings"** under `🏆 Rankings…` (the card disappears too).
+- The card shows your GitHub name, your pet (with its color, accessory, name, and appearance), and your streak, codex, achievement, fixed-problem, quiz, and tip counts. No email and no currency. The streak is based on the last day the app uploaded its values, so it shows 0 if you do not open the app for more than two days. To hide it, turn off **"Show my name in rankings"** under `🏆 Rankings…` (the card disappears too).
 
 ## At a glance
 
@@ -195,7 +195,7 @@ New versions are downloaded in the background and installed when you quit the pe
 ## Privacy and safety
 
 - **Without logging in, nothing leaves your PC.** There are no analytics or ads, and inspected content is never sent out. (It only reads public files in this repository to check for new versions and news.)
-- **If you log in (optional)**, your GitHub name and avatar URL (for display) and your progress (animals, XP, tickets, cosmetics, codex file) are stored on your account on the server (Supabase). Your email is not stored. No password is used (GitHub login), and the login info is encrypted in this PC's secure storage. Rankings, the profile card, and the auction house show only your GitHub name, pet, and scores, and you can turn them off at any time. Inspected page content is never sent to the server, even when logged in.
+- **If you log in (optional)**, your GitHub name and avatar URL (for display) and your progress (animals, XP, tickets, cosmetics, codex file) are stored on your account on the server (Supabase). Your email is not stored. No password is used (GitHub login), and the login info is encrypted in this PC's secure storage. Rankings, the profile card, and the auction house show only your GitHub name, pet and its look, and scores, and you can turn them off at any time. Inspected page content is never sent to the server, even when logged in.
 - Page inspection looks only at `localhost`, `127.0.0.1`, and `*.localhost` tabs.
 - The Chrome extension has minimal permissions (no cookies or history). It only sends a "problem list" to the pet app on this PC, never page content or input values.
 

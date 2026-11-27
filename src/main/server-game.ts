@@ -226,6 +226,12 @@ export class ServerGame {
     return r.data;
   }
 
+  /** 프로필 카드에 그릴 "보여 주기용" 값(색·장식·이름·연속일 등)을 서버에 올린다. 서버가 허용 목록·범위로 다시 거른다. */
+  async pushCardExtras(extras: Record<string, unknown>): Promise<boolean> {
+    const r = await this.rpc.call<null>('set_card_extras', { p_extras: extras });
+    return !r.error;
+  }
+
   /** 내가 올렸다가 since 이후에 팔린 펫들(팔린 순). 서버에 닿지 않으면 null. */
   async mySales(since: string): Promise<SaleRow[] | null> {
     const r = await this.rpc.call<SaleRow[]>('my_sales', { p_since: since });

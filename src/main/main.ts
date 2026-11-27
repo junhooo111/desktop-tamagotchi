@@ -657,6 +657,7 @@ function applySettings(patch: unknown): Settings {
     console.error('설정 저장 실패', error);
   }
   if (settings.language !== before.language && win && !win.isDestroyed()) win.webContents.send('pet:lang', currentLang());
+  if (settings.variant !== before.variant || settings.accessory !== before.accessory || settings.petName !== before.petName || settings.displayStage !== before.displayStage || settings.cardSpecies !== before.cardSpecies) scheduleCardPush();
   if (settings.scanSeconds !== before.scanSeconds) scheduleScan();
   queue = visibleFindings(queue, settings);
   if (notice && isMuted(notice, settings)) setNotice(null, false);
@@ -693,6 +694,7 @@ function growthCtx(): { tipsSeen: number; collected: number; pulls: number; hidd
 function recordGrowth(event: GrowthEvent): void {
   const result = applyEvent(growth, event, Date.now(), growthCtx());
   growth = result.growth;
+  scheduleCardPush();
   if (event.kind === 'care' && collectionPath) {
     const care = claimCare(collection, growth.counters.care);
     if (care.tickets > 0) {
@@ -1581,6 +1583,7 @@ async function handleAuthUrl(url: string): Promise<void> {
 /** 로그인하고 저장분 동기화가 끝난 뒤: 기존 진행을 서버로 한 번 가져오고, 서버 상태를 앱의 컬렉션에 반영한다. */
 async function activateServer(): Promise<void> {
   if (!serverGame || !auth?.user) return;
+  lastCardPush = ''; // 계정이 바뀌었을 수 있으니 카드 값을 다시 보낸다
   const r = await serverGame.activate();
   if (!r.ok || !serverGame.state) {
     say(r.message ?? L('서버와 연결하지 못했어요. 뽑기는 연결된 뒤에 할 수 있어요', 'Could not connect to the server. You can pull once connected'));
@@ -1596,6 +1599,45 @@ async function activateServer(): Promise<void> {
   say(L(`서버와 연결됐어요. 뽑기권 ${collection.tickets}장 · 어느 PC에서든 같은 계정이에요`, `Connected to the server. ${collection.tickets} ticket(s) · same account on any PC`));
   setTimeout(() => void syncGithubCommits(false), 8_000);
   setTimeout(() => void checkSales(), 20_000);
+  setTimeout(() => void pushCardExtras(), 12_000);
+}
+
+/**
+ * 프로필 카드를 풍성하게: 색·장식·이름·모습·연속일·도감·업적 수를 서버에 올린다(로그인했을 때만).
+ * 바뀐 것이 있을 때만 5초 모아서 한 번 보내고, 같은 내용은 다시 보내지 않는다. 하루에 한 번은 날짜가 바뀌므로 다시 보낸다
+ * (카드가 "연속일이 최신인지"를 보낸 날짜로 판단한다).
+ */
+let cardPushTimer: ReturnType<typeof setTimeout> | undefined;
+let lastCardPush = '';
+function scheduleCardPush(): void {
+  if (cardPushTimer || !serverOn()) return;
+  cardPushTimer = setTimeout(() => {
+    cardPushTimer = undefined;
+    void pushCardExtras();
+  }, 5_000);
+}
+
+async function pushCardExtras(): Promise<void> {
+  const game = serverGame;
+  if (!serverOn() || !game || !collectionPath) return;
+  const codex = buildCodex(growth, growthCtx(), Date.now());
+  const extras: Record<string, unknown> = {
+    variant: settings.variant,
+    accessory: settings.accessory,
+    name: settings.petName,
+    streak: codex.streak.current,
+    fixes: codex.counters.fixes,
+    quiz: codex.counters.quizCorrect,
+    rules: codex.rulesLearned,
+    tips: codex.tipsSeen,
+    badges: codex.achievements.filter((a) => a.unlocked).length,
+    day: new Date().toISOString().slice(0, 10),
+  };
+  if (settings.displayStage !== 'auto') extras['stage'] = settings.displayStage;
+  if (settings.cardSpecies !== 'current') extras['species'] = settings.cardSpecies;
+  const key = JSON.stringify(extras);
+  if (key === lastCardPush) return;
+  if (await game.pushCardExtras(extras)) lastCardPush = key;
 }
 
 /**
@@ -2203,6 +2245,7 @@ if (!app.requestSingleInstanceLock()) {
       }, 10 * 60_000);
       setInterval(() => void syncGithubCommits(false), 60 * 60_000);
       setInterval(() => void checkSales(), 5 * 60_000);
+      setInterval(() => void pushCardExtras(), 6 * 3_600_000); // 날짜가 바뀌면 다시 보낸다
     }
     void auth.restore();
     const startUrl = process.argv.find((a) => a.startsWith(AUTH_SCHEME + '://'));

@@ -18,11 +18,42 @@ var RULE_IDS = [
   "table-header",
   "meta-description",
   "img-oversized",
-  "vague-link"
+  "vague-link",
+  "frame-title",
+  "aria-hidden-focus",
+  "empty-heading",
+  "landmark-main",
+  "autoplay-media",
+  "aria-broken-ref",
+  "nested-interactive",
+  "autocomplete-missing",
+  "meta-refresh",
+  "focus-outline",
+  "role-no-focus",
+  "scroll-no-focus",
+  "fake-link",
+  "link-color-only",
+  "text-small",
+  "reduced-motion",
+  "role-img-alt",
+  "html-lang-valid",
+  "video-captions",
+  "img-dimensions",
+  "img-lazy-below-fold",
+  "render-blocking-script",
+  "font-display-missing",
+  "large-dom",
+  "multiple-h1",
+  "og-missing",
+  "mixed-content",
+  "viewport-fixed-width",
+  "input-font-small",
+  "button-type-missing",
+  "deprecated-tags"
 ];
 var LESSONS = {
   "img-alt": {
-    category: "a11y",
+    category: "screenreader",
     title: "\uC774\uBBF8\uC9C0\uC5D0 \uB300\uCCB4 \uD14D\uC2A4\uD2B8(alt)\uAC00 \uC5C6\uC5B4\uC694",
     bubble: "\uC5EC\uAE30 \uC774\uBBF8\uC9C0\uC5D0 alt\uAC00 \uC5C6\uC5B4\uC694!",
     problem: "<img> \uD0DC\uADF8\uC5D0 alt \uC18D\uC131\uC774 \uC544\uC608 \uC5C6\uC2B5\uB2C8\uB2E4.",
@@ -31,7 +62,7 @@ var LESSONS = {
     code: '<img src="/team.jpg" alt="\uD68C\uC758\uC2E4\uC5D0\uC11C \uC6C3\uACE0 \uC788\uB294 \uD300\uC6D0 \uB2E4\uC12F \uBA85" />\n<img src="/divider.svg" alt="" />'
   },
   "button-name": {
-    category: "a11y",
+    category: "screenreader",
     title: "\uBC84\uD2BC\xB7\uB9C1\uD06C\uC5D0 \uC774\uB984\uC774 \uC5C6\uC5B4\uC694",
     bubble: "\uC774 \uBC84\uD2BC\uC774 \uBB58 \uD558\uB294\uC9C0 \uC54C \uC218\uAC00 \uC5C6\uC5B4\uC694!",
     problem: "\uC544\uC774\uCF58\uB9CC \uC788\uB294 \uBC84\uD2BC\uC774\uB098 \uB9C1\uD06C\uC5D0 \uAE00\uC790\uB3C4 aria-label \uB3C4 \uC5C6\uC2B5\uB2C8\uB2E4.",
@@ -40,7 +71,7 @@ var LESSONS = {
     code: '<button aria-label="\uBA54\uB274 \uC5F4\uAE30">\n  <svg aria-hidden="true">\u2026</svg>\n</button>'
   },
   "form-label": {
-    category: "a11y",
+    category: "screenreader",
     title: "\uC785\uB825\uCE78\uC5D0 \uB77C\uBCA8\uC774 \uC5C6\uC5B4\uC694",
     bubble: "\uC774 \uC785\uB825\uCE78\uC774 \uBB34\uC5C7\uC778\uC9C0 \uBAB0\uB77C\uC694!",
     problem: "<input>\xB7<select>\xB7<textarea> \uC5D0 \uC5F0\uACB0\uB41C <label> \uC774\uB098 aria-label \uC774 \uC5C6\uC2B5\uB2C8\uB2E4. placeholder \uB9CC \uC788\uB294 \uACBD\uC6B0\uB3C4 \uD574\uB2F9\uD569\uB2C8\uB2E4.",
@@ -49,7 +80,7 @@ var LESSONS = {
     code: '<label for="email">\uC774\uBA54\uC77C</label>\n<input id="email" type="email" />'
   },
   "html-lang": {
-    category: "a11y",
+    category: "screenreader",
     title: "<html> \uC5D0 lang \uC774 \uC5C6\uC5B4\uC694",
     bubble: "\uC774 \uD398\uC774\uC9C0\uAC00 \uBB34\uC2A8 \uC5B8\uC5B4\uC778\uC9C0 \uBAB0\uB77C\uC694!",
     problem: "<html> \uC694\uC18C\uC5D0 lang \uC18D\uC131\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
@@ -76,7 +107,7 @@ var LESSONS = {
     code: '<meta name="viewport" content="width=device-width, initial-scale=1" />'
   },
   "heading-order": {
-    category: "a11y",
+    category: "screenreader",
     title: "\uC81C\uBAA9 \uB2E8\uACC4\uB97C \uAC74\uB108\uB6F0\uC5C8\uC5B4\uC694",
     bubble: "\uC81C\uBAA9 \uB2E8\uACC4\uAC00 \uAC74\uB108\uB6F0\uC5B4\uC84C\uC5B4\uC694!",
     problem: "h1 \uB2E4\uC74C\uC5D0 \uBC14\uB85C h3 \uCC98\uB7FC \uC81C\uBAA9 \uB2E8\uACC4\uB97C \uAC74\uB108\uB6F4 \uACF3\uC774 \uC788\uC2B5\uB2C8\uB2E4.",
@@ -103,7 +134,7 @@ var LESSONS = {
     code: "img { max-width: 100%; height: auto; }\n.card { width: min(100%, 480px); }"
   },
   contrast: {
-    category: "a11y",
+    category: "vision",
     title: "\uAE00\uC790\uC640 \uBC30\uACBD\uC758 \uBA85\uC554 \uB300\uBE44\uAC00 \uBD80\uC871\uD574\uC694",
     bubble: "\uAE00\uC790\uAC00 \uC798 \uC548 \uBCF4\uC5EC\uC694!",
     problem: "\uAE00\uC790\uC0C9\uACFC \uBC30\uACBD\uC0C9\uC758 \uBA85\uC554 \uB300\uBE44\uAC00 \uAE30\uC900(\uC77C\uBC18 \uAE00\uC790 4.5:1, \uD070 \uAE00\uC790 3:1)\uBCF4\uB2E4 \uB0AE\uC2B5\uB2C8\uB2E4.",
@@ -112,7 +143,7 @@ var LESSONS = {
     code: "/* \uB300\uBE44 2.3:1 \u2192 4.6:1 */\ncolor: #aaa;  \u2192  color: #595959;"
   },
   "dup-id": {
-    category: "a11y",
+    category: "screenreader",
     title: "\uAC19\uC740 id \uAC00 \uD55C \uD398\uC774\uC9C0\uC5D0 \uC5EC\uB7EC \uBC88 \uC4F0\uC600\uC5B4\uC694",
     bubble: "\uAC19\uC740 id \uAC00 \uB450 \uBC88 \uC4F0\uC600\uC5B4\uC694!",
     problem: "\uAC19\uC740 id \uAC12\uC744 \uAC00\uC9C4 \uC694\uC18C\uAC00 \uD55C \uD398\uC774\uC9C0\uC5D0 \uB458 \uC774\uC0C1 \uC788\uC2B5\uB2C8\uB2E4.",
@@ -121,7 +152,7 @@ var LESSONS = {
     code: "// \uAC19\uC740 \uCEF4\uD3EC\uB10C\uD2B8\uB97C \uC5EC\uB7EC \uBC88 \uADF8\uB9B4 \uB54C\nconst id = useId();\n<label htmlFor={id}>\uC774\uB984</label>\n<input id={id} />"
   },
   "zoom-disabled": {
-    category: "a11y",
+    category: "vision",
     title: "\uD654\uBA74 \uD655\uB300\uB97C \uB9C9\uC544 \uB193\uC558\uC5B4\uC694",
     bubble: "\uD655\uB300\uB97C \uB9C9\uC544 \uB193\uC558\uC5B4\uC694!",
     problem: "viewport \uBA54\uD0C0 \uD0DC\uADF8\uC5D0 user-scalable=no \uC774\uAC70\uB098 maximum-scale \uC774 1 \uC774\uD558\uC785\uB2C8\uB2E4.",
@@ -130,7 +161,7 @@ var LESSONS = {
     code: '<meta name="viewport" content="width=device-width, initial-scale=1" />\ninput { font-size: 16px; }'
   },
   "tabindex-positive": {
-    category: "a11y",
+    category: "keyboard",
     title: "tabindex \uC5D0 \uC591\uC218\uB97C \uC37C\uC5B4\uC694",
     bubble: "tabindex \uAC00 \uC591\uC218\uC608\uC694!",
     problem: "tabindex \uAC00 1 \uC774\uC0C1\uC778 \uC694\uC18C\uAC00 \uC788\uC2B5\uB2C8\uB2E4.",
@@ -139,7 +170,7 @@ var LESSONS = {
     code: '<!-- \u2717 --> <div tabindex="5">\u2026</div>\n<!-- \u2713 --> <div tabindex="0">\u2026</div>'
   },
   "alt-quality": {
-    category: "a11y",
+    category: "screenreader",
     title: "alt \uAC00 \uD30C\uC77C \uC774\uB984\uC774\uB098 \uB73B \uC5C6\uB294 \uB9D0\uC774\uC5D0\uC694",
     bubble: "alt \uAC00 \uD30C\uC77C \uC774\uB984 \uAC19\uC544\uC694!",
     problem: 'alt \uAC00 "hero.png", "image", "\uC0AC\uC9C4" \uCC98\uB7FC \uD30C\uC77C \uC774\uB984\uC774\uAC70\uB098 \uC774\uBBF8\uC9C0\uAC00 \uBB34\uC5C7\uC778\uC9C0 \uC54C\uB824 \uC8FC\uC9C0 \uBABB\uD558\uB294 \uB9D0\uC785\uB2C8\uB2E4.',
@@ -148,7 +179,7 @@ var LESSONS = {
     code: '<!-- \u2717 --> <img src="hero.png" alt="hero.png">\n<!-- \u2713 --> <img src="hero.png" alt="\uB178\uD2B8\uBD81\uC73C\uB85C \uC791\uC5C5\uD558\uB294 \uAC1C\uBC1C\uC790">'
   },
   "clickable-div": {
-    category: "a11y",
+    category: "keyboard",
     title: "div \uB098 span \uC744 \uBC84\uD2BC\uCC98\uB7FC \uC37C\uC5B4\uC694",
     bubble: "div \uB97C \uBC84\uD2BC\uCC98\uB7FC \uC37C\uC5B4\uC694!",
     problem: "\uD074\uB9AD\uD560 \uC218 \uC788\uB294 \uBAA8\uC591(\uB9C8\uC6B0\uC2A4 \uD3EC\uC778\uD130\uAC00 \uC190\uAC00\uB77D \uBAA8\uC591)\uC778\uB370 \uBC84\uD2BC\uC774\uB098 \uB9C1\uD06C\uAC00 \uC544\uB2CC div\xB7span \uB4F1\uC774\uACE0, role \uC774\uB098 tabindex \uB3C4 \uC5C6\uC2B5\uB2C8\uB2E4.",
@@ -157,7 +188,7 @@ var LESSONS = {
     code: '<!-- \u2717 --> <div class="btn" onClick={save}>\uC800\uC7A5</div>\n<!-- \u2713 --> <button type="button" class="btn" onClick={save}>\uC800\uC7A5</button>'
   },
   "table-header": {
-    category: "a11y",
+    category: "screenreader",
     title: "\uD45C\uC5D0 \uC81C\uBAA9 \uCE78(th)\uC774 \uC5C6\uC5B4\uC694",
     bubble: "\uD45C\uC5D0 \uC81C\uBAA9 \uCE78\uC774 \uC5C6\uC5B4\uC694!",
     problem: "<table> \uC548\uC5D0 <th> \uAC00 \uD558\uB098\uB3C4 \uC5C6\uC2B5\uB2C8\uB2E4.",
@@ -184,18 +215,701 @@ var LESSONS = {
     code: '<img\n  src="/hero-800.webp"\n  srcset="/hero-800.webp 800w, /hero-1600.webp 1600w"\n  sizes="(max-width: 800px) 100vw, 800px"\n  alt="\u2026" />'
   },
   "vague-link": {
-    category: "a11y",
+    category: "screenreader",
     title: '\uB9C1\uD06C \uAE00\uC790\uAC00 "\uC5EC\uAE30"\uCC98\uB7FC \uB73B\uC774 \uC5C6\uC5B4\uC694',
     bubble: '\uB9C1\uD06C \uC774\uB984\uC774 "\uC5EC\uAE30"\uC608\uC694!',
     problem: '\uB9C1\uD06C \uAE00\uC790\uAC00 "\uC5EC\uAE30", "click here", "link" \uCC98\uB7FC \uC5B4\uB514\uB85C \uAC00\uB294\uC9C0 \uC54C \uC218 \uC5C6\uB294 \uB9D0\uC785\uB2C8\uB2E4.',
     why: '\uC2A4\uD06C\uB9B0 \uB9AC\uB354 \uC0AC\uC6A9\uC790\uB294 \uB9C1\uD06C \uBAA9\uB85D\uB9CC \uB530\uB85C \uD6D1\uC5B4 \uB4E3\uC2B5\uB2C8\uB2E4. "\uC5EC\uAE30, \uC5EC\uAE30, \uC5EC\uAE30"\uB9CC \uB4E4\uB9AC\uBA74 \uC5B4\uB290 \uB9C1\uD06C\uAC00 \uBB34\uC5C7\uC778\uC9C0 \uC54C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uAC80\uC0C9\uC5D4\uC9C4\uB3C4 \uB9C1\uD06C \uAE00\uC790\uB85C \uB300\uC0C1 \uD398\uC774\uC9C0\uB97C \uC774\uD574\uD569\uB2C8\uB2E4.',
     fix: '\uB9C1\uD06C \uAE00\uC790\uB9CC \uC77D\uC5B4\uB3C4 \uBAA9\uC801\uC9C0\uB97C \uC54C \uC218 \uC788\uAC8C \uC4F0\uC138\uC694. \uBB38\uC7A5 \uC18D\uC5D0\uC11C\uB3C4 "\uC0AC\uC6A9 \uC124\uBA85\uC11C \uBCF4\uAE30"\uCC98\uB7FC \uAD6C\uCCB4\uC801\uC778 \uB9D0\uC744 \uB9C1\uD06C\uB85C \uB9CC\uB4ED\uB2C8\uB2E4.',
     code: '<!-- \u2717 --> \uC124\uBA85\uC11C\uB294 <a href="/docs">\uC5EC\uAE30</a>\uB97C \uB20C\uB7EC \uBCF4\uC138\uC694.\n<!-- \u2713 --> <a href="/docs">\uC0AC\uC6A9 \uC124\uBA85\uC11C</a>\uB97C \uD655\uC778\uD574 \uBCF4\uC138\uC694.'
+  },
+  "frame-title": {
+    category: "screenreader",
+    title: "iframe \uC5D0 \uC81C\uBAA9(title)\uC774 \uC5C6\uC5B4\uC694",
+    bubble: "iframe \uC5D0 title \uC774 \uC5C6\uC5B4\uC694!",
+    problem: "<iframe> \uC5D0 title \uB3C4 aria-label \uB3C4 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    why: '\uC2A4\uD06C\uB9B0 \uB9AC\uB354\uB294 iframe \uC744 \uB9CC\uB098\uBA74 "\uD504\uB808\uC784"\uC774\uB77C\uACE0\uB9CC \uC54C\uB9AC\uACE0 \uC774\uB984\uC744 \uC77D\uC5B4 \uC90D\uB2C8\uB2E4. \uC774\uB984\uC774 \uC5C6\uC73C\uBA74 \uC9C0\uB3C4\uC778\uC9C0 \uACB0\uC81C\uCC3D\uC778\uC9C0 \uC601\uC0C1\uC778\uC9C0 \uB4E4\uC5B4\uAC00 \uBCF4\uAE30 \uC804\uC5D0\uB294 \uC54C \uC218 \uC5C6\uC5B4\uC11C, \uD504\uB808\uC784\uC744 \uAC74\uB108\uB6F8\uC9C0 \uD310\uB2E8\uD558\uC9C0 \uBABB\uD569\uB2C8\uB2E4.',
+    fix: 'iframe \uC5D0 \uC548\uC758 \uB0B4\uC6A9\uC744 \uC124\uBA85\uD558\uB294 title \uC744 \uBD99\uC774\uC138\uC694. \uC7A5\uC2DD\uC6A9\uC774\uB77C\uBA74 \uBCF4\uC870 \uAE30\uC220\uC774 \uAC74\uB108\uB6F0\uB3C4\uB85D aria-hidden \uACFC tabindex="-1" \uC744 \uD568\uAED8 \uC4F0\uC138\uC694.',
+    code: '<iframe src="https://maps.example/\u2026" title="\uB9E4\uC7A5 \uC704\uCE58 \uC9C0\uB3C4"></iframe>'
+  },
+  "aria-hidden-focus": {
+    category: "keyboard",
+    title: "\uC228\uAE34 \uC694\uC18C(aria-hidden) \uC548\uC5D0 \uD0A4\uBCF4\uB4DC\uB85C \uAC08 \uC218 \uC788\uB294 \uAC83\uC774 \uC788\uC5B4\uC694",
+    bubble: "\uC228\uAE34 \uACF3\uC5D0 \uD3EC\uCEE4\uC2A4\uAC00 \uAC00\uC694!",
+    problem: 'aria-hidden="true" \uC778 \uC694\uC18C\uAC00 \uB9C1\uD06C\xB7\uBC84\uD2BC\xB7\uC785\uB825\uCE78\uC744 \uD488\uACE0 \uC788\uC5B4\uC11C Tab \uD0A4\uB85C \uB4E4\uC5B4\uAC08 \uC218 \uC788\uC2B5\uB2C8\uB2E4.',
+    why: '\uD654\uBA74 \uC77D\uAE30 \uD504\uB85C\uADF8\uB7A8\uC5D0\uAC8C\uB294 \uC228\uACBC\uB294\uB370 \uD0A4\uBCF4\uB4DC \uD3EC\uCEE4\uC2A4\uB294 \uAC08 \uC218 \uC788\uC73C\uBA74, \uC0AC\uC6A9\uC790\uB294 "\uC544\uBB34\uAC83\uB3C4 \uC5C6\uB294 \uACF3"\uC5D0\uC11C \uD3EC\uCEE4\uC2A4\uAC00 \uBA48\uCD94\uB294 \uACBD\uD5D8\uC744 \uD569\uB2C8\uB2E4. \uC5B4\uB514\uC5D0 \uC788\uB294\uC9C0\uB3C4, \uBB34\uC5C7\uC744 \uB204\uB974\uB294\uC9C0\uB3C4 \uC54C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uB2EB\uD78C \uBA54\uB274\xB7\uBAA8\uB2EC \uB4A4 \uBC30\uACBD\uC5D0\uC11C \uD754\uD788 \uC0DD\uAE41\uB2C8\uB2E4.',
+    fix: '\uC228\uAE38 \uAC70\uBA74 \uD3EC\uCEE4\uC2A4\uB3C4 \uB9C9\uC73C\uC138\uC694: inert \uC18D\uC131(\uB610\uB294 hidden/display:none)\uC744 \uC4F0\uAC70\uB098, \uC548\uC758 \uC694\uC18C\uC5D0 tabindex="-1" \uC744 \uC8FC\uC138\uC694. \uBCF4\uC5EC\uC57C \uD558\uB294 \uAC83\uC774\uBA74 aria-hidden \uC744 \uBE7C\uC138\uC694.',
+    code: '<!-- \u2717 --> <div aria-hidden="true"><button>\uB2EB\uAE30</button></div>\n<!-- \u2713 --> <div inert hidden><button>\uB2EB\uAE30</button></div>'
+  },
+  "empty-heading": {
+    category: "screenreader",
+    title: "\uB0B4\uC6A9\uC774 \uC5C6\uB294 \uC81C\uBAA9(h1~h6)\uC774 \uC788\uC5B4\uC694",
+    bubble: "\uC81C\uBAA9 \uD0DC\uADF8\uAC00 \uBE44\uC5B4 \uC788\uC5B4\uC694!",
+    problem: '<h1>~<h6> \uB610\uB294 role="heading" \uC694\uC18C\uC5D0 \uC77D\uC744 \uC218 \uC788\uB294 \uAE00\uC790\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.',
+    why: '\uC2A4\uD06C\uB9B0 \uB9AC\uB354 \uC0AC\uC6A9\uC790\uB294 \uC81C\uBAA9 \uBAA9\uB85D\uC73C\uB85C \uD398\uC774\uC9C0\uB97C \uD6D1\uC5B4 \uC774\uB3D9\uD569\uB2C8\uB2E4. \uBE48 \uC81C\uBAA9\uC740 \uBAA9\uB85D\uC5D0 "\uC81C\uBAA9" \uC18C\uB9AC\uB9CC \uB098\uB294 \uBE48\uCE78\uC73C\uB85C \uB07C\uC5B4\uB4E4\uC5B4 \uAD6C\uC870\uB97C \uD5F7\uAC08\uB9AC\uAC8C \uD569\uB2C8\uB2E4. \uAE00\uC790 \uD06C\uAE30\uB9CC \uD0A4\uC6B0\uB824\uACE0 \uC81C\uBAA9 \uD0DC\uADF8\uB97C \uC4F8 \uB54C \uC790\uC8FC \uC0DD\uAE41\uB2C8\uB2E4.',
+    fix: "\uC81C\uBAA9\uC5D0\uB294 \uAE00\uC790\uB97C \uB123\uACE0, \uBAA8\uC591\uB9CC \uD544\uC694\uD558\uBA74 CSS \uB97C \uC4F0\uC138\uC694. \uC544\uC774\uCF58 \uC81C\uBAA9\uC774\uB77C\uBA74 aria-label \uC774\uB098 \uC774\uBBF8\uC9C0 alt \uB85C \uC774\uB984\uC744 \uC8FC\uC138\uC694.",
+    code: "<!-- \u2717 --> <h2></h2>\n<!-- \u2713 --> <h2>\uBC30\uC1A1 \uC815\uBCF4</h2>"
+  },
+  "landmark-main": {
+    category: "keyboard",
+    title: "\uD398\uC774\uC9C0\uC5D0 \uBCF8\uBB38 \uC601\uC5ED(main)\uC774 \uC5C6\uC5B4\uC694",
+    bubble: "<main> \uC601\uC5ED\uC774 \uC5C6\uC5B4\uC694!",
+    problem: '\uBB38\uC11C\uC5D0 <main> \uC774\uB098 role="main" \uC774 \uC5C6\uC2B5\uB2C8\uB2E4.',
+    why: '\uC2A4\uD06C\uB9B0 \uB9AC\uB354\uC640 \uD0A4\uBCF4\uB4DC \uC0AC\uC6A9\uC790\uB294 "\uBCF8\uBB38\uC73C\uB85C \uBC14\uB85C \uAC00\uAE30"\uB85C \uBA54\uB274\uB97C \uAC74\uB108\uB701\uB2C8\uB2E4. main \uC774 \uC5C6\uC73C\uBA74 \uB9E4 \uD398\uC774\uC9C0\uB9C8\uB2E4 \uBA38\uB9AC\uB9D0\xB7\uBA54\uB274\uB97C \uCC98\uC74C\uBD80\uD130 \uB2E4 \uC9C0\uB098\uC57C \uBCF8\uBB38\uC5D0 \uB2FF\uC2B5\uB2C8\uB2E4. \uB208\uC73C\uB85C \uBCF4\uB294 \uC0AC\uB78C\uC774 \uB85C\uACE0\uB97C \uAC74\uB108\uB6F0\uB294 \uAC83\uACFC \uAC19\uC740 \uD3B8\uC758\uC785\uB2C8\uB2E4.',
+    fix: "\uD398\uC774\uC9C0\uC758 \uD575\uC2EC \uB0B4\uC6A9\uC744 <main> \uD558\uB098\uB85C \uAC10\uC2F8\uC138\uC694(\uD398\uC774\uC9C0\uB2F9 \uD558\uB098). \uBA38\uB9AC\uB9D0\uC740 <header>, \uBA54\uB274\uB294 <nav>, \uBC14\uB2E5\uAE00\uC740 <footer> \uB97C \uC4F0\uBA74 \uB354 \uC88B\uC2B5\uB2C8\uB2E4.",
+    code: "<header>\u2026</header>\n<nav>\u2026</nav>\n<main>\n  <h1>\uD398\uC774\uC9C0 \uC81C\uBAA9</h1>\n  \u2026\n</main>"
+  },
+  "autoplay-media": {
+    category: "cognitive",
+    title: "\uC18C\uB9AC\uAC00 \uB098\uB294 \uC601\uC0C1\xB7\uC624\uB514\uC624\uAC00 \uC800\uC808\uB85C \uC7AC\uC0DD\uB3FC\uC694",
+    bubble: "\uC18C\uB9AC\uAC00 \uC800\uC808\uB85C \uC7AC\uC0DD\uB3FC\uC694!",
+    problem: "autoplay \uC778 <video>\xB7<audio> \uC5D0 muted \uAC00 \uC5C6\uC5B4\uC11C \uD398\uC774\uC9C0\uAC00 \uC5F4\uB9AC\uBA74 \uC18C\uB9AC\uAC00 \uB0A9\uB2C8\uB2E4.",
+    why: "\uC2A4\uD06C\uB9B0 \uB9AC\uB354 \uC18C\uB9AC\uC640 \uACB9\uCCD0\uC11C \uC548\uB0B4\uAC00 \uB4E4\uB9AC\uC9C0 \uC54A\uAC8C \uB418\uACE0, \uC18C\uB9AC\uB97C \uBA48\uCD94\uB294 \uBC29\uBC95\uC744 \uCC3E\uAE30 \uC804\uAE4C\uC9C0 \uD398\uC774\uC9C0\uB97C \uC4F8 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uC870\uC6A9\uD55C \uACF3\uC774\uB098 \uACF5\uACF5\uC7A5\uC18C\uC5D0\uC11C\uB294 \uBAA8\uB450\uC5D0\uAC8C \uBD88\uD3B8\uD569\uB2C8\uB2E4. 3\uCD08 \uB118\uAC8C \uB098\uB294 \uC18C\uB9AC\uB294 \uBA48\uCD94\uAC70\uB098 \uB04C \uC218 \uC788\uC5B4\uC57C \uD569\uB2C8\uB2E4.",
+    fix: "\uC790\uB3D9 \uC7AC\uC0DD\uC740 \uC18C\uB9AC \uC5C6\uC774(muted) \uD558\uACE0, \uC18C\uB9AC\uAC00 \uD544\uC694\uD558\uBA74 \uC0AC\uC6A9\uC790\uAC00 \uC7AC\uC0DD \uBC84\uD2BC\uC744 \uB20C\uB7EC \uC2DC\uC791\uD558\uAC8C \uD558\uC138\uC694. controls \uB97C \uB2EC\uC544 \uBA48\uCD9C \uC218 \uC788\uAC8C \uD558\uC138\uC694.",
+    code: '<video autoplay muted loop playsinline controls src="/intro.mp4"></video>'
+  },
+  "aria-broken-ref": {
+    category: "screenreader",
+    title: "\uC774\uB984\uC774 \uAC00\uB9AC\uD0A4\uB294 \uACF3(id)\uC774 \uC5C6\uC5B4\uC694",
+    bubble: "\uAC00\uB9AC\uD0A4\uB294 id \uAC00 \uC5C6\uC5B4\uC694!",
+    problem: "aria-labelledby\xB7aria-describedby \uB610\uB294 label \uC758 for \uAC00 \uBB38\uC11C\uC5D0 \uC5C6\uB294 id \uB97C \uAC00\uB9AC\uD0B5\uB2C8\uB2E4.",
+    why: "\uC774\uB984\uACFC \uC124\uBA85\uC774 \uC5F0\uACB0\uB418\uC9C0 \uC54A\uC544\uC11C \uC785\uB825\uCE78\uC774 \uC774\uB984 \uC5C6\uC774 \uC77D\uD799\uB2C8\uB2E4. id \uB97C \uBC14\uAFB8\uAC70\uB098 \uC694\uC18C\uB97C \uC9C0\uC6B0\uBA74\uC11C \uC5F0\uACB0\uC744 \uB193\uCCE4\uC744 \uB54C \uC870\uC6A9\uD788 \uC0DD\uAE30\uB294 \uBB38\uC81C\uB77C \uB208\uC73C\uB85C\uB294 \uBCF4\uC774\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
+    fix: "\uAC00\uB9AC\uD0A4\uB294 id \uAC00 \uC2E4\uC81C\uB85C \uC788\uB294\uC9C0 \uD655\uC778\uD558\uACE0, \uC774\uB984\uC744 \uBC14\uAFE8\uB2E4\uBA74 \uC5F0\uACB0\uB3C4 \uAC19\uC774 \uBC14\uAFB8\uC138\uC694. \uC5F0\uACB0\uC774 \uD544\uC694 \uC5C6\uB2E4\uBA74 \uC18D\uC131\uC744 \uC9C0\uC6B0\uC138\uC694.",
+    code: '<label for="email">\uC774\uBA54\uC77C</label>\n<input id="email" type="email" />   <!-- id \uAC00 \uAC19\uC544\uC57C \uC5F0\uACB0\uB429\uB2C8\uB2E4 -->'
+  },
+  "nested-interactive": {
+    category: "keyboard",
+    title: "\uBC84\uD2BC\xB7\uB9C1\uD06C \uC548\uC5D0 \uB610 \uBC84\uD2BC\xB7\uB9C1\uD06C\uAC00 \uB4E4\uC5B4 \uC788\uC5B4\uC694",
+    bubble: "\uBC84\uD2BC \uC548\uC5D0 \uBC84\uD2BC\uC774 \uC788\uC5B4\uC694!",
+    problem: "<a href>\xB7<button> \uC548\uC5D0 \uB2E4\uB978 \uB9C1\uD06C\xB7\uBC84\uD2BC\xB7\uC785\uB825\uCE78\uC774 \uC911\uCCA9\uB3FC \uC788\uC2B5\uB2C8\uB2E4.",
+    why: "\uBCF4\uC870 \uAE30\uC220\uC774 \uC548\uCABD \uC694\uC18C\uB97C \uC77D\uC9C0 \uBABB\uD558\uAC70\uB098 \uD55C \uBC88\uC5D0 \uB450 \uAC1C\uB97C \uB204\uB978 \uAC83\uCC98\uB7FC \uB3D9\uC791\uD569\uB2C8\uB2E4. HTML \uADDC\uACA9\uC5D0\uC11C\uB3C4 \uD5C8\uC6A9\uB418\uC9C0 \uC54A\uB294 \uAD6C\uC870\uC774\uACE0, \uBE0C\uB77C\uC6B0\uC800\uB9C8\uB2E4 \uB2E4\uB974\uAC8C \uD574\uC11D\uD574\uC11C \uD0A4\uBCF4\uB4DC\xB7\uD130\uCE58\uC5D0\uC11C \uC624\uC791\uB3D9\uD569\uB2C8\uB2E4.",
+    fix: "\uB450 \uAC1C\uB97C \uB098\uB780\uD788 \uB450\uACE0 CSS \uB85C \uACB9\uCCD0 \uBCF4\uC774\uAC8C \uD558\uC138\uC694. \uCE74\uB4DC \uC804\uCCB4\uB97C \uB204\uB974\uAC8C \uD558\uB824\uBA74 \uBC14\uAE65 \uB9C1\uD06C \uD558\uB098\uB9CC \uB450\uACE0 \uC548\uCABD \uB3D9\uC791\uC740 \uB530\uB85C \uBE7C\uC138\uC694.",
+    code: '<!-- \u2717 --> <a href="/p"><button>\uB2F4\uAE30</button></a>\n<!-- \u2713 --> <a href="/p">\uC0C1\uD488 \uBCF4\uAE30</a> <button>\uB2F4\uAE30</button>'
+  },
+  "autocomplete-missing": {
+    category: "cognitive",
+    title: "\uC774\uB984\xB7\uC774\uBA54\uC77C\xB7\uC804\uD654 \uC785\uB825\uCE78\uC5D0 \uC790\uB3D9 \uC644\uC131(autocomplete)\uC774 \uC5C6\uC5B4\uC694",
+    bubble: "\uC790\uB3D9 \uC644\uC131 \uC18D\uC131\uC774 \uC5C6\uC5B4\uC694!",
+    problem: "\uC774\uBA54\uC77C\xB7\uC804\uD654\xB7\uC774\uB984\xB7\uC8FC\uC18C \uAC19\uC740 \uAC1C\uC778 \uC815\uBCF4\uB97C \uBC1B\uB294 \uC785\uB825\uCE78\uC5D0 autocomplete \uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    why: "\uC190\uC774 \uBD88\uD3B8\uD558\uAC70\uB098 \uD0C0\uC774\uD551\uC774 \uC5B4\uB835\uAC70\uB098 \uAE30\uC5B5\uD558\uAE30 \uD798\uB4E0 \uC0AC\uB78C\uC774 \uC800\uC7A5\uB41C \uAC12\uC744 \uD55C \uBC88\uC5D0 \uCC44\uC6B8 \uC218 \uC788\uAC8C \uD558\uB294 \uC811\uADFC\uC131 \uAE30\uC900\uC785\uB2C8\uB2E4(WCAG 1.3.5). \uBAA8\uB450\uC5D0\uAC8C\uB3C4 \uAC00\uC785\xB7\uACB0\uC81C \uC785\uB825\uC774 \uD6E8\uC52C \uBE68\uB77C\uC9D1\uB2C8\uB2E4.",
+    fix: "\uC785\uB825 \uBAA9\uC801\uC5D0 \uB9DE\uB294 autocomplete \uAC12\uC744 \uC4F0\uC138\uC694: email, tel, name, given-name, family-name, street-address, postal-code \u2026",
+    code: '<input type="email" name="email" autocomplete="email" />\n<input name="phone" type="tel" autocomplete="tel" />'
+  },
+  "meta-refresh": {
+    category: "cognitive",
+    title: "\uD398\uC774\uC9C0\uAC00 \uC800\uC808\uB85C \uC0C8\uB85C\uACE0\uCE68\xB7\uC774\uB3D9\uB3FC\uC694(meta refresh)",
+    bubble: "\uC800\uC808\uB85C \uC0C8\uB85C\uACE0\uCE68\uB3FC\uC694!",
+    problem: '<meta http-equiv="refresh"> \uAC00 \uBA87 \uCD08 \uB4A4 \uD398\uC774\uC9C0\uB97C \uB2E4\uC2DC \uBD88\uB7EC\uC624\uAC70\uB098 \uB2E4\uB978 \uACF3\uC73C\uB85C \uBCF4\uB0C5\uB2C8\uB2E4.',
+    why: "\uB0B4\uC6A9\uC744 \uCC9C\uCC9C\uD788 \uC77D\uB294 \uC0AC\uB78C, \uC2A4\uD06C\uB9B0 \uB9AC\uB354 \uC0AC\uC6A9\uC790, \uD0A4\uBCF4\uB4DC\uB85C \uC774\uB3D9\uD558\uB294 \uC0AC\uB78C\uC740 \uC2DC\uAC04\uC774 \uB2E4 \uB418\uAE30 \uC804\uC5D0 \uB05D\uB0B4\uC9C0 \uBABB\uD558\uACE0 \uC77D\uB358 \uC790\uB9AC\uC5D0\uC11C \uCAD3\uACA8\uB0A9\uB2C8\uB2E4. \uC2DC\uAC04 \uC81C\uD55C\uC740 \uBA48\uCD94\uAC70\uB098 \uB298\uB9B4 \uC218 \uC788\uC5B4\uC57C \uD569\uB2C8\uB2E4.",
+    fix: "\uC790\uB3D9 \uC774\uB3D9 \uB300\uC2E0 \uB9C1\uD06C\uB098 \uBC84\uD2BC\uC744 \uB450\uACE0 \uC0AC\uC6A9\uC790\uAC00 \uC9C1\uC811 \uC774\uB3D9\uD558\uAC8C \uD558\uC138\uC694. \uC989\uC2DC \uC774\uB3D9(0\uCD08)\uC774 \uD544\uC694\uD558\uBA74 \uC11C\uBC84 \uB9AC\uB2E4\uC774\uB809\uD2B8(301/302)\uB97C \uC4F0\uC138\uC694.",
+    code: '<!-- \u2717 --> <meta http-equiv="refresh" content="5; url=/home">\n<!-- \u2713 --> <a href="/home">\uD648\uC73C\uB85C \uC774\uB3D9</a>'
+  },
+  "focus-outline": {
+    category: "keyboard",
+    title: "\uD3EC\uCEE4\uC2A4 \uD45C\uC2DC\uB97C \uC5C6\uC560 \uB193\uACE0 \uB300\uC2E0\uD558\uB294 \uD45C\uC2DC\uAC00 \uC5C6\uC5B4\uC694",
+    bubble: "\uD3EC\uCEE4\uC2A4 \uD45C\uC2DC\uAC00 \uC0AC\uB77C\uC84C\uC5B4\uC694!",
+    problem: "CSS \uC5D0\uC11C :focus \uC77C \uB54C outline \uC744 none/0 \uC73C\uB85C \uC9C0\uC6E0\uB294\uB370, \uD14C\uB450\uB9AC\xB7\uADF8\uB9BC\uC790\xB7\uBC30\uACBD \uAC19\uC740 \uB300\uCCB4 \uD45C\uC2DC\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    why: "\uD0A4\uBCF4\uB4DC\uB85C \uC774\uB3D9\uD558\uB294 \uC0AC\uB78C\uC740 \uC9C0\uAE08 \uD3EC\uCEE4\uC2A4\uAC00 \uC5B4\uB514\uC5D0 \uC788\uB294\uC9C0 \uBCF4\uC5EC \uC8FC\uB294 \uD14C\uB450\uB9AC\uAC00 \uC720\uC77C\uD55C \uAE38\uC7A1\uC774\uC785\uB2C8\uB2E4. \uC774\uAC83\uC744 \uC9C0\uC6B0\uBA74 Tab \uC744 \uB20C\uB7EC\uB3C4 \uD654\uBA74\uC758 \uC5B4\uB514\uAC00 \uC120\uD0DD\uB410\uB294\uC9C0 \uC54C \uC218 \uC5C6\uC5B4 \uAE38\uC744 \uC783\uC2B5\uB2C8\uB2E4(WCAG 2.4.7). \uB514\uC790\uC778\uC774 \uD22C\uBC15\uD574 \uBCF4\uC778\uB2E4\uACE0 \uC9C0\uC6B0\uB294 \uACBD\uC6B0\uAC00 \uB9CE\uC2B5\uB2C8\uB2E4.",
+    fix: "outline \uC744 \uC9C0\uC6B0\uC9C0 \uB9D0\uACE0 \uB514\uC790\uC778\uC5D0 \uB9DE\uAC8C \uBC14\uAFB8\uC138\uC694. \uB9C8\uC6B0\uC2A4 \uD074\uB9AD\uC5D0\uB294 \uC548 \uBCF4\uC774\uACE0 \uD0A4\uBCF4\uB4DC\uC5D0\uB9CC \uBCF4\uC774\uAC8C \uD558\uB824\uBA74 :focus-visible \uC744 \uC4F0\uC138\uC694. \uB300\uBE44\uB294 \uC8FC\uBCC0\uACFC 3:1 \uC774\uC0C1\uC774 \uC88B\uC2B5\uB2C8\uB2E4.",
+    code: ":focus-visible {\n  outline: 3px solid #2563eb;\n  outline-offset: 2px;\n}\n/* \u2717 */ button:focus { outline: none; }"
+  },
+  "role-no-focus": {
+    category: "keyboard",
+    title: "role \uC740 \uBC84\uD2BC\uC778\uB370 \uD0A4\uBCF4\uB4DC\uB85C \uAC08 \uC218 \uC5C6\uC5B4\uC694",
+    bubble: "role \uC740 \uC788\uB294\uB370 Tab \uC774 \uC548 \uB3FC\uC694!",
+    problem: 'div\xB7span \uC5D0 role="button"(link\xB7checkbox\xB7switch \uB4F1)\uC744 \uC92C\uC9C0\uB9CC tabindex \uAC00 \uC5C6\uC5B4\uC11C Tab \uD0A4\uB85C \uD3EC\uCEE4\uC2A4\uAC00 \uAC00\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.',
+    why: 'role \uC740 "\uC774\uAC83\uC740 \uBC84\uD2BC\uC774\uC5D0\uC694"\uB77C\uACE0 \uC77D\uC5B4 \uC8FC\uAE30\uB9CC \uD560 \uBFD0 \uD0A4\uBCF4\uB4DC \uB3D9\uC791\uC740 \uB9CC\uB4E4\uC5B4 \uC8FC\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uC2A4\uD06C\uB9B0 \uB9AC\uB354\uB294 \uBC84\uD2BC\uC774\uB77C\uACE0 \uC77D\uB294\uB370 \uD0A4\uBCF4\uB4DC\uB85C\uB294 \uB204\uB97C \uC218\uB3C4 \uC5C6\uB294 \uBAA8\uC21C\uC774 \uC0DD\uAE41\uB2C8\uB2E4. \uC9C1\uC811 Enter\xB7Space \uCC98\uB9AC\uAE4C\uC9C0 \uD574 \uC918\uC57C \uD558\uB294 \uC77C\uC774 \uB9CE\uC544\uC838\uC11C \uC704\uD5D8\uD569\uB2C8\uB2E4.',
+    fix: '\uAC00\uB2A5\uD558\uBA74 \uC9C4\uC9DC <button>\xB7<a> \uB97C \uC4F0\uC138\uC694. \uAF2D div \uC5EC\uC57C \uD558\uBA74 tabindex="0" \uACFC Enter\xB7Space \uD0A4 \uCC98\uB9AC\uB97C \uD568\uAED8 \uB123\uC73C\uC138\uC694.',
+    code: '<!-- \u2717 --> <div role="button" onclick="save()">\uC800\uC7A5</div>\n<!-- \u2713 --> <button type="button" onclick="save()">\uC800\uC7A5</button>'
+  },
+  "scroll-no-focus": {
+    category: "keyboard",
+    title: "\uC2A4\uD06C\uB864\uB418\uB294 \uC601\uC5ED\uC744 \uD0A4\uBCF4\uB4DC\uB85C \uC6C0\uC9C1\uC77C \uC218 \uC5C6\uC5B4\uC694",
+    bubble: "\uC2A4\uD06C\uB864 \uC601\uC5ED\uC5D0 Tab \uC774 \uC548 \uAC00\uC694!",
+    problem: "\uB0B4\uC6A9\uC774 \uB118\uCCD0\uC11C \uC2A4\uD06C\uB864\uB418\uB294 \uC601\uC5ED\uC778\uB370 \uC548\uC5D0 \uD3EC\uCEE4\uC2A4\uAC00 \uAC08 \uC218 \uC788\uB294 \uC694\uC18C\uB3C4 tabindex \uB3C4 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    why: "\uB9C8\uC6B0\uC2A4 \uD720\uC744 \uC4F8 \uC218 \uC5C6\uB294 \uC0AC\uB78C\uC740 \uD3EC\uCEE4\uC2A4\uB97C \uC601\uC5ED\uC5D0 \uB450\uACE0 \uD654\uC0B4\uD45C\xB7PageDown \uC73C\uB85C \uC2A4\uD06C\uB864\uD569\uB2C8\uB2E4. \uC601\uC5ED\uC774 \uD3EC\uCEE4\uC2A4\uB97C \uBABB \uBC1B\uC73C\uBA74 \uB118\uCE5C \uB0B4\uC6A9\uC744 \uC601\uC601 \uBCFC \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uCF54\uB4DC \uBE14\uB85D\xB7\uD45C\xB7\uCC44\uD305 \uBAA9\uB85D\uC5D0\uC11C \uC790\uC8FC \uC0DD\uAE41\uB2C8\uB2E4.",
+    fix: '\uC2A4\uD06C\uB864 \uC601\uC5ED\uC5D0 tabindex="0" \uC744 \uC8FC\uACE0 role \uACFC \uC774\uB984(aria-label)\uC744 \uBD99\uC774\uC138\uC694. \uC548\uC5D0 \uB9C1\uD06C\xB7\uBC84\uD2BC\uC774 \uC788\uC73C\uBA74 \uADF8\uCABD\uC73C\uB85C \uCDA9\uBD84\uD569\uB2C8\uB2E4.',
+    code: '<div tabindex="0" role="region" aria-label="\uC8FC\uBB38 \uB0B4\uC5ED" style="overflow:auto; height:200px">\u2026</div>'
+  },
+  "fake-link": {
+    category: "keyboard",
+    title: '\uC774\uB3D9\uD558\uC9C0 \uC54A\uB294 \uAC00\uC9DC \uB9C1\uD06C\uC608\uC694 (href="#")',
+    bubble: "\uAC00\uC9DC \uB9C1\uD06C\uAC00 \uC788\uC5B4\uC694!",
+    problem: '<a href="#"> \uB610\uB294 href="javascript:\u2026" \uB9C1\uD06C\uB77C\uC11C \uB20C\uB7EC\uB3C4 \uB2E4\uB978 \uD398\uC774\uC9C0\uB85C \uC774\uB3D9\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.',
+    why: '\uC2A4\uD06C\uB9B0 \uB9AC\uB354\uB294 "\uB9C1\uD06C"\uB77C\uACE0 \uC77D\uB294\uB370 \uC2E4\uC81C\uB85C\uB294 \uB3D9\uC791\uC744 \uC2E4\uD589\uD558\uB294 \uBC84\uD2BC\uC774\uB77C \uAE30\uB300\uC640 \uB2E4\uB985\uB2C8\uB2E4. \uD0A4\uBCF4\uB4DC\uC5D0\uC11C\uB3C4 Space \uAC00 \uC548 \uBA39\uACE0, \uB204\uB974\uBA74 \uD398\uC774\uC9C0 \uB9E8 \uC704\uB85C \uD280\uAE30\uB3C4 \uD569\uB2C8\uB2E4. \uC911\uAC04 \uD074\uB9AD\xB7\uC0C8 \uD0ED \uC5F4\uAE30\uB3C4 \uC774\uC0C1\uD558\uAC8C \uB3D9\uC791\uD569\uB2C8\uB2E4.',
+    fix: '\uC774\uB3D9\uC774 \uC544\uB2C8\uB77C \uB3D9\uC791\uC774\uBA74 <button type="button"> \uC744 \uC4F0\uC138\uC694. \uC774\uB3D9\uC774\uBA74 \uC9C4\uC9DC \uC8FC\uC18C\uB97C href \uC5D0 \uC4F0\uC138\uC694.',
+    code: '<!-- \u2717 --> <a href="#" onclick="openMenu()">\uBA54\uB274</a>\n<!-- \u2713 --> <button type="button" onclick="openMenu()">\uBA54\uB274</button>'
+  },
+  "link-color-only": {
+    category: "vision",
+    title: "\uAE00 \uC18D \uB9C1\uD06C\uAC00 \uC0C9\uAE54\uB85C\uB9CC \uAD6C\uBD84\uB3FC\uC694",
+    bubble: "\uB9C1\uD06C\uAC00 \uC0C9\uC73C\uB85C\uB9CC \uAD6C\uBD84\uB3FC\uC694!",
+    problem: "\uBB38\uC7A5 \uC548\uC758 \uB9C1\uD06C\uAC00 \uBC11\uC904\xB7\uAD75\uAE30 \uAC19\uC740 \uB2E4\uB978 \uD45C\uC2DC \uC5C6\uC774, \uC8FC\uBCC0 \uAE00\uC790\uC640 3:1 \uBCF4\uB2E4 \uBE44\uC2B7\uD55C \uC0C9\uC73C\uB85C\uB9CC \uAD6C\uBD84\uB429\uB2C8\uB2E4.",
+    why: "\uC0C9\uC57D\xB7\uC0C9\uB9F9\uC774 \uC788\uB294 \uC0AC\uB78C\uC774\uB098 \uD751\uBC31 \uD654\uBA74, \uD587\uBE5B \uC544\uB798 \uD654\uBA74\uC5D0\uC11C\uB294 \uB9C1\uD06C\uAC00 \uC77C\uBC18 \uAE00\uC790\uC640 \uB611\uAC19\uC544 \uBCF4\uC785\uB2C8\uB2E4. \uC0C9\uB9CC\uC73C\uB85C \uC815\uBCF4\uB97C \uC804\uB2EC\uD558\uBA74 \uC548 \uB41C\uB2E4\uB294 \uAE30\uC900\uC785\uB2C8\uB2E4(WCAG 1.4.1).",
+    fix: "\uB9C1\uD06C\uC5D0 \uBC11\uC904\uC744 \uC720\uC9C0\uD558\uC138\uC694(\uAE30\uBCF8\uAC12\uC785\uB2C8\uB2E4). \uBC11\uC904\uC744 \uC5C6\uC574\uB2E4\uBA74 \uAD75\uAE30\xB7\uD14C\uB450\uB9AC \uAC19\uC740 \uB450 \uBC88\uC9F8 \uB2E8\uC11C\uB97C \uC8FC\uAC70\uB098, \uC0C9 \uB300\uBE44\uB97C \uC8FC\uBCC0 \uAE00\uC790\uC640 3:1 \uC774\uC0C1\uC73C\uB85C \uB9CC\uB4DC\uC138\uC694.",
+    code: "a { text-decoration: underline; }\n/* \uBB38\uC7A5 \uC18D \uB9C1\uD06C\uC5D0\uB294 \uBC11\uC904\uC774 \uAC00\uC7A5 \uD655\uC2E4\uD569\uB2C8\uB2E4 */"
+  },
+  "text-small": {
+    category: "vision",
+    title: "\uAE00\uC790\uAC00 \uB108\uBB34 \uC791\uC544\uC694 (12px \uBBF8\uB9CC)",
+    bubble: "\uAE00\uC790\uAC00 \uB108\uBB34 \uC791\uC544\uC694!",
+    problem: "\uD654\uBA74\uC5D0 \uBCF4\uC774\uB294 \uAE00\uC790\uC758 \uD06C\uAE30\uAC00 12px \uBCF4\uB2E4 \uC791\uC2B5\uB2C8\uB2E4.",
+    why: "\uC800\uC2DC\uB825 \uC0AC\uC6A9\uC790\uC640 \uB098\uC774\uAC00 \uB4E0 \uC0AC\uC6A9\uC790\uB294 \uC791\uC740 \uAE00\uC790\uB97C \uC77D\uAE30 \uC5B4\uB835\uACE0, \uBAA8\uBC14\uC77C\uC5D0\uC11C\uB294 \uB354 \uC2EC\uD569\uB2C8\uB2E4. \uC791\uC740 \uAE00\uC790\uC5D0 \uC5F0\uD55C \uC0C9\uAE4C\uC9C0 \uACB9\uCE58\uBA74 \uC0AC\uC2E4\uC0C1 \uC77D\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uBE0C\uB77C\uC6B0\uC800 \uD655\uB300\uB97C \uB9C9\uC544 \uB450\uC5C8\uB2E4\uBA74 \uB354 \uD070 \uBB38\uC81C\uC785\uB2C8\uB2E4.",
+    fix: "\uBCF8\uBB38\uC740 16px(1rem) \uC548\uD30E, \uBCF4\uC870 \uAE00\uC790\uB3C4 12px \uC774\uC0C1\uC73C\uB85C \uD558\uC138\uC694. px \uB300\uC2E0 rem \uC744 \uC4F0\uBA74 \uC0AC\uC6A9\uC790\uAC00 \uC815\uD55C \uAE30\uBCF8 \uAE00\uC790 \uD06C\uAE30\uB97C \uB530\uB77C\uAC11\uB2C8\uB2E4.",
+    code: "body { font-size: 1rem; }\n.caption { font-size: 0.8125rem; } /* 13px */"
+  },
+  "reduced-motion": {
+    category: "cognitive",
+    title: '\uACC4\uC18D \uC6C0\uC9C1\uC774\uB294 \uD6A8\uACFC\uC778\uB370 "\uC6C0\uC9C1\uC784 \uC904\uC774\uAE30" \uC124\uC815\uC744 \uC9C0\uCF1C \uC8FC\uC9C0 \uC54A\uC544\uC694',
+    bubble: "\uC6C0\uC9C1\uC784 \uC904\uC774\uAE30\uAC00 \uC5C6\uC5B4\uC694!",
+    problem: "\uBB34\uD55C \uBC18\uBCF5(infinite) \uC560\uB2C8\uBA54\uC774\uC158\uC774 \uC788\uB294\uB370 prefers-reduced-motion \uCC98\uB9AC\uAC00 CSS \uC5B4\uB514\uC5D0\uB3C4 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    why: '\uC6C0\uC9C1\uC784\uC5D0 \uBBFC\uAC10\uD55C \uC0AC\uB78C(\uC5B4\uC9C0\uB7FC\uC99D\xB7\uBA40\uBBF8\xB7\uC9D1\uC911\uC7A5\uC560)\uC740 \uC6B4\uC601\uCCB4\uC81C\uC5D0\uC11C "\uC6C0\uC9C1\uC784 \uC904\uC774\uAE30"\uB97C \uCF2D\uB2C8\uB2E4. \uC774 \uC124\uC815\uC744 \uBB34\uC2DC\uD558\uBA74 \uACC4\uC18D \uD754\uB4E4\uB9AC\uB294 \uD654\uBA74 \uB54C\uBB38\uC5D0 \uD398\uC774\uC9C0\uB97C \uBCF4\uAE30 \uC5B4\uB835\uAC70\uB098 \uBAB8\uC774 \uC544\uD508 \uC0AC\uB78C\uC774 \uC788\uC2B5\uB2C8\uB2E4(WCAG 2.3.3).',
+    fix: "@media (prefers-reduced-motion: reduce) \uC548\uC5D0\uC11C \uC560\uB2C8\uBA54\uC774\uC158\uC744 \uB044\uAC70\uB098 \uC544\uC8FC \uC57D\uD558\uAC8C \uD558\uC138\uC694.",
+    code: "@media (prefers-reduced-motion: reduce) {\n  * { animation: none !important; transition: none !important; }\n}"
+  },
+  "role-img-alt": {
+    category: "screenreader",
+    title: 'role="img" \uC778 \uC694\uC18C\uC5D0 \uC124\uBA85\uC774 \uC5C6\uC5B4\uC694',
+    bubble: 'role="img" \uC5D0 \uC774\uB984\uC774 \uC5C6\uC5B4\uC694!',
+    problem: 'role="img"(\uC544\uC774\uCF58 svg\xB7CSS \uADF8\uB9BC \uB4F1)\uC778\uB370 aria-label\xB7aria-labelledby\xB7title \uC774 \uC5C6\uC2B5\uB2C8\uB2E4.',
+    why: '\uC2A4\uD06C\uB9B0 \uB9AC\uB354\uB294 "\uC774\uBBF8\uC9C0"\uB77C\uACE0\uB9CC \uC77D\uACE0 \uBB34\uC5C7\uC778\uC9C0 \uC54C\uB824 \uC8FC\uC9C0 \uBABB\uD569\uB2C8\uB2E4. img \uD0DC\uADF8\uAC00 \uC544\uB2C8\uB77C\uC11C alt \uAC80\uC0AC\uC5D0\uB3C4 \uAC78\uB9AC\uC9C0 \uC54A\uC544 \uB193\uCE58\uAE30 \uC27D\uC2B5\uB2C8\uB2E4.',
+    fix: '\uC758\uBBF8\uAC00 \uC788\uC73C\uBA74 aria-label \uB85C \uC124\uBA85\uD558\uACE0, \uC7A5\uC2DD\uC774\uBA74 role="img" \uB97C \uBE7C\uACE0 aria-hidden="true" \uB97C \uC4F0\uC138\uC694.',
+    code: '<svg role="img" aria-label="\uAC80\uC0C9"><use href="#icon-search" /></svg>\n<svg aria-hidden="true">\u2026</svg> <!-- \uC7A5\uC2DD -->'
+  },
+  "html-lang-valid": {
+    category: "screenreader",
+    title: "html lang \uAC12\uC774 \uC62C\uBC14\uB974\uC9C0 \uC54A\uC544\uC694",
+    bubble: "lang \uAC12\uC774 \uC774\uC0C1\uD574\uC694!",
+    problem: '<html lang> \uAC12\uC774 ko, en-US \uAC19\uC740 \uC62C\uBC14\uB978 \uC5B8\uC5B4 \uCF54\uB4DC\uAC00 \uC544\uB2D9\uB2C8\uB2E4(\uC608: "korean", "kr").',
+    why: "\uC2A4\uD06C\uB9B0 \uB9AC\uB354\uB294 lang \uC73C\uB85C \uC77D\uB294 \uBC1C\uC74C \uADDC\uCE59\uC744 \uACE0\uB985\uB2C8\uB2E4. \uD2C0\uB9B0 \uAC12\uC774\uBA74 \uD55C\uAD6D\uC5B4 \uBB38\uC11C\uB97C \uC601\uC5B4 \uBC1C\uC74C\uC73C\uB85C \uC77D\uB294 \uB4F1 \uC5C9\uB6B1\uD558\uAC8C \uB4E4\uB9BD\uB2C8\uB2E4. \uBC88\uC5ED \uB3C4\uAD6C\uC640 \uAC80\uC0C9\uC5D4\uC9C4\uB3C4 \uC774 \uAC12\uC744 \uCC38\uACE0\uD569\uB2C8\uB2E4.",
+    fix: "ISO \uC5B8\uC5B4 \uCF54\uB4DC\uB97C \uC4F0\uC138\uC694: \uD55C\uAD6D\uC5B4 ko, \uC601\uC5B4 en, \uBBF8\uAD6D \uC601\uC5B4 en-US.",
+    code: '<html lang="ko">   <!-- \u2717 lang="korean" / lang="kr" -->'
+  },
+  "video-captions": {
+    category: "hearing",
+    title: "\uC601\uC0C1\uC5D0 \uC790\uB9C9\uC774 \uC5C6\uC5B4\uC694",
+    bubble: "\uC601\uC0C1\uC5D0 \uC790\uB9C9\uC774 \uC5C6\uC5B4\uC694!",
+    problem: '<video> \uC5D0 <track kind="captions">(\uB610\uB294 subtitles)\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4. (\uC18C\uB9AC \uC5C6\uC774 \uC790\uB3D9 \uC7AC\uC0DD\uB418\uB294 \uC7A5\uC2DD\uC6A9 \uC601\uC0C1\uC740 \uC81C\uC678)',
+    why: "\uC18C\uB9AC\uB97C \uBABB \uB4E3\uB294 \uC0AC\uB78C, \uC18C\uB9AC\uB97C \uCF24 \uC218 \uC5C6\uB294 \uC7A5\uC18C(\uC9C0\uD558\uCCA0\xB7\uB3C4\uC11C\uAD00)\uC5D0\uC11C \uC601\uC0C1\uC744 \uBCF4\uB294 \uC0AC\uB78C\uC740 \uB0B4\uC6A9\uC744 \uC54C \uC218 \uC5C6\uC2B5\uB2C8\uB2E4. \uC790\uB9C9\uC740 \uC678\uAD6D\uC5B4 \uD559\uC2B5\uC790\uC640 \uC2DC\uB044\uB7EC\uC6B4 \uACF3\uC5D0\uC11C\uB3C4 \uB3C4\uC6C0\uC774 \uB429\uB2C8\uB2E4(WCAG 1.2.2).",
+    fix: "WebVTT \uC790\uB9C9 \uD30C\uC77C\uC744 \uB9CC\uB4E4\uC5B4 <track> \uC73C\uB85C \uBD99\uC774\uC138\uC694. \uB9D0\uC18C\uB9AC\uBFD0 \uC544\uB2C8\uB77C \uC911\uC694\uD55C \uC18C\uB9AC(\uBC15\uC218\xB7\uACBD\uACE0\uC74C)\uB3C4 \uC801\uC73C\uBA74 \uC88B\uC2B5\uB2C8\uB2E4.",
+    code: '<video controls src="/intro.mp4">\n  <track kind="captions" src="/intro.ko.vtt" srclang="ko" label="\uD55C\uAD6D\uC5B4" default />\n</video>'
+  },
+  "img-dimensions": {
+    category: "perf",
+    title: "\uC774\uBBF8\uC9C0\uC5D0 \uAC00\uB85C\xB7\uC138\uB85C \uD06C\uAE30\uAC00 \uC5C6\uC5B4\uC694",
+    bubble: "\uC774\uBBF8\uC9C0 \uD06C\uAE30\uB97C \uC548 \uC54C\uB824 \uC92C\uC5B4\uC694!",
+    problem: "<img> \uC5D0 width\xB7height \uC18D\uC131\uB3C4 aspect-ratio \uB3C4 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    why: "\uC774\uBBF8\uC9C0\uAC00 \uB2A6\uAC8C \uB3C4\uCC29\uD558\uBA74 \uADF8\uC81C\uC57C \uC790\uB9AC\uAC00 \uC0DD\uACA8\uC11C \uC544\uB798 \uB0B4\uC6A9\uC774 \uD655 \uBC00\uB824\uB0A9\uB2C8\uB2E4(CLS). \uC77D\uB2E4\uAC00 \uAE00\uC790\uAC00 \uBC00\uB824 \uC5C9\uB6B1\uD55C \uBC84\uD2BC\uC744 \uB204\uB974\uAE30\uB3C4 \uD569\uB2C8\uB2E4.",
+    fix: "width\xB7height \uC18D\uC131\uC744 \uC774\uBBF8\uC9C0\uC758 \uC2E4\uC81C \uBE44\uC728\uB85C \uC801\uC5B4 \uB450\uAC70\uB098 CSS aspect-ratio \uB85C \uC790\uB9AC\uB97C \uBBF8\uB9AC \uC7A1\uC73C\uC138\uC694.",
+    code: '<img src="/a.webp" width="800" height="450" alt="..." />\n/* \uB610\uB294 */ img { aspect-ratio: 16 / 9; }'
+  },
+  "img-lazy-below-fold": {
+    category: "perf",
+    title: "\uD654\uBA74 \uC544\uB798 \uC774\uBBF8\uC9C0\uB97C \uBBF8\uB9AC \uB2E4 \uBC1B\uC544\uC694",
+    bubble: "\uC544\uB798 \uC774\uBBF8\uC9C0\uC5D0 lazy \uAC00 \uC5C6\uC5B4\uC694!",
+    problem: '\uCCAB \uD654\uBA74\uBCF4\uB2E4 \uD55C\uCC38 \uC544\uB798\uC5D0 \uC788\uB294 \uC774\uBBF8\uC9C0\uC5D0 loading="lazy" \uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.',
+    why: "\uC544\uC9C1 \uBCF4\uC774\uC9C0\uB3C4 \uC54A\uB294 \uC774\uBBF8\uC9C0\uAE4C\uC9C0 \uD55C\uAEBC\uBC88\uC5D0 \uB0B4\uB824\uBC1B\uC544\uC11C \uCCAB \uB85C\uB529\uC774 \uB290\uB824\uC9C0\uACE0 \uB370\uC774\uD130\uAC00 \uB0AD\uBE44\uB429\uB2C8\uB2E4.",
+    fix: '\uCCAB \uD654\uBA74 \uC544\uB798 \uC774\uBBF8\uC9C0\uC5D0\uB294 loading="lazy" \uB97C \uBD99\uC774\uC138\uC694. \uB2E8, \uCCAB \uD654\uBA74\uC758 \uD070 \uC774\uBBF8\uC9C0\uC5D0\uB294 \uC4F0\uC9C0 \uB9C8\uC138\uC694.',
+    code: '<img src="/card.webp" loading="lazy" width="400" height="300" alt="..." />'
+  },
+  "render-blocking-script": {
+    category: "perf",
+    title: "\uC2A4\uD06C\uB9BD\uD2B8\uAC00 \uD654\uBA74 \uADF8\uB9AC\uAE30\uB97C \uB9C9\uACE0 \uC788\uC5B4\uC694",
+    bubble: "\uC2A4\uD06C\uB9BD\uD2B8\uAC00 \uD654\uBA74\uC744 \uB9C9\uC544\uC694!",
+    problem: '<head> \uC758 <script src> \uC5D0 async\xB7defer\xB7type="module" \uC774 \uC5C6\uC2B5\uB2C8\uB2E4.',
+    why: "\uBE0C\uB77C\uC6B0\uC800\uAC00 \uC2A4\uD06C\uB9BD\uD2B8\uB97C \uB0B4\uB824\uBC1B\uACE0 \uC2E4\uD589\uD558\uB294 \uB3D9\uC548 HTML \uC744 \uC77D\uC9C0 \uBABB\uD574\uC11C \uD654\uBA74\uC774 \uB2A6\uAC8C \uB098\uD0C0\uB0A9\uB2C8\uB2E4.",
+    fix: "\uB300\uBD80\uBD84 defer \uB97C \uBD99\uC774\uBA74 \uB429\uB2C8\uB2E4. \uC21C\uC11C\uC640 \uC0C1\uAD00\uC5C6\uB294 \uBD84\uC11D \uC2A4\uD06C\uB9BD\uD2B8\uB294 async \uB3C4 \uC88B\uC544\uC694.",
+    code: '<script src="/app.js" defer></script>'
+  },
+  "font-display-missing": {
+    category: "perf",
+    title: "\uC6F9\uD3F0\uD2B8\uC5D0 font-display \uAC00 \uC5C6\uC5B4\uC694",
+    bubble: "font-display \uAC00 \uC5C6\uC5B4\uC694!",
+    problem: "@font-face \uADDC\uCE59\uC5D0 font-display \uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    why: "\uD3F0\uD2B8\uAC00 \uC624\uAE30 \uC804\uAE4C\uC9C0 \uAE00\uC790\uAC00 \uC548 \uBCF4\uC774\uAC70\uB098(FOIT) \uD55C\uCC38 \uB4A4\uC5D0 \uBC14\uB00C\uC5B4 \uD654\uBA74\uC774 \uD754\uB4E4\uB9BD\uB2C8\uB2E4.",
+    fix: "font-display: swap \uC73C\uB85C \uBA3C\uC800 \uAE30\uBCF8 \uAE00\uAF34\uC744 \uBCF4\uC5EC \uC8FC\uACE0, \uD3F0\uD2B8\uAC00 \uC624\uBA74 \uBC14\uAFB8\uC138\uC694.",
+    code: '@font-face {\n  font-family: "Pretendard";\n  src: url(/p.woff2) format("woff2");\n  font-display: swap;\n}'
+  },
+  "large-dom": {
+    category: "perf",
+    title: "\uD654\uBA74 \uC694\uC18C(DOM)\uAC00 \uB108\uBB34 \uB9CE\uC544\uC694",
+    bubble: "\uC694\uC18C\uAC00 \uB108\uBB34 \uB9CE\uC544\uC694!",
+    problem: "\uD398\uC774\uC9C0\uC5D0 DOM \uC694\uC18C\uAC00 1,500\uAC1C\uB97C \uB118\uC2B5\uB2C8\uB2E4.",
+    why: "\uC694\uC18C\uAC00 \uB9CE\uC744\uC218\uB85D \uCC98\uC74C \uADF8\uB9AC\uAE30, \uC2A4\uD0C0\uC77C \uACC4\uC0B0, \uC2A4\uD06C\uB864\xB7\uC785\uB825 \uBC18\uC751\uC774 \uB290\uB824\uC9C0\uACE0 \uBA54\uBAA8\uB9AC\uB97C \uB9CE\uC774 \uC501\uB2C8\uB2E4.",
+    fix: "\uAE34 \uBAA9\uB85D\uC740 \uAC00\uC0C1 \uC2A4\uD06C\uB864\uB85C, \uC548 \uBCF4\uC774\uB294 \uBD80\uBD84\uC740 \uB098\uC911\uC5D0 \uADF8\uB9AC\uACE0, \uC4F8\uB370\uC5C6\uC774 \uACB9\uCE5C \uB798\uD37C div \uB97C \uC904\uC774\uC138\uC694.",
+    code: "<FixedSizeList height={400} itemCount={10000} itemSize={36}>{Row}</FixedSizeList>"
+  },
+  "multiple-h1": {
+    category: "seo",
+    title: "h1 \uC774 \uC5EC\uB7EC \uAC1C\uC608\uC694",
+    bubble: "h1 \uC774 \uB458 \uC774\uC0C1\uC774\uC5D0\uC694!",
+    problem: "\uD55C \uD398\uC774\uC9C0\uC5D0 h1 \uC774 \uB458 \uC774\uC0C1 \uBCF4\uC785\uB2C8\uB2E4.",
+    why: "h1 \uC740 \uD398\uC774\uC9C0\uC758 \uAC00\uC7A5 \uD070 \uC8FC\uC81C\uC785\uB2C8\uB2E4. \uC5EC\uB7EC \uAC1C\uBA74 \uAC80\uC0C9\uC5D4\uC9C4\uACFC \uC2A4\uD06C\uB9B0 \uB9AC\uB354\uAC00 \uBB34\uC5C7\uC774 \uD575\uC2EC\uC778\uC9C0 \uC54C\uAE30 \uC5B4\uB835\uC2B5\uB2C8\uB2E4.",
+    fix: "\uD398\uC774\uC9C0\uB2F9 h1 \uC740 \uD558\uB098\uB9CC \uC4F0\uACE0, \uB098\uBA38\uC9C0\uB294 h2 \uC774\uD558\uB85C \uAD6C\uC870\uB97C \uC7A1\uC73C\uC138\uC694.",
+    code: "<h1>\uC8FC\uBB38 \uB0B4\uC5ED</h1>\n  <h2>\uBC30\uC1A1 \uC911</h2>\n  <h2>\uBC30\uC1A1 \uC644\uB8CC</h2>"
+  },
+  "og-missing": {
+    category: "seo",
+    title: "\uB9C1\uD06C \uBBF8\uB9AC\uBCF4\uAE30(og \uD0DC\uADF8)\uAC00 \uC5C6\uC5B4\uC694",
+    bubble: "\uB9C1\uD06C \uBBF8\uB9AC\uBCF4\uAE30\uAC00 \uC5C6\uC5B4\uC694!",
+    problem: "og:title \uB610\uB294 og:image \uBA54\uD0C0 \uD0DC\uADF8\uAC00 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    why: "\uCE74\uCE74\uC624\uD1A1\xB7\uC2AC\uB799\xB7SNS \uC5D0 \uC8FC\uC18C\uB97C \uBD99\uC600\uC744 \uB54C \uC81C\uBAA9\xB7\uC774\uBBF8\uC9C0\uAC00 \uC5C9\uB6B1\uD558\uAC70\uB098 \uBE48 \uCE74\uB4DC\uAC00 \uB098\uC635\uB2C8\uB2E4.",
+    fix: "og:title, og:description, og:image \uB97C \uD398\uC774\uC9C0\uB9C8\uB2E4 \uB123\uC73C\uC138\uC694(\uC774\uBBF8\uC9C0\uB294 \uC808\uB300 \uC8FC\uC18C).",
+    code: '<meta property="og:title" content="\uC81C\uBAA9" />\n<meta property="og:image" content="https://example.com/thumb.png" />'
+  },
+  "mixed-content": {
+    category: "security",
+    title: "https \uD398\uC774\uC9C0\uC5D0\uC11C http \uC790\uC6D0\uC744 \uBD88\uB7EC\uC640\uC694",
+    bubble: "http \uC790\uC6D0\uC774 \uC11E\uC5EC \uC788\uC5B4\uC694!",
+    problem: "https \uD398\uC774\uC9C0\uAC00 http:// \uC8FC\uC18C\uC758 \uC774\uBBF8\uC9C0\xB7\uC2A4\uD06C\uB9BD\uD2B8\xB7\uC2A4\uD0C0\uC77C\xB7\uD504\uB808\uC784\uC744 \uBD88\uB7EC\uC635\uB2C8\uB2E4.",
+    why: "\uC554\uD638\uD654\uB418\uC9C0 \uC54A\uC740 \uC790\uC6D0\uC740 \uC911\uAC04\uC5D0\uC11C \uBC14\uB014 \uC218 \uC788\uC5B4\uC11C \uBE0C\uB77C\uC6B0\uC800\uAC00 \uB9C9\uAC70\uB098 \uACBD\uACE0\uD569\uB2C8\uB2E4. \uC2A4\uD06C\uB9BD\uD2B8\uAC00 \uBC14\uB00C\uBA74 \uC0AC\uC774\uD2B8 \uC804\uCCB4\uAC00 \uC704\uD5D8\uD574\uC9D1\uB2C8\uB2E4.",
+    fix: "\uC790\uC6D0 \uC8FC\uC18C\uB97C https:// \uB85C \uBC14\uAFB8\uC138\uC694. \uC9C0\uC6D0\uD558\uC9C0 \uC54A\uB294 \uC11C\uBC84\uC758 \uC790\uC6D0\uC740 \uB2E4\uB978 \uACF3\uC744 \uC4F0\uC138\uC694.",
+    code: '<script src="https://cdn.example.com/lib.js"></script>   <!-- \u2717 http:// -->'
+  },
+  "viewport-fixed-width": {
+    category: "responsive",
+    title: "viewport \uD3ED\uC774 \uC22B\uC790\uB85C \uACE0\uC815\uB3FC \uC788\uC5B4\uC694",
+    bubble: "viewport \uD3ED\uC774 \uACE0\uC815\uC774\uC5D0\uC694!",
+    problem: "viewport \uBA54\uD0C0 \uD0DC\uADF8\uAC00 width=1024 \uCC98\uB7FC \uC22B\uC790 \uD3ED\uC73C\uB85C \uACE0\uC815\uB3FC \uC788\uC2B5\uB2C8\uB2E4.",
+    why: "\uAE30\uAE30 \uD3ED\uACFC \uC0C1\uAD00\uC5C6\uC774 \uADF8 \uD3ED\uC73C\uB85C \uADF8\uB9B0 \uB4A4 \uC904\uC5EC\uC11C \uBCF4\uC5EC \uC8FC\uBBC0\uB85C \uC791\uC740 \uD654\uBA74\uC5D0\uC11C \uAE00\uC790\uAC00 \uAE68\uC54C\uCC98\uB7FC \uC791\uC544\uC9D1\uB2C8\uB2E4.",
+    fix: "width=device-width, initial-scale=1 \uB85C \uBC14\uAFB8\uC138\uC694.",
+    code: '<meta name="viewport" content="width=device-width, initial-scale=1" />'
+  },
+  "input-font-small": {
+    category: "responsive",
+    title: "\uC785\uB825\uCE78 \uAE00\uC790\uAC00 16px \uBCF4\uB2E4 \uC791\uC544\uC694",
+    bubble: "\uC785\uB825\uCE78 \uAE00\uC790\uAC00 \uC791\uC544\uC694!",
+    problem: "\uC785\uB825\uCE78\xB7\uC120\uD0DD\uCE78\uC758 \uAE00\uC790 \uD06C\uAE30\uAC00 16px \uBBF8\uB9CC\uC785\uB2C8\uB2E4.",
+    why: "iOS Safari \uB294 16px \uBBF8\uB9CC \uC785\uB825\uCE78\uC744 \uB204\uB974\uBA74 \uD654\uBA74\uC744 \uC800\uC808\uB85C \uD655\uB300\uD574\uC11C \uB808\uC774\uC544\uC6C3\uC774 \uC5B4\uAE0B\uB098\uACE0 \uC0AC\uC6A9\uC790\uAC00 \uB2F9\uD669\uD569\uB2C8\uB2E4.",
+    fix: "\uC785\uB825\uCE78 \uAE00\uC790\uB97C 16px(1rem) \uC774\uC0C1\uC73C\uB85C \uD558\uC138\uC694. \uD655\uB300\uB97C \uB9C9\uB294 \uBC29\uBC95(user-scalable=no)\uC740 \uC811\uADFC\uC131\uC5D0 \uC88B\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4.",
+    code: "input, select, textarea { font-size: 1rem; } /* 16px \uC774\uC0C1 */"
+  },
+  "button-type-missing": {
+    category: "quality",
+    title: "form \uC548\uC758 button \uC5D0 type \uC774 \uC5C6\uC5B4\uC694",
+    bubble: "button \uC5D0 type \uC774 \uC5C6\uC5B4\uC694!",
+    problem: "<form> \uC548\uC758 <button> \uC5D0 type \uC18D\uC131\uC774 \uC5C6\uC2B5\uB2C8\uB2E4.",
+    why: 'type \uC774 \uC5C6\uC73C\uBA74 \uAE30\uBCF8\uC774 submit \uC774\uB77C\uC11C "\uCDE8\uC18C"\uB098 "\uB354 \uBCF4\uAE30" \uBC84\uD2BC\uC744 \uB20C\uB7EC\uB3C4 \uD3FC\uC774 \uC81C\uCD9C\uB418\uC5B4 \uD398\uC774\uC9C0\uAC00 \uC0C8\uB85C\uACE0\uCE68\uB429\uB2C8\uB2E4.',
+    fix: '\uC81C\uCD9C\uC774 \uC544\uB2CC \uBC84\uD2BC\uC740 type="button" \uC73C\uB85C, \uC81C\uCD9C \uBC84\uD2BC\uC740 type="submit" \uC73C\uB85C \uBD84\uBA85\uD788 \uC4F0\uC138\uC694.',
+    code: '<form>\n  <button type="button">\uB354 \uBCF4\uAE30</button>\n  <button type="submit">\uC800\uC7A5</button>\n</form>'
+  },
+  "deprecated-tags": {
+    category: "quality",
+    title: "\uC624\uB798\uB418\uC5B4 \uC4F0\uC9C0 \uC54A\uB294 \uD0DC\uADF8\uB97C \uC37C\uC5B4\uC694",
+    bubble: "\uC61B\uB0A0 \uD0DC\uADF8\uB97C \uC37C\uC5B4\uC694!",
+    problem: "<center>, <font>, <marquee>, <blink> \uAC19\uC740 \uB354 \uC774\uC0C1 \uC4F0\uC9C0 \uC54A\uB294 \uD0DC\uADF8\uAC00 \uC788\uC2B5\uB2C8\uB2E4.",
+    why: "\uD45C\uC900\uC5D0\uC11C \uC0AC\uB77C\uC9C4 \uD0DC\uADF8\uB77C \uBE0C\uB77C\uC6B0\uC800\uB9C8\uB2E4 \uB2E4\uB974\uAC8C \uB3D9\uC791\uD558\uAC70\uB098 \uC5B8\uC81C\uB4E0 \uC9C0\uC6D0\uC774 \uB04A\uAE38 \uC218 \uC788\uC2B5\uB2C8\uB2E4. \uD2B9\uD788 \uC6C0\uC9C1\uC774\uB294 \uAE00\uC790(marquee\xB7blink)\uB294 \uC811\uADFC\uC131\uC5D0\uB3C4 \uD574\uB86D\uC2B5\uB2C8\uB2E4.",
+    fix: "\uBAA8\uC591\uC740 CSS(text-align, font-family, animation \uB4F1)\uB85C \uCC98\uB9AC\uD558\uC138\uC694.",
+    code: '<!-- \u2717 --> <center>\uC81C\uBAA9</center>\n<!-- \u2713 --> <h1 style="text-align:center">\uC81C\uBAA9</h1>'
   }
 };
 
+// dist/shared/tips-en.js
+var TIPS_EN = {
+  "semantic-html": {
+    title: "Use the right tag instead of a div",
+    body: "Use button for buttons, a for links, ul/li for lists, and you get keyboard support, screen reader support, and SEO for free. If you put onClick on a div, you have to build all of that yourself."
+  },
+  "focus-visible": {
+    title: "Replace outline: none, don't just remove it",
+    body: "If you remove the focus ring, keyboard users cannot tell where they are. If you must remove it, add another indicator with :focus-visible."
+  },
+  "box-sizing": {
+    title: "Make box-sizing: border-box the default",
+    body: "With the default (content-box), padding and border are added to width, so a 100% wide element overflows its parent. border-box includes padding and border inside the width."
+  },
+  "flex-min-width": {
+    title: "If a flex child will not shrink, use min-width: 0",
+    body: "A flex item has min-width: auto by default, so long text keeps it from shrinking and it overflows the parent. min-width: 0 lets it shrink, and text-overflow ellipsis finally works."
+  },
+  "rem-vs-px": {
+    title: "Prefer rem over px for font sizes",
+    body: "Fixing sizes in px ignores the browser font size the user chose. rem follows the user setting, which helps people with low vision."
+  },
+  "list-key": {
+    title: "Use a stable id as the React list key",
+    body: "If you use the array index as key, state can attach to the wrong item when items are added, removed, or sorted. Use the unique id your data has."
+  },
+  "effect-cleanup": {
+    title: "useEffect and its cleanup go together",
+    body: "Subscriptions, timers, and event listeners must be released in the cleanup function. Otherwise they pile up every time the screen mounts, causing memory leaks and duplicate runs."
+  },
+  "fetch-race": {
+    title: "Requests can come back in the wrong order",
+    body: "If the search text changes quickly, an earlier request can arrive later and overwrite the screen. Cancel the previous request with AbortController."
+  },
+  "loading-error-empty": {
+    title: "A screen has four states",
+    body: "If you only build the screen with data, it breaks or goes blank while loading, on errors, and for empty lists. This is what AI-generated screens miss most often."
+  },
+  "json-parse-try": {
+    title: "Wrap JSON.parse and localStorage in try/catch",
+    body: "If a stored value is broken or empty, JSON.parse throws and the whole app stops. Assume anything from outside can fail."
+  },
+  debounce: {
+    title: "Debounce instead of requesting on every keystroke",
+    body: "Calling the API for every letter in a search box causes server load and flicker. Send one request after the typing pauses."
+  },
+  "promise-all": {
+    title: "Use Promise.all for unrelated requests",
+    body: "Awaiting independent requests one after another adds their times together. With Promise.all they run together and take only as long as the slowest one."
+  },
+  "layout-shift": {
+    title: "Tell the browser the image size up front",
+    body: "When an image loads late and gets its size, the content below is pushed down (CLS). Reserve the space with width/height attributes or aspect-ratio."
+  },
+  "lazy-image": {
+    title: 'Use loading="lazy" for images below the fold',
+    body: "Downloading images that are not visible at first slows the initial load. But do not use lazy on the large image visible on the first screen."
+  },
+  "reduced-motion": {
+    title: "Respect the reduce-motion setting",
+    body: 'People who feel dizzy turn on "reduce motion" in their OS. Turn off or tone down large movements with prefers-reduced-motion.'
+  },
+  "aria-live": {
+    title: "Announce changing messages with aria-live",
+    body: 'Toast messages like "Saved" or errors only reach people who can see them. Put them in an aria-live region and screen readers will read them too.'
+  },
+  "z-index-context": {
+    title: "z-index is only compared inside a stacking context",
+    body: "Even with z-index: 9999, if a parent creates a new stacking context (position + z-index, transform, opacity, etc.) it cannot beat elements outside it. Put modals directly under body."
+  },
+  "controlled-input": {
+    title: "An input with value but no onChange cannot be typed into",
+    body: "In React, the value you pass always decides what is shown. If onChange does not update the state, typing changes nothing. If you only need an initial value, use defaultValue."
+  },
+  "cors-basics": {
+    title: "A CORS error is the browser blocking it",
+    body: "There is no CORS between servers. It is a security rule where the browser will not hand a cross-origin response to JS, so the fix is the server sending allow headers, or a proxy during development."
+  },
+  "defer-script": {
+    title: "Load scripts with defer",
+    body: "A normal script in <head> stops HTML parsing while it downloads and runs. defer does not block parsing and runs in order after the document is built."
+  }
+};
+
+// dist/shared/tips-extra.js
+var WEBDEV_CWV = { label: "web.dev \xB7 The most effective ways to improve Core Web Vitals", url: "https://web.dev/articles/top-cwv" };
+var WOOWA_IMG = { label: "\uC6B0\uC544\uD55C\uD615\uC81C\uB4E4 \uAE30\uC220\uBE14\uB85C\uADF8 \xB7 \uBC30\uBBFC\uC6B0\uB9AC\uB3D9\uB124 \uC774\uBBF8\uC9C0 \uCD5C\uC801\uD654 \uC0AC\uB840", url: "https://techblog.woowahan.com/20228/" };
+var KAKAO_WASM = { label: "\uCE74\uCE74\uC624 \uAE30\uC220\uBE14\uB85C\uADF8 \xB7 FE\uAC1C\uBC1C\uC790\uC758 \uC131\uC7A5 \uC2A4\uD1A0\uB9AC 08 (WebAssembly)", url: "https://tech.kakao.com/2021/05/17/frontend-growth-08/" };
+var KAKAO_FLOW = { label: "if(kakao)dev2022 \xB7 Lighthouse Userflow \uC6F9 \uBC18\uC751\uC131 \uAC1C\uC120", url: "https://if.kakao.com/2022/session/126" };
+var MDN_CSP = { label: "MDN \xB7 Content Security Policy", url: "https://developer.mozilla.org/docs/Web/Security/Practical_implementation_guides/CSP" };
+var EXTRA_TIPS = [
+  // ---- 성능 ----
+  {
+    id: "lcp-discoverable",
+    ko: { title: "\uAC00\uC7A5 \uD070 \uC774\uBBF8\uC9C0\uB294 HTML \uC5D0\uC11C \uBC14\uB85C \uCC3E\uAC8C", body: 'LCP(\uAC00\uC7A5 \uD070 \uCF58\uD150\uCE20) \uC774\uBBF8\uC9C0\uAC00 CSS \uBC30\uACBD\uC774\uB098 JS \uB85C \uB2A6\uAC8C \uB9CC\uB4E4\uC5B4\uC9C0\uBA74 \uBE0C\uB77C\uC6B0\uC800\uAC00 \uBC1C\uACAC\uD558\uB294 \uC2DC\uC810\uC774 \uB2A6\uC5B4\uC9D1\uB2C8\uB2E4. HTML \uC758 img \uB85C \uB450\uACE0 fetchpriority="high" \uB85C \uC6B0\uC120\uC21C\uC704\uB97C \uB192\uC774\uC138\uC694.' },
+    en: { title: "Make the biggest image discoverable in HTML", body: 'If the LCP (largest content) image is a CSS background or created late by JS, the browser finds it late. Keep it as an img in the HTML and raise its priority with fetchpriority="high".' },
+    code: '<img src="/hero.webp" width="1200" height="600"\n     fetchpriority="high" alt="..." />',
+    source: WEBDEV_CWV
+  },
+  {
+    id: "no-lazy-lcp",
+    ko: { title: "\uCCAB \uD654\uBA74\uC758 \uD070 \uC774\uBBF8\uC9C0\uC5D0 lazy \uB97C \uC4F0\uC9C0 \uB9C8\uC138\uC694", body: 'loading="lazy" \uB294 \uC77C\uBD80\uB7EC \uB2A6\uAC8C \uBC1B\uB294 \uAE30\uB2A5\uC785\uB2C8\uB2E4. \uCCAB \uD654\uBA74 \uB9E8 \uC704\uC758 \uD070 \uC774\uBBF8\uC9C0\uC5D0 \uC4F0\uBA74 LCP \uAC00 \uC624\uD788\uB824 \uB290\uB824\uC838\uC694. \uD654\uBA74 \uC544\uB798 \uC774\uBBF8\uC9C0\uC5D0\uB9CC \uC4F0\uC138\uC694.' },
+    en: { title: "Do not lazy-load the big image on the first screen", body: 'loading="lazy" deliberately delays the download. On the large image at the top of the first screen it makes LCP worse. Use it only for images below the fold.' },
+    code: '<img src="/hero.webp" fetchpriority="high" alt="..." />  <!-- lazy \uC5C6\uC74C -->\n<img src="/card.webp" loading="lazy" alt="..." />',
+    source: WEBDEV_CWV
+  },
+  {
+    id: "inp-long-tasks",
+    ko: { title: "50ms \uB118\uB294 \uAE34 \uC791\uC5C5\uC740 \uCABC\uAC1C\uC138\uC694", body: "\uBA54\uC778 \uC2A4\uB808\uB4DC\uAC00 \uD55C \uC791\uC5C5\uC5D0 \uC624\uB798 \uBD99\uC7A1\uD600 \uC788\uC73C\uBA74 \uADF8\uB3D9\uC548 \uB204\uB978 \uBC84\uD2BC\uC774 \uBC18\uC751\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4(INP). \uD070 \uBC18\uBCF5\uBB38\uC740 \uB098\uB220\uC11C \uC0AC\uC774\uC0AC\uC774 \uBE0C\uB77C\uC6B0\uC800\uC5D0\uAC8C \uC228 \uC274 \uD2C8\uC744 \uC8FC\uC138\uC694." },
+    en: { title: "Break up tasks longer than 50ms", body: "If the main thread is stuck on one task, buttons pressed meanwhile do not respond (INP). Split big loops and give the browser room to breathe between chunks." },
+    code: "for (const chunk of chunks) {\n  process(chunk);\n  await new Promise((r) => setTimeout(r)); // \uD55C \uD2F1 \uC591\uBCF4\n}",
+    source: WEBDEV_CWV
+  },
+  {
+    id: "font-display",
+    ko: { title: "\uC6F9\uD3F0\uD2B8\uB294 font-display \uB97C \uC815\uD558\uC138\uC694", body: "\uD3F0\uD2B8\uAC00 \uC624\uAE30 \uC804\uAE4C\uC9C0 \uAE00\uC790\uAC00 \uC548 \uBCF4\uC774\uBA74(FOIT) \uCCAB\uC778\uC0C1\uC774 \uB098\uC069\uB2C8\uB2E4. font-display: swap \uC740 \uAE30\uBCF8 \uAE00\uAF34\uB85C \uBA3C\uC800 \uBCF4\uC5EC \uC8FC\uACE0 \uD3F0\uD2B8\uAC00 \uC624\uBA74 \uBC14\uAFC9\uB2C8\uB2E4. \uAE00\uC790 \uD06C\uAE30 \uCC28\uC774\uB85C \uBC00\uB9AC\uC9C0 \uC54A\uAC8C size-adjust \uB3C4 \uB3C4\uC6C0\uC774 \uB3FC\uC694." },
+    en: { title: "Set font-display for web fonts", body: "If text is invisible until the font arrives (FOIT), the first impression suffers. font-display: swap shows a fallback first and swaps when the font loads. size-adjust helps avoid layout jumps from size differences." },
+    code: '@font-face {\n  font-family: "Pretendard";\n  src: url(/pretendard.woff2) format("woff2");\n  font-display: swap;\n}'
+  },
+  {
+    id: "image-modern-format",
+    ko: { title: "\uC774\uBBF8\uC9C0\uB294 WebP\xB7AVIF \uC640 \uC54C\uB9DE\uC740 \uD06C\uAE30\uB85C", body: "\uAC19\uC740 \uD654\uC9C8\uC774\uBA74 JPEG\xB7PNG \uBCF4\uB2E4 WebP\xB7AVIF \uAC00 \uD6E8\uC52C \uAC00\uBCCD\uC2B5\uB2C8\uB2E4. \uD654\uBA74\uC5D0 \uBCF4\uC774\uB294 \uD06C\uAE30\uBCF4\uB2E4 \uD6E8\uC52C \uD070 \uC6D0\uBCF8\uC744 \uADF8\uB300\uB85C \uC4F0\uC9C0 \uB9D0\uACE0 \uC378\uB124\uC77C\uC744 \uB530\uB85C \uB9CC\uB4E4\uC5B4 \uC4F0\uC138\uC694." },
+    en: { title: "Use WebP/AVIF and the right size for images", body: "At the same quality, WebP and AVIF are much lighter than JPEG or PNG. Do not ship an original far larger than what is shown; make proper thumbnails." },
+    code: '<picture>\n  <source srcset="/a.avif" type="image/avif" />\n  <source srcset="/a.webp" type="image/webp" />\n  <img src="/a.jpg" alt="..." />\n</picture>',
+    source: WOOWA_IMG
+  },
+  {
+    id: "image-on-demand",
+    ko: { title: "\uD070 \uC774\uBBF8\uC9C0\uB294 \uD544\uC694\uD560 \uB54C\uB9CC \uBD88\uB7EC\uC624\uC138\uC694", body: "\uD53C\uB4DC\uC5D0\uC11C\uB294 \uC791\uC740 \uC378\uB124\uC77C\uB9CC, \uD070 \uC6D0\uBCF8\uC740 \uC0C1\uC138 \uD654\uBA74\uC744 \uC5F4 \uB54C \uBC1B\uC73C\uBA74 \uC804\uC1A1\uB7C9\uC774 \uD06C\uAC8C \uC904\uC5B4\uB4ED\uB2C8\uB2E4. \uBCF4\uC774\uC9C0 \uC54A\uB294 \uC774\uBBF8\uC9C0\uB97C \uBBF8\uB9AC \uBC1B\uC9C0 \uC54A\uB294 \uAC83\uC774 \uAC00\uC7A5 \uC26C\uC6B4 \uCD5C\uC801\uD654\uC608\uC694." },
+    en: { title: "Load big images only when needed", body: "Show small thumbnails in the feed and fetch the large original only when the detail view opens, and the transfer shrinks a lot. Not downloading what nobody sees is the easiest optimization." },
+    code: "const [open, setOpen] = useState(false);\n<img src={open ? item.full : item.thumb} onClick={() => setOpen(true)} />",
+    source: WOOWA_IMG
+  },
+  {
+    id: "code-splitting",
+    ko: { title: "\uD654\uBA74\uBCC4\uB85C \uCF54\uB4DC\uB97C \uB098\uB220\uC11C \uBC1B\uC73C\uC138\uC694", body: "\uCC98\uC74C \uD654\uBA74\uC5D0 \uD544\uC694 \uC5C6\uB294 \uD398\uC774\uC9C0\xB7\uBB34\uAC70\uC6B4 \uCC28\uD2B8\xB7\uC5D0\uB514\uD130\uAE4C\uC9C0 \uD55C \uBC88\uB4E4\uC5D0 \uB123\uC73C\uBA74 \uCCAB \uB85C\uB529\uC774 \uB290\uB9BD\uB2C8\uB2E4. \uB77C\uC6B0\uD2B8 \uB2E8\uC704\uB85C dynamic import \uD558\uBA74 \uD544\uC694\uD55C \uC21C\uAC04\uC5D0\uB9CC \uB0B4\uB824\uBC1B\uC544\uC694." },
+    en: { title: "Split code per screen", body: "If pages, charts, and editors the first screen does not need all live in one bundle, the first load is slow. Dynamic-import per route so they download only when needed." },
+    code: 'const Settings = lazy(() => import("./Settings"));\n<Suspense fallback={<Spinner />}><Settings /></Suspense>'
+  },
+  {
+    id: "bundle-weight",
+    ko: { title: "\uB77C\uC774\uBE0C\uB7EC\uB9AC\uB97C \uB123\uAE30 \uC804\uC5D0 \uBB34\uAC8C\uB97C \uBCF4\uC138\uC694", body: "\uB0A0\uC9DC \uD558\uB098 \uACE0\uCE58\uB824\uACE0 \uD070 \uB77C\uC774\uBE0C\uB7EC\uB9AC\uB97C \uD1B5\uC9F8\uB85C \uB123\uC73C\uBA74 \uBC88\uB4E4\uC774 \uBA87 \uBC30\uB85C \uCEE4\uC9C8 \uC218 \uC788\uC2B5\uB2C8\uB2E4. \uBC88\uB4E4 \uBD84\uC11D \uB3C4\uAD6C\uB85C \uD070 \uB369\uC5B4\uB9AC\uB97C \uCC3E\uACE0, \uAC00\uBCBC\uC6B4 \uB300\uC548\uC774\uB098 \uD544\uC694\uD55C \uD568\uC218\uB9CC \uAC00\uC838\uC624\uB294 \uBC29\uBC95\uC744 \uACE0\uB824\uD558\uC138\uC694." },
+    en: { title: "Check a library's weight before adding it", body: "Pulling in a big library just to format a date can multiply your bundle. Use a bundle analyzer to find the big chunks, and consider lighter alternatives or importing only the functions you need." },
+    code: '// vite: rollup-plugin-visualizer \uB85C \uBC88\uB4E4 \uAD6C\uC131\uC744 \uB208\uC73C\uB85C \uD655\uC778\nimport { format } from "date-fns"; // \uD544\uC694\uD55C \uD568\uC218\uB9CC'
+  },
+  {
+    id: "cache-hashed-assets",
+    ko: { title: "\uD574\uC2DC\uAC00 \uBD99\uC740 \uD30C\uC77C\uC740 \uC624\uB798 \uCE90\uC2DC\uD558\uC138\uC694", body: "app.3f9a1c.js \uCC98\uB7FC \uB0B4\uC6A9\uC774 \uBC14\uB00C\uBA74 \uC774\uB984\uC774 \uBC14\uB00C\uB294 \uD30C\uC77C\uC740 1\uB144 \uCE90\uC2DC\uD574\uB3C4 \uC548\uC804\uD569\uB2C8\uB2E4. \uBC18\uB300\uB85C index.html \uC740 \uCE90\uC2DC\uD558\uC9C0 \uC54A\uAC70\uB098 \uC9E7\uAC8C \uB450\uC5B4\uC57C \uC0C8 \uBC30\uD3EC\uAC00 \uBC14\uB85C \uBCF4\uC5EC\uC694." },
+    en: { title: "Cache hashed files for a long time", body: "Files whose names change when the content changes, like app.3f9a1c.js, are safe to cache for a year. index.html, on the other hand, should not be cached (or only briefly) so a new deploy shows up right away." },
+    code: "Cache-Control: public, max-age=31536000, immutable   # /assets/*.js\nCache-Control: no-cache                              # index.html"
+  },
+  {
+    id: "preconnect",
+    ko: { title: "\uACE7 \uC4F8 \uC678\uBD80 \uC11C\uBC84\uC5D0\uB294 preconnect", body: "\uD3F0\uD2B8\xB7API\xB7CDN \uCC98\uB7FC \uACE7 \uC694\uCCAD\uD560 \uB2E4\uB978 \uCD9C\uCC98\uAC00 \uC788\uB2E4\uBA74 \uC5F0\uACB0(DNS\xB7TLS)\uC744 \uBBF8\uB9AC \uC5F4\uC5B4 \uB450\uBA74 \uCCAB \uC694\uCCAD\uC774 \uBE68\uB77C\uC9D1\uB2C8\uB2E4. \uB108\uBB34 \uB9CE\uC774 \uAC78\uBA74 \uC624\uD788\uB824 \uBC29\uD574\uB418\uB2C8 \uC815\uB9D0 \uC911\uC694\uD55C \uD55C\uB450 \uACF3\uB9CC\uC694." },
+    en: { title: "Preconnect to servers you will use soon", body: "If you will soon call another origin (font, API, CDN), opening the connection early speeds up the first request. Do not overdo it; just the one or two that really matter." },
+    code: '<link rel="preconnect" href="https://api.example.com" crossorigin />'
+  },
+  {
+    id: "virtual-list",
+    ko: { title: "\uC544\uC8FC \uAE34 \uBAA9\uB85D\uC740 \uAC00\uC0C1\uD654\uD558\uC138\uC694", body: "\uC218\uCC9C \uAC1C \uD56D\uBAA9\uC744 \uBAA8\uB450 DOM \uC5D0 \uB9CC\uB4E4\uBA74 \uC2A4\uD06C\uB864\uACFC \uC785\uB825\uC774 \uBC84\uBC85\uC785\uB2C8\uB2E4. \uD654\uBA74\uC5D0 \uBCF4\uC774\uB294 \uAC83\uB9CC \uADF8\uB9AC\uB294 \uAC00\uC0C1 \uC2A4\uD06C\uB864(react-window \uB4F1)\uC744 \uC4F0\uBA74 \uAC1C\uC218\uC640 \uC0C1\uAD00\uC5C6\uC774 \uAC00\uBCBC\uC6CC\uC694." },
+    en: { title: "Virtualize very long lists", body: "Rendering thousands of items into the DOM makes scrolling and typing janky. Virtual scrolling (react-window and the like) draws only what is visible and stays light no matter the count." },
+    code: '<FixedSizeList height={400} itemCount={10000} itemSize={36} width="100%">\n  {Row}\n</FixedSizeList>'
+  },
+  {
+    id: "offload-wasm",
+    ko: { title: "\uBB34\uAC70\uC6B4 \uACC4\uC0B0\uC740 \uBA54\uC778 \uC2A4\uB808\uB4DC \uBC16\uC73C\uB85C", body: "\uC774\uBBF8\uC9C0 \uD544\uD130\xB7\uD070 \uB370\uC774\uD130 \uAC00\uACF5\uCC98\uB7FC \uC624\uB798 \uAC78\uB9AC\uB294 \uACC4\uC0B0\uC740 Web Worker \uB85C \uC62E\uAE30\uBA74 \uD654\uBA74\uC774 \uBA48\uCD94\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4. \uACC4\uC0B0\uC774 \uC815\uB9D0 \uBCD1\uBAA9\uC774\uBA74 WebAssembly \uB85C \uB354 \uBE60\uB974\uAC8C \uB9CC\uB4E4 \uC218\uB3C4 \uC788\uC5B4\uC694." },
+    en: { title: "Move heavy computation off the main thread", body: "Long computations like image filters or processing big data keep the UI from freezing when moved to a Web Worker. If the computation is a real bottleneck, WebAssembly can make it faster still." },
+    code: 'const worker = new Worker(new URL("./filter.worker.ts", import.meta.url));\nworker.postMessage(pixels);\nworker.onmessage = (e) => draw(e.data);',
+    source: KAKAO_WASM
+  },
+  {
+    id: "measure-interactions",
+    ko: { title: "\uB85C\uB529\uB9CC \uB9D0\uACE0 '\uC870\uC791'\uB3C4 \uCE21\uC815\uD558\uC138\uC694", body: "\uD398\uC774\uC9C0\uAC00 \uC5F4\uB9AC\uB294 \uC18D\uB3C4\uB9CC \uC7AC\uBA74 \uBC84\uD2BC\uC744 \uB20C\uB800\uC744 \uB54C\uC758 \uBC18\uC751\uC740 \uB193\uCE69\uB2C8\uB2E4. Lighthouse \uC0AC\uC6A9\uC790 \uD750\uB984(User Flow)\uCC98\uB7FC \uD074\uB9AD\xB7\uC785\uB825 \uAC19\uC740 \uC0C1\uD638\uC791\uC6A9 \uAD6C\uAC04\uB3C4 \uCE21\uC815\uD574 \uBCF4\uC138\uC694." },
+    en: { title: "Measure interactions, not just loading", body: "Measuring only how fast a page opens misses how it responds when a button is pressed. Measure interaction phases (clicks, input) too, for example with Lighthouse User Flows." },
+    code: "// Lighthouse User Flow: startFlow \u2192 navigate \u2192 startTimespan \u2192 \uD074\uB9AD \u2192 endTimespan",
+    source: KAKAO_FLOW
+  },
+  {
+    id: "field-data",
+    ko: { title: "\uB0B4 \uCEF4\uD4E8\uD130\uAC00 \uBE60\uB974\uB2E4\uACE0 \uBE60\uB978 \uAC8C \uC544\uB2C8\uC5D0\uC694", body: "\uAC1C\uBC1C PC \uC640 \uC640\uC774\uD30C\uC774\uC5D0\uC11C \uBE60\uB978 \uD398\uC774\uC9C0\uAC00 \uC2E4\uC81C \uC0AC\uC6A9\uC790\uC758 \uC800\uC0AC\uC591 \uD3F0\uC5D0\uC11C\uB294 \uB290\uB9B4 \uC218 \uC788\uC2B5\uB2C8\uB2E4. web-vitals \uB77C\uC774\uBE0C\uB7EC\uB9AC\uB85C \uC2E4\uC81C \uC0AC\uC6A9\uC790 \uB370\uC774\uD130\uB97C \uBAA8\uC544\uC11C 75% \uC0AC\uC6A9\uC790\uAC00 \uAE30\uC900\uC744 \uB118\uB294\uC9C0 \uBCF4\uC138\uC694." },
+    en: { title: "Fast on your machine does not mean fast", body: "A page that is quick on your dev PC and Wi-Fi can be slow on a real user's low-end phone. Collect real-user data with the web-vitals library and check that 75% of users meet the thresholds." },
+    code: 'import { onLCP, onINP, onCLS } from "web-vitals";\nonLCP(send); onINP(send); onCLS(send);',
+    source: WEBDEV_CWV
+  },
+  // ---- CSS ----
+  {
+    id: "container-queries",
+    ko: { title: "\uCE74\uB4DC\uB294 \uD654\uBA74\uC774 \uC544\uB2C8\uB77C '\uC790\uB9AC' \uD06C\uAE30\uB97C \uB530\uB974\uAC8C", body: "\uBBF8\uB514\uC5B4 \uCFFC\uB9AC\uB294 \uD654\uBA74 \uC804\uCCB4 \uD3ED\uB9CC \uBD05\uB2C8\uB2E4. \uCEE8\uD14C\uC774\uB108 \uCFFC\uB9AC\uB97C \uC4F0\uBA74 \uCE74\uB4DC\uAC00 \uB193\uC778 \uC790\uB9AC \uD3ED\uC5D0 \uB9DE\uCDB0 \uBAA8\uC591\uC774 \uBC14\uB00C\uC5B4\uC11C \uC0AC\uC774\uB4DC\uBC14\uC5D0 \uC788\uB4E0 \uBCF8\uBB38\uC5D0 \uC788\uB4E0 \uC54C\uB9DE\uAC8C \uBCF4\uC5EC\uC694." },
+    en: { title: "Let a card follow its slot, not the screen", body: "Media queries only see the whole viewport width. Container queries let a card adapt to the width of where it sits, so it looks right in a sidebar or in the main column." },
+    code: ".card-wrap { container-type: inline-size; }\n@container (min-width: 400px) { .card { display: flex; } }"
+  },
+  {
+    id: "flex-gap",
+    ko: { title: "\uAC04\uACA9\uC740 margin \uB300\uC2E0 gap", body: "\uD56D\uBAA9 \uC0AC\uC774 \uAC04\uACA9\uC744 margin \uC73C\uB85C \uC8FC\uBA74 \uCCAB\xB7\uB9C8\uC9C0\uB9C9 \uD56D\uBAA9 \uCC98\uB9AC\uAC00 \uBC88\uAC70\uB86D\uC2B5\uB2C8\uB2E4. flex\xB7grid \uC758 gap \uC740 \uD56D\uBAA9 \uC0AC\uC774\uC5D0\uB9CC \uAC04\uACA9\uC744 \uB123\uC5B4 \uC918\uC11C \uD6E8\uC52C \uB2E8\uC21C\uD574\uC694." },
+    en: { title: "Use gap instead of margin for spacing", body: "Spacing items with margin makes the first and last item awkward. gap in flex and grid adds space only between items, which is much simpler." },
+    code: ".row { display: flex; gap: 12px; }"
+  },
+  {
+    id: "dvh-units",
+    ko: { title: "\uBAA8\uBC14\uC77C\uC5D0\uC11C 100vh \uB294 \uC8FC\uC18C\uCC3D\uC5D0 \uAC00\uB824\uC838\uC694", body: "\uBAA8\uBC14\uC77C \uBE0C\uB77C\uC6B0\uC800\uB294 \uC8FC\uC18C\uCC3D\uC774 \uB098\uD0C0\uB0AC\uB2E4 \uC0AC\uB77C\uC838\uC11C 100vh \uAC00 \uC2E4\uC81C \uBCF4\uC774\uB294 \uB192\uC774\uBCF4\uB2E4 \uD07D\uB2C8\uB2E4. 100dvh(\uB3D9\uC801 \uBDF0\uD3EC\uD2B8 \uB192\uC774)\uB97C \uC4F0\uBA74 \uC9C0\uAE08 \uBCF4\uC774\uB294 \uB192\uC774\uC5D0 \uB9DE\uC544\uC694." },
+    en: { title: "100vh on mobile gets hidden by the address bar", body: "Mobile browsers show and hide the address bar, so 100vh is taller than what is actually visible. 100dvh (dynamic viewport height) matches the height visible right now." },
+    code: ".full { min-height: 100vh; min-height: 100dvh; }"
+  },
+  {
+    id: "color-scheme",
+    ko: { title: "\uB2E4\uD06C \uBAA8\uB4DC\uB294 color-scheme \uBD80\uD130", body: "color-scheme: light dark \uB97C \uC120\uC5B8\uD558\uBA74 \uC785\uB825\uCE78\xB7\uC2A4\uD06C\uB864\uBC14 \uAC19\uC740 \uAE30\uBCF8 \uC694\uC18C\uB3C4 \uB2E4\uD06C \uBAA8\uB4DC\uC5D0 \uB9DE\uAC8C \uBC14\uB01D\uB2C8\uB2E4. \uADF8\uB2E4\uC74C prefers-color-scheme \uC73C\uB85C \uB0B4 \uC0C9\uB9CC \uC870\uC815\uD558\uBA74 \uB3FC\uC694." },
+    en: { title: "Start dark mode with color-scheme", body: "Declaring color-scheme: light dark makes default elements such as inputs and scrollbars follow dark mode too. Then adjust only your own colors with prefers-color-scheme." },
+    code: ":root { color-scheme: light dark; }\n@media (prefers-color-scheme: dark) { :root { --bg: #111; } }"
+  },
+  {
+    id: "text-clamp",
+    ko: { title: "\uAE34 \uAE00\uC740 \uC904 \uC218\uB85C \uB9D0\uC904\uC784", body: "\uD55C \uC904 \uB9D0\uC904\uC784\uC740 text-overflow: ellipsis, \uC5EC\uB7EC \uC904\uC740 line-clamp \uB97C \uC501\uB2C8\uB2E4. \uC798\uB9B0 \uAE00\uC758 \uC804\uCCB4 \uB0B4\uC6A9\uC744 \uBCFC \uC218 \uC788\uB294 \uBC29\uBC95(\uD3BC\uCE58\uAE30\xB7\uD234\uD301)\uB3C4 \uD568\uAED8 \uC81C\uACF5\uD558\uC138\uC694." },
+    en: { title: "Truncate long text by line count", body: "Use text-overflow: ellipsis for one line and line-clamp for several. Also give a way to see the full text (expand, tooltip)." },
+    code: ".title {\n  display: -webkit-box;\n  -webkit-line-clamp: 2;\n  -webkit-box-orient: vertical;\n  overflow: hidden;\n}"
+  },
+  {
+    id: "sticky-overflow",
+    ko: { title: "sticky \uAC00 \uC548 \uBA39\uC73C\uBA74 \uBD80\uBAA8\uC758 overflow \uB97C \uBCF4\uC138\uC694", body: "position: sticky \uB294 \uC870\uC0C1 \uC911\uC5D0 overflow: hidden/auto \uAC00 \uC788\uC73C\uBA74 \uADF8 \uC548\uC5D0\uC11C\uB9CC \uBD99\uC2B5\uB2C8\uB2E4. \uC548 \uBD99\uB294\uB2E4\uBA74 \uBD80\uBAA8 \uCCB4\uC778\uC5D0 overflow \uAC00 \uC788\uB294\uC9C0, top \uAC12\uC774 \uC788\uB294\uC9C0 \uD655\uC778\uD558\uC138\uC694." },
+    en: { title: "If sticky does nothing, check the parent's overflow", body: "position: sticky only sticks within an ancestor that has overflow hidden/auto. If it does not stick, check the parent chain for overflow and make sure a top value is set." },
+    code: ".header { position: sticky; top: 0; }\n/* \uC870\uC0C1\uC5D0 overflow: hidden \uC774 \uC788\uC73C\uBA74 \uC548 \uBD99\uC5B4\uC694 */"
+  },
+  // ---- JS / TS ----
+  {
+    id: "nullish-vs-or",
+    ko: { title: "\uAE30\uBCF8\uAC12\uC740 || \uBCF4\uB2E4 ??", body: "count || 10 \uC740 0 \uC774\uB098 \uBE48 \uBB38\uC790\uC5F4\uB3C4 '\uC5C6\uC74C'\uC73C\uB85C \uBCF4\uACE0 10 \uC774 \uB429\uB2C8\uB2E4. ?? \uB294 null\xB7undefined \uC77C \uB54C\uB9CC \uAE30\uBCF8\uAC12\uC744 \uC368\uC11C 0 \uC774 \uC0B4\uC544\uB0A8\uC544\uC694." },
+    en: { title: "Prefer ?? over || for defaults", body: "count || 10 treats 0 and the empty string as missing and gives 10. ?? uses the default only for null and undefined, so 0 survives." },
+    code: 'const page = query.page ?? 1;  // 0 \uC740 0\nconst name = input || "\uC775\uBA85";   // \uBE48 \uBB38\uC790\uC5F4\uC774\uBA74 "\uC775\uBA85"'
+  },
+  {
+    id: "immutable-update",
+    ko: { title: "\uC0C1\uD0DC\uB294 \uC9C1\uC811 \uBC14\uAFB8\uC9C0 \uB9D0\uACE0 \uC0C8\uB85C \uB9CC\uB4E4\uAE30", body: "\uBC30\uC5F4\uC5D0 push \uD558\uAC70\uB098 \uAC1D\uCCB4 \uC18D\uC131\uC744 \uBC14\uB85C \uBC14\uAFB8\uBA74 React \uAC00 \uBCC0\uD654\uB97C \uBABB \uC54C\uC544\uCC44 \uD654\uBA74\uC774 \uC548 \uBC14\uB01D\uB2C8\uB2E4. \uC804\uAC1C \uC5F0\uC0B0\uC790\uB098 map\xB7filter \uB85C \uC0C8 \uAC12\uC744 \uB9CC\uB4E4\uC5B4 \uB118\uAE30\uC138\uC694." },
+    en: { title: "Create new state instead of mutating it", body: "Pushing onto an array or assigning an object property directly means React does not notice the change and the screen does not update. Build a new value with spread, map, or filter." },
+    code: 'setItems((prev) => [...prev, newItem]);\nsetUser((u) => ({ ...u, name: "\uC0C8 \uC774\uB984" }));'
+  },
+  {
+    id: "structured-clone",
+    ko: { title: "\uAE4A\uC740 \uBCF5\uC0AC\uB294 structuredClone", body: "JSON.parse(JSON.stringify(x)) \uB294 Date\xB7Map\xB7undefined \uB97C \uB9DD\uAC00\uB728\uB9BD\uB2C8\uB2E4. structuredClone \uC740 \uC774\uB7F0 \uAC12\uB4E4\uC744 \uC62C\uBC14\uB974\uAC8C \uBCF5\uC0AC\uD558\uB294 \uD45C\uC900 \uD568\uC218\uC608\uC694(\uD568\uC218\uB294 \uBCF5\uC0AC\uD560 \uC218 \uC5C6\uC5B4\uC694)." },
+    en: { title: "Use structuredClone for deep copies", body: "JSON.parse(JSON.stringify(x)) mangles Date, Map, and undefined. structuredClone is the standard function that copies them correctly (functions cannot be cloned)." },
+    code: "const copy = structuredClone(state);"
+  },
+  {
+    id: "ts-unknown",
+    ko: { title: "any \uB300\uC2E0 unknown \uC73C\uB85C \uBC1B\uACE0 \uC881\uD788\uC138\uC694", body: "any \uB294 \uD0C0\uC785 \uAC80\uC0AC\uB97C \uAEBC \uBC84\uB9BD\uB2C8\uB2E4. \uC678\uBD80\uC5D0\uC11C \uC628 \uAC12\uC740 unknown \uC73C\uB85C \uBC1B\uACE0 typeof\xB7\uAC80\uC0AC \uD568\uC218\uB85C \uC881\uD600\uC11C \uC4F0\uBA74 \uC548\uC804\uD558\uAC8C \uC4F0\uBA74\uC11C\uB3C4 \uC2E4\uC218\uB97C \uCEF4\uD30C\uC77C \uB54C \uC7A1\uC544\uC694." },
+    en: { title: "Take unknown instead of any, then narrow", body: "any turns type checking off. Take outside values as unknown and narrow them with typeof or a guard function, and you stay safe and catch mistakes at compile time." },
+    code: 'function parse(v: unknown) {\n  if (typeof v === "string") return v.trim();\n  throw new Error("\uBB38\uC790\uC5F4\uC774 \uC544\uB2C8\uC5D0\uC694");\n}'
+  },
+  {
+    id: "functional-setstate",
+    ko: { title: "\uC774\uC804 \uAC12\uC5D0 \uAE30\uB300\uB294 \uC5C5\uB370\uC774\uD2B8\uB294 \uD568\uC218\uD615\uC73C\uB85C", body: "setCount(count + 1) \uC744 \uC5F0\uB2EC\uC544 \uBD80\uB974\uBA74 \uAC19\uC740 count \uB97C \uC77D\uC5B4\uC11C \uD55C \uBC88\uB9CC \uB298\uC5B4\uB0A9\uB2C8\uB2E4. \uC774\uC804 \uAC12\uC774 \uD544\uC694\uD558\uBA74 setCount(c => c + 1) \uCC98\uB7FC \uD568\uC218\uB97C \uB118\uAE30\uC138\uC694." },
+    en: { title: "Use the functional form when updating from the previous value", body: "Calling setCount(count + 1) several times reads the same count and only increases once. When you need the previous value, pass a function like setCount(c => c + 1)." },
+    code: "setCount((c) => c + 1);\nsetCount((c) => c + 1); // +2"
+  },
+  {
+    id: "passive-listeners",
+    ko: { title: "\uC2A4\uD06C\uB864\xB7\uD130\uCE58 \uB9AC\uC2A4\uB108\uB294 passive \uB85C", body: "\uC2A4\uD06C\uB864\uC744 \uB9C9\uC744 \uC77C\uC774 \uC5C6\uB294 touchstart\xB7wheel \uB9AC\uC2A4\uB108\uC5D0 { passive: true } \uB97C \uC8FC\uBA74 \uBE0C\uB77C\uC6B0\uC800\uAC00 \uAE30\uB2E4\uB9AC\uC9C0 \uC54A\uACE0 \uBC14\uB85C \uC2A4\uD06C\uB864\uD574\uC11C \uBD80\uB4DC\uB7EC\uC6CC\uC838\uC694." },
+    en: { title: "Make scroll and touch listeners passive", body: "For touchstart and wheel listeners that never block scrolling, { passive: true } lets the browser scroll right away without waiting, so it feels smoother." },
+    code: 'window.addEventListener("touchstart", onTouch, { passive: true });'
+  },
+  {
+    id: "intl-format",
+    ko: { title: "\uC22B\uC790\xB7\uB0A0\uC9DC\uB294 Intl \uB85C \uD604\uC9C0\uD654", body: "\uC9C1\uC811 \uBB38\uC790\uC5F4\uC744 \uC774\uC5B4 \uBD99\uC774\uC9C0 \uB9D0\uACE0 Intl.NumberFormat\xB7DateTimeFormat \uC744 \uC4F0\uBA74 \uCC9C \uB2E8\uC704 \uAD6C\uBD84, \uD1B5\uD654, \uB0A0\uC9DC \uD615\uC2DD\uC774 \uC0AC\uC6A9\uC790 \uC5B8\uC5B4\uC5D0 \uB9DE\uAC8C \uC790\uB3D9\uC73C\uB85C \uB098\uC635\uB2C8\uB2E4." },
+    en: { title: "Localize numbers and dates with Intl", body: "Instead of stitching strings by hand, Intl.NumberFormat and DateTimeFormat produce digit grouping, currency, and date formats that fit the user's language automatically." },
+    code: 'new Intl.NumberFormat("ko-KR", { style: "currency", currency: "KRW" }).format(12000);\nnew Intl.DateTimeFormat(navigator.language).format(new Date());'
+  },
+  {
+    id: "utc-dates",
+    ko: { title: "\uC2DC\uAC04\uC740 UTC \uB85C \uC800\uC7A5\uD558\uACE0 \uD654\uBA74\uC5D0\uC11C\uB9CC \uD604\uC9C0 \uC2DC\uAC04\uC73C\uB85C", body: "\uC11C\uBC84\uC640 \uBE0C\uB77C\uC6B0\uC800\uC758 \uC2DC\uAC04\uB300\uAC00 \uB2E4\uB974\uBA74 \uB0A0\uC9DC\uAC00 \uD558\uB8E8\uC529 \uC5B4\uAE0B\uB0A9\uB2C8\uB2E4. ISO 8601(UTC)\uB85C \uC8FC\uACE0\uBC1B\uACE0, \uC0AC\uC6A9\uC790\uC5D0\uAC8C \uBCF4\uC5EC \uC904 \uB54C\uB9CC \uD604\uC9C0 \uC2DC\uAC04\uB300\uB85C \uBC14\uAFB8\uC138\uC694." },
+    en: { title: "Store time in UTC, show local time only on screen", body: "If the server and browser time zones differ, dates drift by a day. Exchange ISO 8601 (UTC) and convert to the local time zone only when showing it to the user." },
+    code: 'const iso = new Date().toISOString();           // \uC800\uC7A5\xB7\uC804\uC1A1\nnew Date(iso).toLocaleString("ko-KR");            // \uD45C\uC2DC'
+  },
+  {
+    id: "money-integers",
+    ko: { title: "\uB3C8\uC740 \uC18C\uC218\uC810 \uB9D0\uACE0 \uC815\uC218\uB85C", body: "0.1 + 0.2 \uB294 0.30000000000000004 \uC785\uB2C8\uB2E4. \uAE08\uC561\uC740 \uC6D0\xB7\uC13C\uD2B8 \uAC19\uC740 \uCD5C\uC18C \uB2E8\uC704 \uC815\uC218\uB85C \uACC4\uC0B0\uD558\uACE0, \uD654\uBA74\uC5D0 \uBCF4\uC77C \uB54C\uB9CC \uD615\uC2DD\uC744 \uB9DE\uCD94\uC138\uC694." },
+    en: { title: "Handle money as integers, not decimals", body: "0.1 + 0.2 is 0.30000000000000004. Calculate amounts in the smallest unit as integers (won, cents) and format only when showing them." },
+    code: "const cents = 1999;               // $19.99\nconst total = cents * qty;"
+  },
+  {
+    id: "url-builder",
+    ko: { title: "URL \uC740 \uBB38\uC790\uC5F4 \uC774\uC5B4 \uBD99\uC774\uC9C0 \uB9D0\uACE0 URL \uB85C", body: "\uAC80\uC0C9\uC5B4\uC5D0 &, \uACF5\uBC31, \uD55C\uAE00\uC774 \uC788\uC73C\uBA74 \uC9C1\uC811 \uC774\uC5B4 \uBD99\uC778 \uC8FC\uC18C\uAC00 \uAE68\uC9D1\uB2C8\uB2E4. URL\xB7URLSearchParams \uAC00 \uC54C\uC544\uC11C \uC778\uCF54\uB529\uD574 \uC918\uC694." },
+    en: { title: "Build URLs with URL, not string concatenation", body: "If a search term has &, spaces, or non-ASCII characters, a hand-built address breaks. URL and URLSearchParams encode them for you." },
+    code: 'const url = new URL("/search", location.origin);\nurl.searchParams.set("q", "\uCE74\uD398 & \uBCA0\uC774\uCEE4\uB9AC");'
+  },
+  // ---- React ----
+  {
+    id: "derived-state",
+    ko: { title: "props \uB97C state \uC5D0 \uBCF5\uC0AC\uD558\uC9C0 \uB9C8\uC138\uC694", body: "props \uB85C \uACC4\uC0B0\uD560 \uC218 \uC788\uB294 \uAC12\uC744 state \uC5D0 \uB610 \uC800\uC7A5\uD558\uBA74 \uB458\uC774 \uC5B4\uAE0B\uB0A9\uB2C8\uB2E4. \uB80C\uB354\uB9C1 \uC911\uC5D0 \uACC4\uC0B0\uD558\uAC70\uB098 key \uB85C \uCEF4\uD3EC\uB10C\uD2B8\uB97C \uC0C8\uB85C \uB9CC\uB4E4\uC5B4 \uCD08\uAE30\uD654\uD558\uC138\uC694." },
+    en: { title: "Do not copy props into state", body: "If you store in state a value you can compute from props, the two drift apart. Compute it while rendering, or reset the component with a key." },
+    code: "const fullName = `${first} ${last}`; // state \uAC00 \uC544\uB2C8\uB77C \uACC4\uC0B0"
+  },
+  {
+    id: "context-value",
+    ko: { title: "Context \uAC12\uC744 \uB9E4\uBC88 \uC0C8\uB85C \uB9CC\uB4E4\uC9C0 \uB9C8\uC138\uC694", body: "Provider \uC758 value \uC5D0 { a, b } \uB97C \uC9C1\uC811 \uC4F0\uBA74 \uB80C\uB354\uB9C1\uB9C8\uB2E4 \uC0C8 \uAC1D\uCCB4\uB77C\uC11C \uAD6C\uB3C5\uD55C \uBAA8\uB4E0 \uCEF4\uD3EC\uB10C\uD2B8\uAC00 \uB2E4\uC2DC \uADF8\uB824\uC9D1\uB2C8\uB2E4. useMemo \uB85C \uACE0\uC815\uD558\uAC70\uB098 Context \uB97C \uC798\uAC8C \uB098\uB204\uC138\uC694." },
+    en: { title: "Do not recreate the Context value every render", body: "Writing value={{ a, b }} on a Provider makes a new object on each render, re-rendering every subscriber. Stabilize it with useMemo or split the Context." },
+    code: "const value = useMemo(() => ({ user, logout }), [user]);\n<AuthContext.Provider value={value}>"
+  },
+  {
+    id: "error-boundary",
+    ko: { title: "\uC5D0\uB7EC \uACBD\uACC4\uB85C \uD654\uBA74 \uC804\uCCB4\uAC00 \uD558\uC598\uC9C0\uB294 \uAC78 \uB9C9\uC73C\uC138\uC694", body: "\uB80C\uB354\uB9C1 \uC911 \uC608\uC678\uAC00 \uB098\uBA74 \uC571 \uC804\uCCB4\uAC00 \uD558\uC597\uAC8C \uBE44\uC5B4\uC694. Error Boundary \uB85C \uC601\uC5ED\uBCC4\uB85C \uAC10\uC2F8 \uB450\uBA74 \uADF8 \uBD80\uBD84\uB9CC \uC548\uB0B4\uB97C \uBCF4\uC5EC \uC8FC\uACE0 \uB098\uBA38\uC9C0\uB294 \uC0B4\uC544 \uC788\uC2B5\uB2C8\uB2E4." },
+    en: { title: "Use error boundaries to avoid a whole-screen blank", body: "An exception during rendering blanks the whole app. Wrapping areas in an Error Boundary shows a message just for that part and keeps the rest alive." },
+    code: "<ErrorBoundary fallback={<p>\uBB38\uC81C\uAC00 \uC0DD\uACBC\uC5B4\uC694</p>}>\n  <Chart />\n</ErrorBoundary>"
+  },
+  {
+    id: "strict-effects",
+    ko: { title: "\uAC1C\uBC1C \uBAA8\uB4DC\uC5D0\uC11C effect \uAC00 \uB450 \uBC88 \uB3C4\uB294 \uAC74 \uC815\uC0C1", body: "StrictMode \uB294 \uC815\uB9AC(cleanup)\uB97C \uC798 \uD588\uB294\uC9C0 \uD655\uC778\uD558\uB824\uACE0 \uAC1C\uBC1C \uC911\uC5D0\uB9CC effect \uB97C \uB450 \uBC88 \uC2E4\uD589\uD569\uB2C8\uB2E4. \uB450 \uBC88 \uB3CC\uC558\uC744 \uB54C \uBB38\uC81C\uAC00 \uC0DD\uAE34\uB2E4\uBA74 \uC815\uB9AC \uD568\uC218\uAC00 \uBE60\uC84C\uB2E4\uB294 \uC2E0\uD638\uC608\uC694." },
+    en: { title: "Effects running twice in dev is normal", body: "StrictMode runs effects twice in development only, to check that your cleanup works. If a double run causes problems, the cleanup function is missing." },
+    code: "useEffect(() => {\n  const id = setInterval(tick, 1000);\n  return () => clearInterval(id);\n}, []);"
+  },
+  // ---- 보안 ----
+  {
+    id: "xss-innerhtml",
+    ko: { title: "\uC0AC\uC6A9\uC790 \uC785\uB825\uC744 innerHTML \uC5D0 \uB123\uC9C0 \uB9C8\uC138\uC694", body: "innerHTML\xB7dangerouslySetInnerHTML \uC5D0 \uC0AC\uC6A9\uC790\uAC00 \uC4F4 \uAE00\uC744 \uADF8\uB300\uB85C \uB123\uC73C\uBA74 \uC2A4\uD06C\uB9BD\uD2B8\uAC00 \uC2E4\uD589\uB418\uB294 XSS \uAC00 \uB429\uB2C8\uB2E4. \uAE00\uC790\uB9CC \uBCF4\uC77C \uB54C\uB294 textContent \uB97C \uC4F0\uACE0, HTML \uC774 \uAF2D \uD544\uC694\uD558\uBA74 \uAC80\uC99D\uB41C sanitizer \uB97C \uAC70\uCE58\uC138\uC694." },
+    en: { title: "Never put user input into innerHTML", body: "Putting user-written text into innerHTML or dangerouslySetInnerHTML lets scripts run (XSS). Use textContent when you only show text, and run it through a vetted sanitizer if you truly need HTML." },
+    code: "el.textContent = userText;           // \uC548\uC804\n// el.innerHTML = userText;         // \uC704\uD5D8"
+  },
+  {
+    id: "csp-basics",
+    ko: { title: "CSP \uB294 XSS \uC758 \uB450 \uBC88\uC9F8 \uBC29\uC5B4\uC120", body: "Content-Security-Policy \uB85C \uC2E4\uD589\uC744 \uD5C8\uC6A9\uD560 \uC2A4\uD06C\uB9BD\uD2B8 \uCD9C\uCC98\uB97C \uC81C\uD55C\uD558\uBA74 XSS \uAC00 \uB6AB\uB824\uB3C4 \uD53C\uD574\uB97C \uC904\uC77C \uC218 \uC788\uC2B5\uB2C8\uB2E4. \uC778\uB77C\uC778 \uC2A4\uD06C\uB9BD\uD2B8\uB294 \uB9C9\uACE0 nonce\xB7hash \uB97C \uC4F0\uB294 \uC5C4\uACA9\uD55C \uC815\uCC45\uC774 \uAC00\uC7A5 \uAC15\uB825\uD574\uC694. \uC785\uB825 \uAC80\uC99D\xB7\uCD9C\uB825 \uC778\uCF54\uB529\uACFC \uD568\uAED8 \uC4F0\uB294 \uBCF4\uC870 \uC218\uB2E8\uC785\uB2C8\uB2E4." },
+    en: { title: "CSP is a second line of defense against XSS", body: "Limiting which script origins may run with Content-Security-Policy reduces damage even if XSS slips through. A strict policy that blocks inline scripts and uses nonces or hashes is strongest. It complements, not replaces, input validation and output encoding." },
+    code: "Content-Security-Policy: default-src 'self'; script-src 'self' 'nonce-abc123'",
+    source: MDN_CSP
+  },
+  {
+    id: "noopener",
+    ko: { title: "\uC0C8 \uD0ED\uC73C\uB85C \uC5EC\uB294 \uC678\uBD80 \uB9C1\uD06C\uC5D0\uB294 rel", body: 'target="_blank" \uB9C1\uD06C\uB294 \uC5F4\uB9B0 \uD398\uC774\uC9C0\uAC00 window.opener \uB85C \uC6D0\uB798 \uD398\uC774\uC9C0\uC5D0 \uC811\uADFC\uD560 \uC218 \uC788\uC5C8\uC2B5\uB2C8\uB2E4. \uC694\uC998 \uBE0C\uB77C\uC6B0\uC800\uB294 \uAE30\uBCF8\uC73C\uB85C \uB9C9\uC9C0\uB9CC rel="noopener noreferrer" \uB97C \uBD99\uC774\uBA74 \uC624\uB798\uB41C \uD658\uACBD\uACFC \uB9AC\uD37C\uB7EC \uB178\uCD9C\uAE4C\uC9C0 \uB300\uBE44\uB3FC\uC694.' },
+    en: { title: "Add rel to external links that open in a new tab", body: 'A target="_blank" page could reach the original page through window.opener. Modern browsers block this by default, but rel="noopener noreferrer" also covers older environments and referrer leakage.' },
+    code: '<a href="https://example.com" target="_blank" rel="noopener noreferrer">...</a>'
+  },
+  {
+    id: "samesite-cookies",
+    ko: { title: "\uCFE0\uD0A4\uC5D0\uB294 HttpOnly\xB7Secure\xB7SameSite", body: "HttpOnly \uB294 JS \uAC00 \uCFE0\uD0A4\uB97C \uC77D\uC9C0 \uBABB\uD558\uAC8C, Secure \uB294 HTTPS \uC5D0\uC11C\uB9CC \uBCF4\uB0B4\uAC8C, SameSite \uB294 \uB2E4\uB978 \uC0AC\uC774\uD2B8\uC5D0\uC11C \uC628 \uC694\uCCAD\uC5D0 \uCFE0\uD0A4\uB97C \uBD99\uC774\uC9C0 \uC54A\uAC8C \uD569\uB2C8\uB2E4(CSRF \uC644\uD654). \uB85C\uADF8\uC778 \uCFE0\uD0A4\uB294 \uC138 \uAC00\uC9C0\uB97C \uBAA8\uB450 \uC758\uC2DD\uD558\uC138\uC694." },
+    en: { title: "Cookies: HttpOnly, Secure, SameSite", body: "HttpOnly keeps JS from reading the cookie, Secure sends it only over HTTPS, and SameSite keeps it off cross-site requests (CSRF mitigation). Think about all three for login cookies." },
+    code: "Set-Cookie: sid=abc; HttpOnly; Secure; SameSite=Lax; Path=/"
+  },
+  {
+    id: "no-secrets-in-bundle",
+    ko: { title: "\uD504\uB860\uD2B8\uC5D4\uB4DC \uCF54\uB4DC\uC5D0 \uBE44\uBC00\uD0A4\uB97C \uB123\uC9C0 \uB9C8\uC138\uC694", body: "\uBC88\uB4E4\uC5D0 \uB4E4\uC5B4\uAC04 \uAC12\uC740 \uB204\uAD6C\uB098 \uAC1C\uBC1C\uC790 \uB3C4\uAD6C\uB85C \uBCFC \uC218 \uC788\uC2B5\uB2C8\uB2E4. VITE_\xB7NEXT_PUBLIC_ \uC811\uB450\uC0AC\uAC00 \uBD99\uC740 \uD658\uACBD\uBCC0\uC218\uB294 \uACF5\uAC1C\uB418\uB294 \uAC12\uC774\uC5D0\uC694. \uBE44\uBC00\uD0A4\uB294 \uC11C\uBC84\uC5D0\uC11C\uB9CC \uC4F0\uACE0, \uD504\uB860\uD2B8\uC5D4\uB4DC\uB294 \uACF5\uAC1C \uAC00\uB2A5\uD55C \uD0A4\uB9CC \uAC00\uC9C0\uC138\uC694." },
+    en: { title: "Never put secret keys in frontend code", body: "Anything in the bundle can be read by anyone with dev tools. Env vars prefixed VITE_ or NEXT_PUBLIC_ are public. Keep secret keys on the server only; the frontend should hold only keys that are safe to expose." },
+    code: "// \u2717 const key = import.meta.env.VITE_SECRET_KEY\n// \u2713 \uC11C\uBC84(API)\uC5D0\uC11C \uD0A4\uB97C \uC4F0\uACE0, \uD504\uB860\uD2B8\uB294 \uACB0\uACFC\uB9CC \uBC1B\uB294\uB2E4"
+  },
+  {
+    id: "sri",
+    ko: { title: "\uC678\uBD80 \uC2A4\uD06C\uB9BD\uD2B8\uC5D0\uB294 SRI \uB85C \uBB34\uACB0\uC131 \uD655\uC778", body: "CDN \uC5D0\uC11C \uBD88\uB7EC\uC624\uB294 \uC2A4\uD06C\uB9BD\uD2B8\uAC00 \uBC14\uB00C\uC5B4\uB3C4 \uC54C\uC544\uCC44\uC9C0 \uBABB\uD558\uBA74 \uC704\uD5D8\uD569\uB2C8\uB2E4. integrity \uC18D\uC131\uC5D0 \uD574\uC2DC\uB97C \uC801\uC73C\uBA74 \uB0B4\uC6A9\uC774 \uB2E4\uB97C \uB54C \uBE0C\uB77C\uC6B0\uC800\uAC00 \uC2E4\uD589\uD558\uC9C0 \uC54A\uC544\uC694." },
+    en: { title: "Verify external scripts with SRI", body: "A script loaded from a CDN that changes unnoticed is dangerous. With a hash in the integrity attribute, the browser refuses to run it if the content differs." },
+    code: '<script src="https://cdn.example.com/lib.js"\n  integrity="sha384-..." crossorigin="anonymous"></script>'
+  },
+  // ---- 접근성 ----
+  {
+    id: "skip-link",
+    ko: { title: "'\uBCF8\uBB38\uC73C\uB85C \uAC74\uB108\uB6F0\uAE30' \uB9C1\uD06C\uB97C \uB123\uC73C\uC138\uC694", body: "\uD0A4\uBCF4\uB4DC \uC0AC\uC6A9\uC790\uB294 \uB9E4 \uD398\uC774\uC9C0\uB9C8\uB2E4 \uBA54\uB274\uB97C \uC218\uC2ED \uBC88 Tab \uC73C\uB85C \uC9C0\uB098\uC57C \uBCF8\uBB38\uC5D0 \uB2FF\uC2B5\uB2C8\uB2E4. \uB9E8 \uC55E\uC5D0 \uBCF8\uBB38\uC73C\uB85C \uAC00\uB294 \uB9C1\uD06C\uB97C \uB450\uACE0, \uD3EC\uCEE4\uC2A4\uB97C \uBC1B\uC73C\uBA74 \uBCF4\uC774\uAC8C \uD558\uC138\uC694." },
+    en: { title: 'Add a "skip to content" link', body: "Keyboard users must Tab through the menu dozens of times on every page to reach the content. Put a link to the main content first and make it visible when focused." },
+    code: '<a class="skip" href="#main">\uBCF8\uBB38\uC73C\uB85C \uAC74\uB108\uB6F0\uAE30</a>\n<main id="main">...</main>'
+  },
+  {
+    id: "dialog-focus",
+    ko: { title: "\uBAA8\uB2EC\uC740 <dialog> \uC640 \uD3EC\uCEE4\uC2A4 \uAD00\uB9AC", body: "\uBAA8\uB2EC\uC774 \uC5F4\uB9AC\uBA74 \uD3EC\uCEE4\uC2A4\uB97C \uC548\uC73C\uB85C \uC62E\uAE30\uACE0, \uB2EB\uD788\uBA74 \uC5F4\uC5C8\uB358 \uBC84\uD2BC\uC73C\uB85C \uB3CC\uB824\uC8FC\uC138\uC694. Esc \uB85C \uB2EB\uD600\uC57C \uD558\uACE0\uC694. \uB124\uC774\uD2F0\uBE0C <dialog> \uC758 showModal() \uC740 \uC774\uAC78 \uB300\uBD80\uBD84 \uD574 \uC90D\uB2C8\uB2E4." },
+    en: { title: "Modals: use <dialog> and manage focus", body: "When a modal opens, move focus inside; when it closes, return focus to the button that opened it. Esc should close it. The native <dialog> showModal() does most of this for you." },
+    code: '<dialog id="d"><form method="dialog"><button>\uB2EB\uAE30</button></form></dialog>\n<script>d.showModal()</script>'
+  },
+  {
+    id: "form-errors",
+    ko: { title: "\uC624\uB958\uB294 \uC0C9\uAE54\uB9CC\uC774 \uC544\uB2C8\uB77C \uAE00\uB85C", body: "\uC785\uB825\uCE78\uC774 \uBE68\uAC1C\uC9C0\uAE30\uB9CC \uD558\uBA74 \uC0C9\uC744 \uBABB \uBCF4\uAC70\uB098 \uC2A4\uD06C\uB9B0 \uB9AC\uB354\uB97C \uC4F0\uB294 \uC0AC\uB78C\uC740 \uC624\uB958\uB97C \uBAA8\uB985\uB2C8\uB2E4. \uC624\uB958 \uBA54\uC2DC\uC9C0\uB97C \uAE00\uB85C \uC4F0\uACE0 aria-invalid\xB7aria-describedby \uB85C \uC785\uB825\uCE78\uC5D0 \uC5F0\uACB0\uD558\uC138\uC694." },
+    en: { title: "Show errors in words, not just color", body: "If the field only turns red, people who cannot see color or use a screen reader miss the error. Write the message and connect it to the field with aria-invalid and aria-describedby." },
+    code: '<input aria-invalid="true" aria-describedby="e1" />\n<p id="e1">\uC774\uBA54\uC77C \uD615\uC2DD\uC774 \uC62C\uBC14\uB974\uC9C0 \uC54A\uC544\uC694</p>'
+  },
+  {
+    id: "touch-target",
+    ko: { title: "\uB204\uB974\uB294 \uC601\uC5ED\uC740 \uB109\uB109\uD558\uAC8C", body: "WCAG 2.2 \uB294 \uCD5C\uC18C 24\xD724 CSS px \uB97C \uC694\uAD6C\uD558\uACE0, \uC190\uAC00\uB77D\uC73C\uB85C \uB204\uB974\uAE30 \uD3B8\uD55C \uD06C\uAE30\uB294 44px \uC548\uD30E\uC785\uB2C8\uB2E4. \uC544\uC774\uCF58\uC774 \uC791\uC544\uB3C4 padding \uC73C\uB85C \uB204\uB974\uB294 \uC601\uC5ED\uC744 \uD0A4\uC6B0\uC138\uC694." },
+    en: { title: "Make tap targets generous", body: "WCAG 2.2 requires at least 24\xD724 CSS px, and a comfortable size for a finger is around 44px. Even with a small icon, grow the tappable area with padding." },
+    code: ".icon-btn { min-width: 44px; min-height: 44px; padding: 10px; }"
+  },
+  {
+    id: "lang-switch",
+    ko: { title: "\uB2E4\uB978 \uC5B8\uC5B4\uAC00 \uC11E\uC774\uBA74 lang \uC73C\uB85C \uC54C\uB824 \uC8FC\uC138\uC694", body: '\uD55C\uAD6D\uC5B4 \uBB38\uC11C\uC5D0 \uC601\uC5B4 \uBB38\uC7A5\uC774 \uC788\uC73C\uBA74 \uADF8 \uBD80\uBD84\uC5D0 lang="en" \uC744 \uC8FC\uC138\uC694. \uC2A4\uD06C\uB9B0 \uB9AC\uB354\uAC00 \uADF8 \uAD6C\uAC04\uB9CC \uC601\uC5B4 \uBC1C\uC74C\uC73C\uB85C \uC77D\uC5B4 \uC90D\uB2C8\uB2E4.' },
+    en: { title: "Mark other-language passages with lang", body: 'If a Korean page has an English sentence, give that part lang="en" so the screen reader reads just that stretch with English pronunciation.' },
+    code: '<p>\uC774 \uAE30\uB2A5\uC740 <span lang="en">progressive enhancement</span> \uBC29\uC2DD\uC774\uC5D0\uC694.</p>'
+  },
+  {
+    id: "heading-outline",
+    ko: { title: "\uC81C\uBAA9\uC740 \uAE00\uC790 \uD06C\uAE30\uAC00 \uC544\uB2C8\uB77C \uAD6C\uC870\uB85C", body: "h1 \u2192 h2 \u2192 h3 \uCC98\uB7FC \uB0B4\uC6A9\uC758 \uACC4\uCE35\uB300\uB85C \uC81C\uBAA9 \uD0DC\uADF8\uB97C \uC4F0\uC138\uC694. \uC2A4\uD06C\uB9B0 \uB9AC\uB354 \uC0AC\uC6A9\uC790\uB294 \uC81C\uBAA9 \uBAA9\uB85D\uC73C\uB85C \uD398\uC774\uC9C0\uB97C \uD6D1\uC2B5\uB2C8\uB2E4. \uD06C\uAE30\uB294 CSS \uB85C \uB530\uB85C \uC815\uD558\uC138\uC694." },
+    en: { title: "Headings are structure, not font size", body: "Use heading tags in the content's hierarchy: h1 \u2192 h2 \u2192 h3. Screen reader users skim a page through its list of headings. Set the size separately with CSS." },
+    code: "<h1>\uC8FC\uBB38</h1>\n  <h2>\uBC30\uC1A1\uC9C0</h2>\n  <h2>\uACB0\uC81C \uC218\uB2E8</h2>"
+  },
+  // ---- 네트워크 ----
+  {
+    id: "fetch-ok",
+    ko: { title: "fetch \uB294 404\xB7500 \uC5D0\uB3C4 \uC131\uACF5\uC73C\uB85C \uB05D\uB098\uC694", body: "fetch \uB294 \uB124\uD2B8\uC6CC\uD06C\uAC00 \uB04A\uACBC\uC744 \uB54C\uB9CC \uC2E4\uD328\uD558\uACE0, \uC11C\uBC84\uAC00 404\xB7500 \uC744 \uB3CC\uB824\uC918\uB3C4 Promise \uB294 \uC774\uD589\uB429\uB2C8\uB2E4. response.ok \uB97C \uAF2D \uD655\uC778\uD558\uC138\uC694." },
+    en: { title: "fetch succeeds even on 404 and 500", body: "fetch rejects only when the network fails; if the server returns 404 or 500 the Promise still resolves. Always check response.ok." },
+    code: "const res = await fetch(url);\nif (!res.ok) throw new Error(`HTTP ${res.status}`);"
+  },
+  {
+    id: "optimistic-update",
+    ko: { title: "\uC88B\uC544\uC694 \uAC19\uC740 \uAC00\uBCBC\uC6B4 \uB3D9\uC791\uC740 \uB099\uAD00\uC801 \uC5C5\uB370\uC774\uD2B8", body: "\uC11C\uBC84 \uC751\uB2F5\uC744 \uAE30\uB2E4\uB838\uB2E4\uAC00 \uD654\uBA74\uC744 \uBC14\uAFB8\uBA74 \uB290\uB9AC\uAC8C \uB290\uAEF4\uC9D1\uB2C8\uB2E4. \uBA3C\uC800 \uD654\uBA74\uC744 \uBC14\uAFB8\uACE0 \uC2E4\uD328\uD558\uBA74 \uB418\uB3CC\uB9AC\uB294 \uB099\uAD00\uC801 \uC5C5\uB370\uC774\uD2B8\uB85C \uC989\uAC01\uC801\uC778 \uBC18\uC751\uC744 \uC8FC\uC138\uC694." },
+    en: { title: 'Optimistic updates for light actions like "like"', body: "Waiting for the server response before updating the screen feels slow. Update the screen first and roll back on failure for an instant response." },
+    code: "setLiked(true);\ntry { await api.like(id); } catch { setLiked(false); }"
+  },
+  // ---- SEO ----
+  {
+    id: "og-meta",
+    ko: { title: "\uB9C1\uD06C \uBBF8\uB9AC\uBCF4\uAE30\uB294 og \uBA54\uD0C0 \uD0DC\uADF8\uB85C", body: "\uCE74\uCE74\uC624\uD1A1\xB7\uC2AC\uB799\uC5D0 \uC8FC\uC18C\uB97C \uBD99\uC600\uC744 \uB54C \uB098\uC624\uB294 \uC81C\uBAA9\xB7\uC124\uBA85\xB7\uC774\uBBF8\uC9C0\uB294 og:title, og:description, og:image \uAC00 \uC815\uD569\uB2C8\uB2E4. \uC5C6\uC73C\uBA74 \uC5C9\uB6B1\uD55C \uAE00\uC774\uB098 \uBE48 \uCE74\uB4DC\uAC00 \uB098\uC640\uC694." },
+    en: { title: "Control link previews with og meta tags", body: "The title, description, and image shown when you paste a URL into a chat app come from og:title, og:description, and og:image. Without them you get random text or an empty card." },
+    code: '<meta property="og:title" content="\uC81C\uBAA9" />\n<meta property="og:image" content="https://.../thumb.png" />'
+  }
+];
+
 // dist/shared/tips.js
-var TIPS = [
+var BASE_TIPS = [
   {
     id: "semantic-html",
     title: "div \uB300\uC2E0 \uC54C\uB9DE\uC740 \uD0DC\uADF8\uB97C \uC4F0\uC138\uC694",
@@ -316,6 +1030,10 @@ var TIPS = [
     body: "<head> \uC758 \uC77C\uBC18 script \uB294 \uB0B4\uB824\uBC1B\uACE0 \uC2E4\uD589\uD558\uB294 \uB3D9\uC548 HTML \uD30C\uC2F1\uC744 \uBA48\uCDA5\uB2C8\uB2E4. defer \uB294 \uD30C\uC2F1\uC744 \uB9C9\uC9C0 \uC54A\uACE0, \uBB38\uC11C\uAC00 \uB2E4 \uB9CC\uB4E4\uC5B4\uC9C4 \uB4A4 \uC21C\uC11C\uB300\uB85C \uC2E4\uD589\uD574\uC694.",
     code: '<script src="/app.js" defer></script>'
   }
+];
+var TIPS = [
+  ...BASE_TIPS.map((t) => ({ ...t, en: TIPS_EN[t.id] })),
+  ...EXTRA_TIPS.map((t) => ({ id: t.id, title: t.ko.title, body: t.ko.body, code: t.code, en: t.en, ...t.source ? { source: t.source } : {} }))
 ];
 var TIP_EVERY_MS = 20 * 6e4;
 var TIP_PENDING_MS = 10 * 6e4;
@@ -631,6 +1349,27 @@ function chunky(rows) {
 }
 
 // dist/shared/art/accessory.js
+var ACCESSORIES = [
+  "none",
+  "ribbon",
+  "glasses",
+  "crown",
+  "wings",
+  "sprout",
+  "flower",
+  "partyhat",
+  "halo",
+  "cap",
+  "witch",
+  "chef",
+  "santa",
+  "headband",
+  "antenna",
+  "bunnyears",
+  "eyepatch",
+  "monocle",
+  "star"
+];
 var ACCESSORY_COLORS = {
   none: { X: "#ffffff", Y: "#ffffff" },
   ribbon: { X: "#ff6b8b", Y: "#c2385a" },
@@ -834,7 +1573,10 @@ function drawBackWings(g, acc, x, y, size) {
 }
 
 // dist/shared/art/style.js
+var VARIANTS = ["default", "pastel", "deep", "mono"];
 var DEFAULT_STYLE = { variant: "default", accessory: "none" };
+var isVariant = (v) => typeof v === "string" && VARIANTS.includes(v);
+var isAccessory = (v) => typeof v === "string" && ACCESSORIES.includes(v);
 function gray(hex) {
   const n = parseInt(hex.slice(1), 16);
   const v = Math.round(0.3 * (n >> 16 & 255) + 0.59 * (n >> 8 & 255) + 0.11 * (n & 255));
@@ -2730,11 +3472,48 @@ function renderProfileCard(input) {
   ].join("\n");
 }
 
+// dist/shared/settings.js
+var MAX_PET_NAME = 12;
+function sanitizePetName(v) {
+  if (typeof v !== "string")
+    return "";
+  const cleaned = v.replace(/[\u0000-\u001f\u007f<>&"]/g, "").replace(/\s+/g, " ").trim();
+  return Array.from(cleaned).slice(0, MAX_PET_NAME).join("").trim();
+}
+
 // dist/shared/card-endpoint.js
 var W2 = 420;
 var H2 = 190;
+var DAY_MS = 864e5;
 function notFoundSvg() {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W2}" height="${H2}" viewBox="0 0 ${W2} ${H2}"><rect width="${W2}" height="${H2}" rx="6" fill="#232640"/><rect x="1.5" y="1.5" width="${W2 - 3}" height="${H2 - 3}" rx="5" fill="none" stroke="#6d28d9" stroke-width="3"/><text x="${W2 / 2}" y="${H2 / 2 - 4}" text-anchor="middle" font-family="monospace" font-size="16" fill="#ffd166">NO PET CARD</text><text x="${W2 / 2}" y="${H2 / 2 + 18}" text-anchor="middle" font-family="monospace" font-size="11" fill="#9aa0c8">LOG IN WITH GITHUB IN THE APP</text></svg>`;
+}
+var num = (v, max) => typeof v === "number" && Number.isFinite(v) ? Math.max(0, Math.min(max, Math.floor(v))) : 0;
+function readExtras(raw, speciesId, now) {
+  if (typeof raw !== "object" || raw === null)
+    return null;
+  const e = raw;
+  const style = {
+    variant: isVariant(e["variant"]) ? e["variant"] : DEFAULT_STYLE.variant,
+    accessory: isAccessory(e["accessory"]) ? e["accessory"] : DEFAULT_STYLE.accessory
+  };
+  const name = sanitizePetName(e["name"]);
+  const stage = e["stage"] === "baby" || e["stage"] === "adult" || e["stage"] === "legend" && speciesId !== null && isSpeciesId(speciesId) && isHiddenSpecies(speciesId) ? e["stage"] : void 0;
+  const day = typeof e["day"] === "string" && /^\d{4}-\d{2}-\d{2}$/.test(e["day"]) ? Date.parse(e["day"] + "T00:00:00Z") : NaN;
+  const fresh = Number.isFinite(day) && now - day <= 2 * DAY_MS;
+  const streak = fresh ? num(e["streak"], 3650) : 0;
+  const g = emptyGrowth();
+  g.counters.fixes = num(e["fixes"], 1e5);
+  g.counters.quizCorrect = num(e["quiz"], 1e5);
+  g.days = Array.from({ length: Math.min(streak, 400) }, (_, i) => localDay(now - (Math.min(streak, 400) - 1 - i) * DAY_MS));
+  RULE_IDS.slice(0, Math.min(num(e["rules"], 100), RULE_IDS.length)).forEach((id) => {
+    g.rules[id] = { confirms: 1, fixes: 0 };
+  });
+  ACHIEVEMENTS.slice(0, Math.min(num(e["badges"], 100), ACHIEVEMENTS.length)).forEach((a) => {
+    g.achievements[a.id] = now;
+  });
+  const codex = buildCodex(g, { tipsSeen: num(e["tips"], 1e3) }, now);
+  return { style, name, ...stage ? { stage } : {}, codex };
 }
 function renderCardFromRow(row, now = Date.now()) {
   if (!row || row.found !== true)
@@ -2742,9 +3521,15 @@ function renderCardFromRow(row, now = Date.now()) {
   const species = typeof row.species_id === "string" && isSpeciesId(row.species_id) ? row.species_id : null;
   const xp = typeof row.xp === "number" && Number.isFinite(row.xp) ? Math.max(0, Math.min(2e6, Math.floor(row.xp))) : 0;
   const pet = { ...createPet(species ?? "rabbit", now), xp: species ? xp : 0 };
-  const svg = renderProfileCard({ pet, style: DEFAULT_STYLE });
+  const extras = species ? readExtras(row.extras, species, now) : null;
+  const svg = renderProfileCard({
+    pet,
+    style: extras?.style ?? DEFAULT_STYLE,
+    ...extras ? { codex: extras.codex, ...extras.name ? { name: extras.name } : {}, ...extras.stage ? { stage: extras.stage } : {} } : {}
+  });
   return { svg, status: species ? "ok" : "empty" };
 }
 export {
+  readExtras,
   renderCardFromRow
 };
