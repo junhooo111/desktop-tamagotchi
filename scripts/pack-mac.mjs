@@ -1,5 +1,6 @@
 // macOS 배포 zip(Intel·Apple Silicon)을 Windows 에서 만든다. electron-builder 는 macOS 에서만 mac 빌드가 되므로,
 // 공식 Electron macOS zip 에 우리 앱을 넣어 새 zip 으로 묶는다(scripts/mac-zip.py). 서명·공증은 없고, 동작은 맥에서 확인하지 못한다.
+// Python 3 가 필요하다. `python` 이 Microsoft Store 껍데기이면 환경 변수 PYTHON 에 실제 python.exe 경로를 준다.
 // 사용: npm run pack:mac   →   release-mac/Desktop-Tamagotchi-<버전>-mac-<arch>.zip
 import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -34,7 +35,7 @@ const files = [];
 for (const arch of ['x64', 'arm64']) {
   const zip = await downloadArtifact({ version: electronVersion, platform: 'darwin', arch, artifactName: 'electron' });
   const out = path.join(outDir, `Desktop-Tamagotchi-${pkg.version}-mac-${arch}.zip`);
-  execFileSync('python', [path.join(root, 'scripts', 'mac-zip.py'), zip, appDir, path.join(root, 'extension'), out, pkg.version], { stdio: 'inherit' });
+  execFileSync(process.env['PYTHON'] ?? 'python', [path.join(root, 'scripts', 'mac-zip.py'), zip, appDir, path.join(root, 'extension'), out, pkg.version], { stdio: 'inherit' });
   const bytes = fs.readFileSync(out);
   files.push({ arch, name: path.basename(out), sha512: createHash('sha512').update(bytes).digest('hex'), size: bytes.length });
 }
