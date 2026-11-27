@@ -165,7 +165,7 @@ const RULES: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^업데이트 정보를 찾지 못했어요\. 새 버전을 올리는 중일 수 있으니 잠시 뒤에 다시 해 주세요/, () => 'Could not find the update information. A new version may be being uploaded; please try again shortly'],
   [/^받은 파일을 확인하지 못했어요\. 잠시 뒤에 다시 해 주세요/, () => 'Could not verify the downloaded file. Please try again shortly'],
   [/^업데이트를 확인하지 못했어요\. 잠시 뒤에 다시 해 주세요 \(원인: /, () => 'Could not check for updates. Please try again shortly (cause: '],
-  [/^🎟 새 기능! 뽑기권 (\d+)장을 드렸어요\.\n메뉴의 '뽑기·컬렉션…'에서 새 동물을 뽑아 보세요/, (m) => `🎟 New feature! You got ${m[1]} ticket(s).\nPull new animals in the menu's 'Gacha & Collection…'`],
+  [/^🎟 새 기능! 뽑기권 (\d+)장을 드렸어요\.\n메뉴의 '뽑기…'에서 새 동물을 뽑아 보세요/, (m) => `🎟 New feature! You got ${m[1]} ticket(s).\nPull new animals in the menu's 'Gacha…'`],
   // 서버 오류(friendlyError)
   [/^뽑기권이 모자라요/, () => 'Not enough tickets'],
   [/^게임머니가 모자라요/, () => 'Not enough game money'],

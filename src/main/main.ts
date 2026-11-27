@@ -211,6 +211,7 @@ let growthPath = '';
 let collection: Collection;
 let collectionPath = '';
 let collectionWin: BrowserWindow | null = null;
+let petsWin: BrowserWindow | null = null;
 let newsPath = '';
 /** 마지막으로 가져온 공지(메뉴에 보여 준다) */
 let newsItems: NewsItem[] = [];
@@ -414,7 +415,7 @@ function serverAward(kind: Grant['kind'], count: number, perCall: number, keyBas
 
 /** 뽑기권을 받았다고 알린다(방금 한 일의 말풍선이 지나간 뒤에). */
 function announceTickets(text: string): void {
-  setTimeout(() => say(`🎟 ${text}\n` + L(`메뉴의 '뽑기·컬렉션…'에서 뽑아 보세요 (보유 ${collection.tickets}장)`, `Pull in the menu's 'Gacha & Collection…' (you have ${collection.tickets})`)), 3_000);
+  setTimeout(() => say(`🎟 ${text}\n` + L(`메뉴의 '뽑기…'에서 뽑아 보세요 (보유 ${collection.tickets}장)`, `Pull in the menu's 'Gacha…' (you have ${collection.tickets})`)), 3_000);
 }
 
 // ---- 선물 상자: 하루 두세 번 펫이 선물을 가져온다(뽑기권·경험치·응가(꽝)) ----
@@ -1500,11 +1501,14 @@ function switchPet(id: SpeciesId): { ok: boolean; message: string } {
 
 function refreshCollection(): void {
   if (collectionWin && !collectionWin.isDestroyed()) collectionWin.webContents.send('collection:refresh');
+  if (petsWin && !petsWin.isDestroyed()) petsWin.webContents.send('collection:refresh');
 }
 
 function closeCollection(): void {
   if (collectionWin && !collectionWin.isDestroyed()) collectionWin.close();
   collectionWin = null;
+  if (petsWin && !petsWin.isDestroyed()) petsWin.close();
+  petsWin = null;
 }
 
 /** 꾸미기 뽑기로 아직 얻을 수 있는 장식·색 수 */
@@ -1601,10 +1605,20 @@ function doPullCosmeticLocal() {
   return { ok: true as const, message: L(`${name}(을)를 얻었어요!`, `Got ${nameEn(name)}!`), kind: item.kind, itemId: item.id, view: collectionData() };
 }
 
+/** 뽑기 창(collection.html)과 내 펫 창(pets.html)은 같은 통로(collectionApi)를 쓴다. */
 function openCollection(): void {
-  if (collectionWin && !collectionWin.isDestroyed()) {
-    collectionWin.show();
-    collectionWin.focus();
+  openCollectionWindow('gacha');
+}
+
+function openPets(): void {
+  openCollectionWindow('pets');
+}
+
+function openCollectionWindow(kind: 'gacha' | 'pets'): void {
+  const existing = kind === 'gacha' ? collectionWin : petsWin;
+  if (existing && !existing.isDestroyed()) {
+    existing.show();
+    existing.focus();
     return;
   }
   const area = screen.getDisplayNearestPoint({ x: Math.round(behavior.x), y: Math.round(behavior.y) }).workArea;
@@ -1619,7 +1633,7 @@ function openCollection(): void {
     minimizable: false,
     maximizable: false,
     autoHideMenuBar: true,
-    title: L('뽑기·컬렉션', 'Gacha & Collection'),
+    title: kind === 'gacha' ? L('뽑기', 'Gacha') : L('내 펫', 'My pets'),
     backgroundColor: '#fffdf5',
     show: false,
     webPreferences: {
@@ -1634,9 +1648,11 @@ function openCollection(): void {
   w.once('ready-to-show', () => w.show());
   w.on('closed', () => {
     if (collectionWin === w) collectionWin = null;
+    if (petsWin === w) petsWin = null;
   });
-  void w.loadFile(path.join(projectRoot, 'static', 'collection.html'));
-  collectionWin = w;
+  void w.loadFile(path.join(projectRoot, 'static', kind === 'gacha' ? 'collection.html' : 'pets.html'));
+  if (kind === 'gacha') collectionWin = w;
+  else petsWin = w;
 }
 
 function applyElapsedInPlace(): PetState {
@@ -1981,7 +1997,8 @@ function buildMenuModel(): MenuModel {
         icon: 'paw',
         items: [
           { id: on('wardrobe', () => openWardrobe()), label: L('꾸미기…', 'Customize…'), icon: 'star' },
-          { id: on('collection', () => openCollection()), label: L('뽑기·컬렉션…', 'Gacha & Collection…'), icon: 'ticket', badge: String(collection.tickets) },
+          { id: on('pets', () => openPets()), label: L('내 펫…', 'My pets…'), icon: 'paw' },
+          { id: on('collection', () => openCollection()), label: L('뽑기…', 'Gacha…'), icon: 'ticket', badge: String(collection.tickets) },
           { id: on('codex', () => openCodex()), label: L('도감·기록…', 'Codex & records…'), icon: 'book' },
           behavior.home
             ? {
@@ -2379,7 +2396,7 @@ function setupIpc(): void {
     const r = switchPet(id);
     return { ...r, view: collectionData() };
   });
-  ipcMain.on('collection:close', () => closeCollection());
+  ipcMain.on('collection:close', (event) => BrowserWindow.fromWebContents(event.sender)?.close());
   ipcMain.handle('wardrobe:set', (_event, patch: unknown) => applyWardrobe(patch));
   ipcMain.on('wardrobe:close', () => closeWardrobe());
   ipcMain.handle('results:get', () =>
@@ -2583,7 +2600,7 @@ if (!app.requestSingleInstanceLock()) {
     persist();
     if (updateGift > 0) setTimeout(() => announceTickets(L(`새 버전으로 업데이트해 줘서 고마워요! 뽑기권 +${updateGift}장`, `Thanks for updating! +${updateGift} ticket(s)`)), 5_000);
     if (!loadedCollection) {
-      setTimeout(() => say(`🎟 새 기능! 뽑기권 ${collection.tickets}장을 드렸어요.\n메뉴의 '뽑기·컬렉션…'에서 새 동물을 뽑아 보세요`), 6_000);
+      setTimeout(() => say(`🎟 새 기능! 뽑기권 ${collection.tickets}장을 드렸어요.\n메뉴의 '뽑기…'에서 새 동물을 뽑아 보세요`), 6_000);
     }
     lastUptimeAt = Date.now();
     setInterval(() => accrueUptime(), 60_000);

@@ -5,8 +5,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { buildCollectionView, pullSpecies, startCollection, type Collection, type CollectionView } from '../shared/collection.js';
 import { createPet } from '../shared/pet.js';
 
-const html = fs.readFileSync(path.join(process.cwd(), 'static', 'collection.html'), 'utf8');
-const body = /<body>([\s\S]*)<\/body>/.exec(html)?.[1]?.replace(/<script[\s\S]*?<\/script>/g, '') ?? '';
+// 뽑기 창과 내 펫 창은 같은 스크립트를 쓴다. 시험에서는 두 화면을 함께 올려 놓고 본다.
+const pageBody = (name: string): string => /<body>([\s\S]*)<\/body>/.exec(fs.readFileSync(path.join(process.cwd(), 'static', name), 'utf8'))?.[1]?.replace(/<script[\s\S]*?<\/script>/g, '') ?? '';
+const body = pageBody('collection.html') + pageBody('pets.html');
 
 const el = <T extends HTMLElement = HTMLElement>(id: string): T => document.getElementById(id) as T;
 const flush = async (ms = 0): Promise<void> => {
@@ -66,9 +67,10 @@ describe('뽑기·컬렉션 창', () => {
     expect(el('pity').textContent).toContain('40번');
   });
 
-  it('모든 동물 칸을 보여 준다: 가진 동물은 정보와 꺼내기, 없는 동물은 점선 칸이고 히든은 ???로 숨긴다', async () => {
+  it('내 펫 목록에는 가진 동물만 보여 주고, 키우는 동물이 정보와 함께 나온다(못 만난 동물은 도감에서 본다)', async () => {
     await open(view(base(0)));
-    expect(pets()).toHaveLength(20);
+    expect(pets()).toHaveLength(1);
+    expect(pets()[0]!.dataset['id']).toBe('cat');
     const cat = pet('cat');
     expect(cat.textContent).toContain('고양이');
     expect(cat.textContent).toContain('Lv.6');
@@ -76,12 +78,7 @@ describe('뽑기·컬렉션 창', () => {
     expect(cat.classList.contains('active')).toBe(true);
     expect(cat.querySelector('button')!.disabled).toBe(true); // 키우는 중
     expect(cat.querySelector('button')!.textContent).toBe('키우는 중');
-    expect(pet('dog').classList.contains('empty')).toBe(true);
-    expect(pet('dog').textContent).toContain('강아지');
-    expect(pet('dog').querySelector('button')).toBeNull();
-    expect(pet('dragon').textContent).toContain('???');
-    expect(pet('dragon').textContent).not.toContain('용');
-    expect(pet('dragon').classList.contains('hidden-pet')).toBe(true);
+    expect(pets().some((p) => p.dataset['id'] === 'dog')).toBe(false);
   });
 
   it('뽑기권이 모자라면 뽑기 버튼이 막힌다', async () => {
@@ -190,7 +187,7 @@ describe('뽑기·컬렉션 창', () => {
     await flush();
     expect(api.get).toHaveBeenCalledTimes(2);
     expect(el('tickets').textContent).toContain('7장');
-    expect(pets()).toHaveLength(20);
+    expect(pets()).toHaveLength(1);
   });
 
   it('닫기 버튼과 Esc 로 닫는다', async () => {

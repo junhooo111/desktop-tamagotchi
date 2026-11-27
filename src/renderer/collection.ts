@@ -1,5 +1,6 @@
 /**
- * 뽑기·컬렉션 창: 뽑기권으로 동물·꾸미기를 뽑고, 가진 동물 중 한 마리를 꺼낸다.
+ * 뽑기 창(collection.html): 뽑기권으로 동물·꾸미기를 뽑는다.
+ * 내 펫 창(pets.html): 가진 동물 목록을 보고 한 마리를 꺼내 키운다. 두 창이 같은 스크립트를 쓰고, 없는 요소는 건너뛴다.
  * 규칙(확률·비용·보상)은 메인(shared/collection.ts)이 정하고 여기서는 보여 주기만 한다.
  */
 import type { Lang } from '../shared/i18n.js';
@@ -30,6 +31,11 @@ declare global {
 }
 
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
+const has = (id: string): boolean => document.getElementById(id) !== null;
+const setText = (id: string, value: string): void => {
+  const e = document.getElementById(id);
+  if (e) e.textContent = value;
+};
 
 const STAGE_NAME = { egg: '알', baby: '새끼', adult: '성체', legend: '전설' } as const;
 /** 뽑는 연출에 걸리는 시간(ms) */
@@ -101,8 +107,23 @@ function petCard(e: CollectionEntry): HTMLElement {
 }
 
 function render(): void {
-  $('tickets').textContent = `🎟 뽑기권 ${data.tickets}장`;
-  $('owned-count').textContent = `가진 동물 ${data.ownedCount}/${data.total}`;
+  setText('tickets', `🎟 뽑기권 ${data.tickets}장`);
+  setText('owned-count', `가진 동물 ${data.ownedCount}/${data.total}`);
+  renderGacha();
+  renderPets();
+}
+
+function renderPets(): void {
+  if (!has('grid')) return;
+  const grid = $('grid');
+  grid.textContent = '';
+  // 키우는 동물을 맨 앞에, 나머지는 레벨 높은 순으로 보여 준다(가진 동물만).
+  const mine = data.entries.filter((e) => e.owned).sort((a, b) => Number(b.active) - Number(a.active) || b.level - a.level);
+  for (const e of mine) grid.append(petCard(e));
+}
+
+function renderGacha(): void {
+  if (!has('pull-species')) return;
   const species = $<HTMLButtonElement>('pull-species');
   species.textContent = `동물 뽑기 (${data.cost.species}장)`;
   species.disabled = busy || data.tickets < data.cost.species;
@@ -112,9 +133,6 @@ function render(): void {
   const c = data.chances;
   $('chances').textContent = `확률: 일반 동물 ${data.entries.filter((e) => !e.hidden).length}종 각 ${c.commonEach.toFixed(1)}% · 히든 동물 ${data.entries.filter((e) => e.hidden).length}종 각 ${c.hiddenEach}% (합쳐서 ${c.hiddenTotal}%). 이미 가진 동물이 나오면 그 동물이 경험치를 받아요.`;
   $('pity').textContent = `히든이 안 나오면 ${data.untilPity}번 안에 반드시 나와요 (지금까지 ${data.pulls}번 뽑음)`;
-  const grid = $('grid');
-  grid.textContent = '';
-  for (const e of data.entries) grid.append(petCard(e));
 }
 
 function showResult(result: PullResult): void {
@@ -171,6 +189,8 @@ async function switchTo(id: SpeciesId): Promise<void> {
   const r = await window.collectionApi.switchTo(id);
   data = r.view;
   render();
+  setText('switch-note', r.message);
+  if (!has('result')) return;
   const box = $('result');
   box.hidden = false;
   box.classList.remove('shaking', 'win-hidden');
@@ -186,9 +206,11 @@ async function refresh(): Promise<void> {
   render();
 }
 
-$('pull-species').addEventListener('click', () => void pull('species'));
-$('pull-cosmetic').addEventListener('click', () => void pull('cosmetic'));
-$('close').addEventListener('click', () => window.collectionApi.close());
+if (has('pull-species')) {
+  $('pull-species').addEventListener('click', () => void pull('species'));
+  $('pull-cosmetic').addEventListener('click', () => void pull('cosmetic'));
+}
+for (const id of ['close', 'close-pets']) if (has(id)) $(id).addEventListener('click', () => window.collectionApi.close());
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') window.collectionApi.close();
 });

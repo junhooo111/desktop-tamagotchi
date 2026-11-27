@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'" />
+    <title>내 펫</title>
+    <link rel="stylesheet" href="./collection.css" />
+  </head>
+  <body>
+    <main>
+      <h1>내 펫</h1>
+      <div class="wallet">
+        <strong id="owned-count"></strong>
+      </div>
+      <p class="hint">한 번에 한 마리만 꺼내서 키울 수 있어요. 꺼내 두지 않은 동물은 시간이 멈춰 있어요. 아직 못 만난 동물은 메뉴의 `도감·기록…` 에서 볼 수 있어요.</p>
+      <p class="hint" id="switch-note" role="status"></p>
+      <div id="grid" class="grid"></div>
+      <footer>
+        <button id="close-pets" type="button">닫기</button>
+      </footer>
+    </main>
+    <script type="module" src="../dist/renderer/collection.js"></script>
+  </body>
+</html>

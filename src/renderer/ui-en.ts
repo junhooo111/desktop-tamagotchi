@@ -69,6 +69,10 @@ export const UI_EN: Record<string, string> = {
   달성: 'Done',
   // 뽑기·컬렉션
   '뽑기·컬렉션': 'Gacha & Collection',
+  뽑기하기: 'Gacha',
+  '내 펫': 'My pets',
+  '뽑은 동물은 메뉴의 `내 펫…` 에서 꺼내서 키울 수 있어요.': 'Take pulled animals out to raise them in `My pets…` in the menu.',
+  '한 번에 한 마리만 꺼내서 키울 수 있어요. 꺼내 두지 않은 동물은 시간이 멈춰 있어요. 아직 못 만난 동물은 메뉴의 `도감·기록…` 에서 볼 수 있어요.': 'You can raise one animal at a time. Animals you have not taken out have their time stopped. Animals you have not met yet are in `Codex & records…` in the menu.',
   '뽑은 결과': 'Pull result',
   '가진 동물': 'Animals you own',
   '한 번에 한 마리만 꺼내서 키울 수 있어요. 꺼내 두지 않은 동물은 시간이 멈춰 있어요.': 'You can raise one animal at a time. Animals you have not taken out have their time stopped.',
@@ -95,7 +99,7 @@ export const UI_EN: Record<string, string> = {
   '지금 열린 페이지에는 없어요': 'Not on the page that is open now',
   // 꾸미기
   꾸미기: 'Customize',
-  '업적을 달성하면 색과 장식이 열려요. 도감을 채우면 왕관, 문제를 많이 고치면 날개, 연속으로 오면 꽃과 천사 고리를 받아요. 뽑기권으로 꾸미기를 뽑을 수도 있어요(메뉴의 뽑기·컬렉션). 동물은 뽑기로 얻고 거기서 바꿔요.': 'Achievements unlock colors and accessories. Fill the codex for the crown, fix many problems for wings, and keep a streak for the flower and halo. You can also pull cosmetics with tickets (Gacha & Collection in the menu). Animals come from gacha and you switch them there.',
+  '업적을 달성하면 색과 장식이 열려요. 도감을 채우면 왕관, 문제를 많이 고치면 날개, 연속으로 오면 꽃과 천사 고리를 받아요. 뽑기권으로 꾸미기를 뽑을 수도 있어요(메뉴의 뽑기). 동물은 뽑기로 얻고 거기서 바꿔요.': 'Achievements unlock colors and accessories. Fill the codex for the crown, fix many problems for wings, and keep a streak for the flower and halo. You can also pull cosmetics with tickets (Gacha & Collection in the menu). Animals come from gacha and you switch them there.',
   미리보기: 'Preview',
   이름: 'Name',
   '이름을 지어 주세요': 'Give it a name',

@@ -68,7 +68,7 @@ It is unsigned, so this step is needed. New versions are downloaded by the app a
 1. After installing, an **egg** appears. (An icon also appears in the tray at the bottom right; press `^` if you cannot see it.)
 2. **Click (pet)** the egg and it warms up, **hatching after about 10 clicks**. Which animal appears is random only the first time.
 3. A baby wanders the screen. Click to pet it, and **right-click** to feed it and play.
-4. In `🎟 Gacha & Collection…` use the **3 starter tickets** for your first pull.
+4. In `🎟 Gacha…` use the **3 starter tickets** for your first pull.
 5. To have the pet appear every time you turn on your PC, right-click → **`Launch at login`**.
 
 ### Controls
@@ -107,7 +107,7 @@ An animal from gacha comes out as a **baby**, not an egg. Rank colors change eve
 
 ## Collecting animals: gacha and collection
 
-Right-click → **`🎟 Gacha & Collection…`**. Animals come **only from gacha**. Pulled animals gather in your collection and you **take out one** to raise; the others have their time stopped.
+Right-click → **`🎟 Gacha…`**. Animals come **only from gacha**. Pulled animals gather in your collection and you **take out one** to raise; the others have their time stopped.
 
 - **14 common animals** have equal odds (about 6.7% each) and **6 hidden animals** are very rare (1% each). Hidden animals show as `???` until you pull them.
 - **Pity**: if no hidden animal appears, the 40th pull always gives one.
@@ -166,7 +166,7 @@ Right-click the pet to open a **pixel-style menu**. You can use the mouse or the
 |---|---|
 | **Header** | Pet name, level rank, and bars for XP, fullness, mood, and cleanliness (the old `Show status`) |
 | **5 care buttons** | Pet · Feed · Play · Wash · Walk |
-| Tab **My pet** | Customize… · 🎟 Gacha & Collection… (ticket count) · Codex & records… · Let it play alone (here only) / Let it roam freely · Export profile card… |
+| Tab **My pet** | Customize… · My pets… · 🎟 Gacha… (ticket count) · Codex & records… · Let it play alone (here only) / Let it roam freely · Export profile card… |
 | Tab **Online** | 🏪 Auction house… · 🏆 Rankings… (logged-in players) · ☁ Log in with GitHub / your account (sync, contribution check, copy card URL, log out) |
 | Tab **Dev** | Inspect now · Inspection results… · FE tip of the day · Inspection tools (inspection browser, demo page, Chrome extension folder) |
 | **Bottom row** | ⚙ Settings · 🔔 News · ⋯ More (check for updates, launch at login, preview moves (test), version) · ⏻ Quit |
