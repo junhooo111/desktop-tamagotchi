@@ -1,6 +1,17 @@
 {
   "items": [
     {
+      "id": "v0.12.2-english-polish",
+      "date": "2026-11-27",
+      "title": "영어 모드 다듬기, 영어 README",
+      "body": "영어 모드에서 코드 예시·검사 상세 문구·공지·계정 메시지까지 영어로 나와요. 직접 지은 펫 이름은 번역하지 않고, 영어 README도 생겼어요.",
+      "en": {
+        "title": "English mode polish and English README",
+        "body": "English mode now covers code examples, inspection details, news, and account messages. Names you give your pet are never translated, and there is an English README."
+      },
+      "url": "https://github.com/junhooo111/desktop-tamagotchi/releases/tag/v0.12.2"
+    },
+    {
       "id": "v0.12.1-learning-coins",
       "date": "2026-11-27",
       "title": "배움으로 게임머니를 받아요",
