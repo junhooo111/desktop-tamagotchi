@@ -22,14 +22,14 @@ afterAll(async () => {
 const rows = async (sql: string): Promise<unknown[]> => (await db.query(sql)).rows;
 
 describe('가입', () => {
-  it('GitHub 로그인으로 가입하면 프로필과 환영 재화 100 이 생기고 원장에도 남는다', async () => {
-    const p = (await db.query<{ github_login: string; avatar_url: string; coins: number }>(
-      'select github_login, avatar_url, coins from public.profiles where user_id = $1',
+  it('GitHub 로그인으로 가입하면 프로필과 환영 게임머니 100·뽑기권 3장이 생기고 원장에도 남는다', async () => {
+    const p = (await db.query<{ github_login: string; avatar_url: string; coins: number; tickets: number }>(
+      'select github_login, avatar_url, coins, tickets from public.profiles where user_id = $1',
       [alice],
     )).rows[0];
-    expect(p).toEqual({ github_login: 'alice', avatar_url: 'https://avatars.example/alice.png', coins: 100 });
-    const ledger = (await db.query('select delta, reason from public.ledger where user_id = $1', [alice])).rows;
-    expect(ledger).toEqual([{ delta: 100, reason: 'welcome' }]);
+    expect(p).toEqual({ github_login: 'alice', avatar_url: 'https://avatars.example/alice.png', coins: 100, tickets: 3 });
+    const ledger = (await db.query('select delta, reason, currency from public.ledger where user_id = $1 order by currency', [alice])).rows;
+    expect(ledger).toEqual([{ delta: 100, reason: 'welcome', currency: 'coin' }, { delta: 3, reason: 'welcome', currency: 'ticket' }]);
   });
 
   it('user_name 이 없으면 preferred_username, 그것도 없으면 임시 이름을 쓴다', async () => {
@@ -54,7 +54,7 @@ describe('가입', () => {
 describe('읽기 권한(RLS)', () => {
   it('방문자(anon)는 펫 종류만 볼 수 있고 프로필·원장·학습 기록은 못 본다', async () => {
     await as(db, null, async () => {
-      expect((await rows('select id from public.species')).length).toBe(6);
+      expect((await rows('select id from public.species')).length).toBe(20);
       for (const table of ['profiles', 'ledger', 'learning_events']) {
         expect(await errorOf(() => db.query(`select * from public.${table}`)), table).toMatch(/permission denied/);
       }

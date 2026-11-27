@@ -89,11 +89,34 @@ export async function errorOf(fn: () => Promise<unknown>): Promise<string | null
 export async function ledgerMismatches(db: Db): Promise<{ user_id: string; coins: number; ledger: number }[]> {
   const res = await db.query<{ user_id: string; coins: number; ledger: number }>(`
     select p.user_id, p.coins, coalesce(sum(l.delta), 0)::int as ledger
-      from public.profiles p left join public.ledger l on l.user_id = p.user_id
+      from public.profiles p left join public.ledger l on l.user_id = p.user_id and l.currency = 'coin'
      group by p.user_id, p.coins
     having p.coins <> coalesce(sum(l.delta), 0)
   `);
   return res.rows;
+}
+
+/** 뽑기권(tickets)과 원장의 뽑기권 합계가 어긋난 사용자 목록 */
+export async function ticketMismatches(db: Db): Promise<{ user_id: string; tickets: number; ledger: number }[]> {
+  const res = await db.query<{ user_id: string; tickets: number; ledger: number }>(`
+    select p.user_id, p.tickets, coalesce(sum(l.delta), 0)::int as ledger
+      from public.profiles p left join public.ledger l on l.user_id = p.user_id and l.currency = 'ticket'
+     group by p.user_id, p.tickets
+    having p.tickets <> coalesce(sum(l.delta), 0)
+  `);
+  return res.rows;
+}
+
+export async function ticketsOf(db: Db, userId: string): Promise<number> {
+  const res = await db.query<{ tickets: number }>('select tickets from public.profiles where user_id = $1', [userId]);
+  return res.rows[0]!.tickets;
+}
+
+/** 뽑기권을 정확히 n 장으로 맞춘다(원장도 같이 맞춘다. 테스트 준비용). */
+export async function setTickets(db: Db, userId: string, n: number): Promise<void> {
+  const cur = await ticketsOf(db, userId);
+  await db.query('update public.profiles set tickets = $2 where user_id = $1', [userId, n]);
+  if (n !== cur) await db.query("insert into public.ledger (user_id, delta, reason, currency) values ($1, $2, 'welcome', 'ticket')", [userId, n - cur]);
 }
 
 export async function coinsOf(db: Db, userId: string): Promise<number> {

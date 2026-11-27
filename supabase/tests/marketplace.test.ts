@@ -91,31 +91,31 @@ describe('판매 취소 (cancel_listing)', () => {
 });
 
 describe('구매 (buy_listing)', () => {
-  it('재화가 옮겨가고(수수료 5% 소각), 펫 주인이 바뀌고, 원장에 남는다', async () => {
+  it('게임머니가 수수료 없이 가격 그대로 옮겨가고, 펫 주인이 바뀌고, 원장에 남는다', async () => {
     const { seller, buyer, pet } = await trio('buy1');
     await setCoins(seller, 0);
     await setCoins(buyer, 500);
     const id = await sell(seller, pet, 200);
     const res = await buy(buyer, id);
 
-    expect(res).toMatchObject({ price: 200, fee: 10, coins: 300 });
+    expect(res).toMatchObject({ price: 200, coins: 300 });
     expect(await coinsOf(db, buyer)).toBe(300);
-    expect(await coinsOf(db, seller)).toBe(190); // 200 - 수수료 10
+    expect(await coinsOf(db, seller)).toBe(200); // 수수료 없이 가격 그대로
     expect(await ownerOf(pet)).toBe(buyer);
     expect(await listingStatus(id)).toBe('sold');
     const ledger = (await db.query('select user_id, delta, reason from public.ledger where ref_id = $1 order by delta', [id])).rows;
     expect(ledger).toEqual([
       { user_id: buyer, delta: -200, reason: 'trade_buy' },
-      { user_id: seller, delta: 190, reason: 'trade_sell' },
+      { user_id: seller, delta: 200, reason: 'trade_sell' },
     ]);
   });
 
-  it('수수료는 내림한다(가격 19 → 수수료 0)', async () => {
+  it('아무리 작은 가격이어도 판 사람이 전액 받는다(가격 19 → 19)', async () => {
     const { seller, buyer, pet } = await trio('buy2');
     await setCoins(seller, 0);
     await setCoins(buyer, 50);
     const id = await sell(seller, pet, 19);
-    expect((await buy(buyer, id)).fee).toBe(0);
+    expect(await buy(buyer, id)).not.toHaveProperty('fee');
     expect(await coinsOf(db, seller)).toBe(19);
   });
 
@@ -197,7 +197,7 @@ describe('진화 (evolve_pet)', () => {
 
   async function withEvolution<T>(fn: () => Promise<T>): Promise<T> {
     // 진화 도트가 아직 없으므로, 규칙만 시험하려고 임시 종을 만든다.
-    await admin(db, "insert into public.species (id, name, rarity, gacha_weight) values ('cat_x', '진화 고양이', 'epic', 0)");
+    await admin(db, "insert into public.species (id, name, rarity, gacha_weight) values ('cat_x', '진화 고양이', 'common', 0)");
     await admin(db, "update public.species set evolves_to = 'cat_x', evolve_level = 3, evolve_cost = 70 where id = 'cat'");
     try {
       return await fn();

@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { admin, as, coinsOf, createDb, errorOf, givePet, ledgerMismatches, signUp, type Db } from './helpers.js';
+import { COST, DAILY_TICKETS, HIDDEN_PITY, HIDDEN_PERCENT_EACH, WELCOME_TICKETS, hiddenPercent } from '../../src/shared/collection.js';
+import { HIDDEN_SPECIES, SPECIES } from '../../src/shared/species.js';
+import { admin, as, coinsOf, createDb, errorOf, givePet, ledgerMismatches, setTickets, signUp, ticketMismatches, ticketsOf, type Db } from './helpers.js';
 
 let db: Db;
 
@@ -8,7 +10,8 @@ beforeAll(async () => {
 }, 60_000);
 
 afterAll(async () => {
-  expect(await ledgerMismatches(db)).toEqual([]); // 어떤 테스트를 거쳐도 재화와 원장이 어긋나지 않는다
+  expect(await ledgerMismatches(db)).toEqual([]);
+  expect(await ticketMismatches(db)).toEqual([]); // 어떤 테스트를 거쳐도 재화와 원장이 어긋나지 않는다
   await db.close();
 });
 
@@ -97,100 +100,167 @@ describe('학습 이벤트 보고 (report_learning)', () => {
   });
 });
 
-describe('뽑기 (gacha_pull)', () => {
+describe('동물 뽑기 (gacha_pull) — 앱 규칙(src/shared/collection.ts)과 같은 값', () => {
   const pull = async (user: string) =>
-    as(db, user, async () => (await db.query<{ r: { pet_id: string; species_id: string; rarity: string; coins: number } }>(
+    as(db, user, async () => (await db.query<{ r: { pet_id: string; species_id: string; rarity: string; tickets: number } }>(
       'select public.gacha_pull() as r')).rows[0]!.r);
 
-  it('100 을 내고 펫 1마리를 얻으며, 첫 펫은 자동으로 장착되고 원장에 남는다', async () => {
+  it('서버의 동물 20종과 가입 선물·확률이 앱의 값과 같다', async () => {
+    const rows = (await db.query<{ id: string; rarity: string; gacha_weight: number }>('select id, rarity, gacha_weight from public.species order by id')).rows;
+    expect(rows.map((r) => r.id).sort()).toEqual(SPECIES.map((s) => s.id).sort());
+    for (const s of SPECIES) expect(rows.find((r) => r.id === s.id)?.rarity, s.id).toBe(s.hidden ? 'hidden' : 'common');
+    const total = rows.reduce((n, r) => n + r.gacha_weight, 0);
+    const hidden = rows.filter((r) => r.rarity === 'hidden');
+    expect(hidden).toHaveLength(HIDDEN_SPECIES.length);
+    for (const h of hidden) expect((h.gacha_weight / total) * 100, h.id).toBeCloseTo(HIDDEN_PERCENT_EACH, 5);
+    const u = await signUp(db, 'rules');
+    expect(await ticketsOf(db, u)).toBe(WELCOME_TICKETS);
+  });
+
+  it('뽑기권 3장을 내고 펫 1마리를 얻으며, 첫 펫은 자동으로 장착되고 원장(뽑기권)에 남는다', async () => {
     const u = await signUp(db, 'puller1');
     const r = await pull(u);
-    expect(r.coins).toBe(0);
-    expect(await coinsOf(db, u)).toBe(0);
+    expect(r.tickets).toBe(WELCOME_TICKETS - COST.species);
+    expect(await ticketsOf(db, u)).toBe(0);
+    expect(await coinsOf(db, u)).toBe(100); // 게임머니는 건드리지 않는다
     expect(await equipped(u)).toBe(r.pet_id);
     const pet = (await db.query('select species_id, xp, level from public.pets where id = $1', [r.pet_id])).rows[0];
     expect(pet).toMatchObject({ species_id: r.species_id, xp: 0, level: 1 });
-    const ledger = (await db.query('select delta, reason, ref_id from public.ledger where user_id = $1 and reason = $2', [u, 'gacha'])).rows;
-    expect(ledger).toEqual([{ delta: -100, reason: 'gacha', ref_id: r.pet_id }]);
+    const ledger = (await db.query('select delta, reason, ref_id, currency from public.ledger where user_id = $1 and reason = $2', [u, 'gacha'])).rows;
+    expect(ledger).toEqual([{ delta: -COST.species, reason: 'gacha', ref_id: r.pet_id, currency: 'ticket' }]);
   });
 
   it('이미 장착한 펫이 있으면 새 펫으로 바꾸지 않는다', async () => {
     const u = await signUp(db, 'puller2');
-    await admin(db, 'update public.profiles set coins = 500 where user_id = $1', [u]);
-    await admin(db, "insert into public.ledger (user_id, delta, reason) values ($1, 400, 'welcome')", [u]);
+    await setTickets(db, u, 9);
     const first = await pull(u);
     await pull(u);
     expect(await equipped(u)).toBe(first.pet_id);
   });
 
-  it('재화가 부족하면 거절하고 아무것도 바뀌지 않는다', async () => {
+  it('뽑기권이 모자라면 거절하고 아무것도 바뀌지 않는다', async () => {
     const u = await signUp(db, 'poor');
-    await admin(db, 'update public.profiles set coins = 99 where user_id = $1', [u]);
-    await admin(db, "insert into public.ledger (user_id, delta, reason) values ($1, -1, 'learn')", [u]);
-    expect(await errorOf(() => pull(u))).toMatch(/insufficient_coins/);
-    expect(await coinsOf(db, u)).toBe(99);
+    await setTickets(db, u, COST.species - 1);
+    expect(await errorOf(() => pull(u))).toMatch(/insufficient_tickets/);
+    expect(await ticketsOf(db, u)).toBe(COST.species - 1);
     expect((await db.query('select id from public.pets where owner_id = $1', [u])).rows).toHaveLength(0);
   });
 
-  it('가중치가 0 인 종은 나오지 않고, 하나만 남기면 그 종만 나온다', async () => {
-    const u = await signUp(db, 'weights');
-    await admin(db, 'update public.profiles set coins = 1000 where user_id = $1', [u]);
-    await admin(db, "insert into public.ledger (user_id, delta, reason) values ($1, 900, 'welcome')", [u]);
+  it('게임머니가 많아도 뽑기권이 없으면 뽑을 수 없다(재화가 섞이지 않는다)', async () => {
+    const u = await signUp(db, 'rich');
+    await setTickets(db, u, 0);
+    await admin(db, 'update public.profiles set coins = 9999 where user_id = $1', [u]);
+    await admin(db, "insert into public.ledger (user_id, delta, reason, currency) values ($1, 9899, 'learn', 'coin')", [u]);
+    expect(await errorOf(() => pull(u))).toMatch(/insufficient_tickets/);
+  });
+
+  it('같은 동물이 또 나와도 별개의 펫(개체)이 생긴다 — 경매장에 올릴 수 있게', async () => {
+    const u = await signUp(db, 'dupes');
+    await setTickets(db, u, COST.species * 3);
     await admin(db, "update public.species set gacha_weight = 0 where id <> 'duck'");
     try {
-      for (let i = 0; i < 5; i++) expect((await pull(u)).species_id).toBe('duck');
+      for (let i = 0; i < 3; i++) expect((await pull(u)).species_id).toBe('duck');
+      expect((await db.query('select id from public.pets where owner_id = $1 and species_id = $2', [u, 'duck'])).rows).toHaveLength(3);
     } finally {
-      await admin(db, "update public.species set gacha_weight = case id when 'chick' then 25 when 'duck' then 25 when 'rabbit' then 20 when 'cat' then 11 when 'dog' then 11 else 8 end");
+      await admin(db, "update public.species set gacha_weight = case rarity when 'hidden' then 7 else 47 end");
     }
   });
 
-  it('연속 일반 9번 뒤에는 희귀 이상이 확정이고, 희귀 이상이 나오면 카운트가 0 으로 돌아간다', async () => {
+  it(`히든이 안 나온 채 ${HIDDEN_PITY}번 뽑으면 다음은 히든이 확정이고, 히든이 나오면 카운트가 0 으로 돌아간다`, async () => {
     const u = await signUp(db, 'pity');
-    await admin(db, 'update public.profiles set coins = 1000, pity = 9 where user_id = $1', [u]);
-    await admin(db, "insert into public.ledger (user_id, delta, reason) values ($1, 900, 'welcome')", [u]);
+    await setTickets(db, u, COST.species * 12);
     for (let i = 0; i < 10; i++) {
-      await admin(db, 'update public.profiles set pity = 9 where user_id = $1', [u]);
+      await admin(db, 'update public.profiles set pity = $2 where user_id = $1', [u, HIDDEN_PITY]);
       const r = await pull(u);
-      expect(r.rarity, `${i}번째`).not.toBe('common');
+      expect(r.rarity, `${i}번째`).toBe('hidden');
       expect((await db.query<{ pity: number }>('select pity from public.profiles where user_id = $1', [u])).rows[0]!.pity).toBe(0);
     }
   });
 
-  it('일반이 나오면 천장 카운트가 1 늘어난다', async () => {
-    const u = await signUp(db, 'pity2');
-    await admin(db, 'update public.profiles set coins = 300 where user_id = $1', [u]);
-    await admin(db, "insert into public.ledger (user_id, delta, reason) values ($1, 200, 'welcome')", [u]);
-    await admin(db, "update public.species set gacha_weight = 0 where rarity <> 'common'");
+  it('천장 직전(39)까지는 히든이 확정이 아니다', async () => {
+    const u = await signUp(db, 'pity39');
+    await setTickets(db, u, COST.species * 4);
+    await admin(db, "update public.species set gacha_weight = 0 where rarity = 'hidden'");
     try {
-      await pull(u);
-      await pull(u);
-      expect((await db.query<{ pity: number }>('select pity from public.profiles where user_id = $1', [u])).rows[0]!.pity).toBe(2);
+      await admin(db, 'update public.profiles set pity = $2 where user_id = $1', [u, HIDDEN_PITY - 1]);
+      expect((await pull(u)).rarity).toBe('common');
+      expect((await db.query<{ pity: number }>('select pity from public.profiles where user_id = $1', [u])).rows[0]!.pity).toBe(HIDDEN_PITY);
     } finally {
-      await admin(db, "update public.species set gacha_weight = case id when 'cat' then 11 when 'dog' then 11 when 'turtle' then 8 else gacha_weight end");
+      await admin(db, "update public.species set gacha_weight = 7 where rarity = 'hidden'");
     }
   });
 
-  it('확률이 가중치를 따른다: 일반 70% 안팎, 희귀 22%, 에픽 8% (천장 영향 제외)', async () => {
+  it('확률: 히든은 합쳐서 6% 안팎이다 (천장 영향 제외)', async () => {
     const u = await signUp(db, 'stats');
     const N = 600;
-    await admin(db, 'update public.profiles set coins = $2 where user_id = $1', [u, N * 100]);
-    await admin(db, "insert into public.ledger (user_id, delta, reason) values ($1, $2, 'welcome')", [u, N * 100 - 100]);
+    await setTickets(db, u, N * COST.species);
     for (let i = 0; i < N; i++) {
       await admin(db, 'update public.profiles set pity = 0 where user_id = $1', [u]); // 천장이 분포를 바꾸지 않게
       await pull(u);
     }
-    // 뽑은 펫을 등급별로 센다(펫 테이블이 정답지다).
     const rows = (await db.query<{ rarity: string; n: number }>(
-      `select s.rarity, count(*)::int as n
-         from public.pets p join public.species s on s.id = p.species_id
-        where p.owner_id = $1 group by s.rarity`, [u])).rows;
+      `select s.rarity, count(*)::int as n from public.pets p join public.species s on s.id = p.species_id where p.owner_id = $1 group by s.rarity`, [u])).rows;
     const share = Object.fromEntries(rows.map((r) => [r.rarity, r.n / N]));
-    // 표본 600 에서 표준편차는 약 2%. 넓은 허용 범위로 우연한 실패를 피한다.
-    expect(share['common']).toBeGreaterThan(0.58);
-    expect(share['common']).toBeLessThan(0.82);
-    expect(share['rare']).toBeGreaterThan(0.12);
-    expect(share['rare']).toBeLessThan(0.34);
-    expect(share['epic']).toBeGreaterThan(0.03);
-    expect(share['epic']).toBeLessThan(0.16);
-  }, 120_000);
+    const hiddenExpected = hiddenPercent() / 100;
+    // 표본 600 에서 6% 의 표준편차는 약 1%. 넓은 허용 범위로 우연한 실패를 피한다.
+    expect(share['hidden'] ?? 0).toBeGreaterThan(hiddenExpected - 0.04);
+    expect(share['hidden'] ?? 0).toBeLessThan(hiddenExpected + 0.05);
+  }, 180_000);
+});
+
+describe('꾸미기 뽑기 (gacha_cosmetic)', () => {
+  const cosmetic = async (user: string) =>
+    as(db, user, async () => (await db.query<{ r: { kind: string; item_id: string; tickets: number } }>('select public.gacha_cosmetic() as r')).rows[0]!.r);
+
+  it(`뽑기권 ${COST.cosmetic}장으로 아직 없는 꾸미기를 하나 얻고 원장에 남는다`, async () => {
+    const u = await signUp(db, 'dresser');
+    await setTickets(db, u, 5);
+    const r = await cosmetic(u);
+    expect(r.tickets).toBe(5 - COST.cosmetic);
+    expect(['accessory', 'variant']).toContain(r.kind);
+    expect((await db.query('select kind, item_id from public.cosmetics where user_id = $1', [u])).rows).toEqual([{ kind: r.kind, item_id: r.item_id }]);
+    expect((await db.query("select delta, currency from public.ledger where user_id = $1 and reason = 'gacha_cosmetic'", [u])).rows).toEqual([{ delta: -COST.cosmetic, currency: 'ticket' }]);
+  });
+
+  it('이미 가진 꾸미기는 다시 나오지 않고, 다 모으면 거절한다(총 21개: 장식 18 + 색 3)', async () => {
+    const u = await signUp(db, 'collector');
+    await setTickets(db, u, COST.cosmetic * 25);
+    const seen = new Set<string>();
+    for (let i = 0; i < 21; i++) {
+      const r = await cosmetic(u);
+      const key = `${r.kind}:${r.item_id}`;
+      expect(seen.has(key), key).toBe(false);
+      seen.add(key);
+    }
+    expect(await errorOf(() => cosmetic(u))).toMatch(/all_collected/);
+    expect(await ticketsOf(db, u)).toBe(COST.cosmetic * 25 - COST.cosmetic * 21);
+  });
+
+  it('뽑기권이 모자라면 거절한다', async () => {
+    const u = await signUp(db, 'poor2');
+    await setTickets(db, u, 1);
+    expect(await errorOf(() => cosmetic(u))).toMatch(/insufficient_tickets/);
+  });
+});
+
+describe('출석 뽑기권 (claim_daily_ticket)', () => {
+  const claim = async (user: string) =>
+    as(db, user, async () => (await db.query<{ r: { granted: number; tickets: number } }>('select public.claim_daily_ticket() as r')).rows[0]!.r);
+
+  it('하루에 한 번 1장을 주고, 같은 날 다시 부르면 0장이다', async () => {
+    const u = await signUp(db, 'daily1');
+    expect(await claim(u)).toEqual({ granted: DAILY_TICKETS, tickets: WELCOME_TICKETS + DAILY_TICKETS });
+    expect(await claim(u)).toEqual({ granted: 0, tickets: WELCOME_TICKETS + DAILY_TICKETS });
+  });
+
+  it('어제 받았으면 오늘 또 받는다', async () => {
+    const u = await signUp(db, 'daily2');
+    await claim(u);
+    await admin(db, "update public.ledger set created_at = created_at - interval '1 day' where user_id = $1 and reason = 'daily'", [u]);
+    expect((await claim(u)).granted).toBe(DAILY_TICKETS);
+  });
+
+  it('로그인하지 않으면 부를 수 없다', async () => {
+    expect(await errorOf(() => as(db, null, () => db.query('select public.claim_daily_ticket()')))).toMatch(/permission denied/);
+  });
 });
