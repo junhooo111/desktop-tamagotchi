@@ -54,7 +54,15 @@ function renderRules(): void {
     const ids = RULE_IDS.filter((id) => LESSONS[id].category === category);
     if (ids.length === 0) continue;
     const head = document.createElement('h3');
-    head.textContent = CATEGORY_LABELS[category];
+    // 분류 전체를 한 번에 켜고 끈다(어떤 사용자를 배려해서 검사할지 고르는 모드)
+    const all = document.createElement('input');
+    all.type = 'checkbox';
+    all.dataset['category'] = category;
+    all.checked = ids.every((id) => !current.disabledRules.includes(id));
+    all.indeterminate = !all.checked && ids.some((id) => !current.disabledRules.includes(id));
+    all.setAttribute('aria-label', CATEGORY_LABELS[category] + ' 전체 켜기·끄기');
+    all.addEventListener('change', () => void change({ disabledRules: RULE_IDS.filter((r) => (ids.includes(r) ? !all.checked : current.disabledRules.includes(r))) }));
+    head.append(all, ' ' + CATEGORY_LABELS[category]);
     box.append(head);
     for (const id of ids) {
       const label = document.createElement('label');

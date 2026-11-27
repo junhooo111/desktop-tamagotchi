@@ -126,16 +126,31 @@ describe('설정 창', () => {
   });
 
   describe('검사할 규칙', () => {
-    const boxes = (): HTMLInputElement[] => [...el('rules').querySelectorAll('input[type="checkbox"]')] as HTMLInputElement[];
+    const boxes = (): HTMLInputElement[] => [...el('rules').querySelectorAll('input[data-rule]')] as HTMLInputElement[];
 
     it('모든 규칙을 분류별로 묶어 체크박스로 보여 주고, 켜 둔 규칙은 체크되어 있다', async () => {
       await open({ ...DEFAULT_SETTINGS, disabledRules: ['contrast'] });
       expect(boxes()).toHaveLength(RULE_IDS.length);
-      expect([...el('rules').querySelectorAll('h3')].map((h) => h.textContent)).toEqual(Object.values(CATEGORY_LABELS));
+      expect([...el('rules').querySelectorAll('h3')].map((h) => h.textContent?.trim())).toEqual(Object.values(CATEGORY_LABELS));
       const byRule = Object.fromEntries(boxes().map((b) => [b.dataset['rule'], b.checked]));
       expect(byRule['contrast']).toBe(false);
       expect(byRule['img-alt']).toBe(true);
       expect(el('rules').textContent).toContain(LESSONS['img-alt'].title);
+    });
+
+    it('분류 체크박스로 그 분류의 규칙을 한꺼번에 끄고 켠다(키보드 사용자만 배려하는 모드 등)', async () => {
+      const { api } = await open({ ...DEFAULT_SETTINGS, disabledRules: ['contrast'] });
+      const keyboard = el('rules').querySelector('input[data-category="keyboard"]') as HTMLInputElement;
+      const vision = el('rules').querySelector('input[data-category="vision"]') as HTMLInputElement;
+      expect(keyboard.checked).toBe(true);
+      expect(vision.checked).toBe(false); // 시각 분류는 일부만 켜져 있다
+      expect(vision.indeterminate).toBe(true);
+      keyboard.checked = false;
+      keyboard.dispatchEvent(new Event('change'));
+      await new Promise((r) => setTimeout(r, 0));
+      const sent = (api.set as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[0] as { disabledRules: string[] };
+      expect(sent.disabledRules).toEqual(expect.arrayContaining(['contrast', 'tabindex-positive', 'clickable-div', 'focus-outline']));
+      expect(sent.disabledRules).not.toContain('img-alt');
     });
 
     it('체크를 해제하면 꺼 둔 규칙 목록에 그 규칙이 더해져서 메인에 간다', async () => {

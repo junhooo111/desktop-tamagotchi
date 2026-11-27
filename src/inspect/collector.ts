@@ -106,7 +106,7 @@ export function collectPage(opts: { requireLayout: boolean }): PageSnapshot {
   };
 
   // 1. 이미지 alt
-  doc.querySelectorAll('img:not([alt])').forEach((img) => {
+  doc.querySelectorAll('img:not([alt]), input[type="image"]:not([alt]):not([aria-label])').forEach((img) => {
     if (isShown(img)) add('img-alt', img, (img.getAttribute('src') ?? '').slice(0, 60));
   });
 
@@ -405,6 +405,118 @@ export function collectPage(opts: { requireLayout: boolean }): PageSnapshot {
   const refresh = doc.querySelector('meta[http-equiv="refresh" i]');
   const refreshSeconds = Number(/^\s*(\d+)/.exec(refresh?.getAttribute('content') ?? '')?.[1] ?? 0);
   if (refresh && refreshSeconds > 0) add('meta-refresh', null, `${refreshSeconds}초 뒤 이동`);
+
+  // 29. 포커스 표시 제거: :focus 규칙이 outline 을 지우는데 대체 표시(테두리·그림자 등)가 없음
+  const focusRules: { selector: string; removes: boolean; replaces: boolean }[] = [];
+  let infiniteAnimation = false;
+  let reducedMotionHandled = false;
+  const walkRules = (rules: CSSRuleList, depth: number): void => {
+    for (const rule of Array.from(rules)) {
+      const anyRule = rule as CSSRule & { selectorText?: string; style?: CSSStyleDeclaration; cssRules?: CSSRuleList; media?: MediaList };
+      if (anyRule.media && /prefers-reduced-motion/i.test(anyRule.media.mediaText)) reducedMotionHandled = true;
+      if (anyRule.cssRules && depth < 4) walkRules(anyRule.cssRules, depth + 1);
+      const style = anyRule.style;
+      if (!style || typeof anyRule.selectorText !== 'string') continue;
+      if (/infinite/i.test(style.getPropertyValue('animation') + ' ' + style.getPropertyValue('animation-iteration-count'))) infiniteAnimation = true;
+      if (!/:focus(-visible)?(?![\w-])/.test(anyRule.selectorText)) continue;
+      const outline = (style.getPropertyValue('outline') + ' ' + style.getPropertyValue('outline-style') + ' ' + style.getPropertyValue('outline-width')).toLowerCase();
+      const removes = /\bnone\b|(^|\s)0(px)?(\s|$)/.test(outline) && outline.trim() !== '';
+      const shadow = style.getPropertyValue('box-shadow').trim();
+      const visibleOutline = outline.trim() !== '' && !removes;
+      const replaces =
+        visibleOutline ||
+        (shadow !== '' && shadow !== 'none') ||
+        ['border', 'border-color', 'border-width', 'background', 'background-color', 'text-decoration', 'filter'].some((p) => style.getPropertyValue(p).trim() !== '');
+      focusRules.push({ selector: anyRule.selectorText, removes, replaces });
+    }
+  };
+  for (const sheet of Array.from(doc.styleSheets)) {
+    try {
+      walkRules(sheet.cssRules, 0);
+    } catch {
+      // 다른 출처의 스타일시트는 읽을 수 없다
+    }
+  }
+  const strippedFocus = focusRules.find((r) => r.removes && !r.replaces);
+  if (strippedFocus && !focusRules.some((r) => r.replaces)) add('focus-outline', null, `${strippedFocus.selector.slice(0, 50)} { outline: none }`);
+
+  // 30. role 은 버튼 같은데 키보드로 갈 수 없음
+  const roleNeedsFocus = '[role="button"], [role="link"], [role="checkbox"], [role="radio"], [role="switch"], [role="menuitem"], [role="slider"], [role="textbox"], [role="combobox"]';
+  const natively = 'a[href], button, input, select, textarea, summary, [contenteditable="true"]';
+  doc.querySelectorAll(roleNeedsFocus).forEach((el) => {
+    if (full('role-no-focus') || !isShown(el) || el.matches(natively) || el.hasAttribute('tabindex') || el.getAttribute('aria-disabled') === 'true') return;
+    add('role-no-focus', el, `role="${el.getAttribute('role')}" 인데 tabindex 없음`);
+  });
+
+  // 31. 스크롤되는 영역에 키보드로 갈 수 없음 (레이아웃이 있을 때만)
+  if (opts.requireLayout) {
+    for (const el of Array.from(doc.body ? doc.body.querySelectorAll('div, section, article, pre, ul, ol, table, aside, main') : []).slice(0, 1500)) {
+      if (full('scroll-no-focus')) break;
+      const style = getComputedStyle(el);
+      if (!/(auto|scroll)/.test(style.overflowY + ' ' + style.overflowX) || !isShown(el)) continue;
+      const overflowing = el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1;
+      if (!overflowing || el.hasAttribute('tabindex') || el.querySelector(focusableSelector) !== null) continue;
+      add('scroll-no-focus', el, `<${el.tagName.toLowerCase()}> 스크롤 영역에 tabindex 없음`);
+    }
+  }
+
+  // 32. 이동하지 않는 가짜 링크 (href="#", javascript:)
+  doc.querySelectorAll('a[href]').forEach((a) => {
+    if (full('fake-link') || !isShown(a) || a.getAttribute('role') === 'button') return;
+    const href = (a.getAttribute('href') ?? '').trim().toLowerCase();
+    if (href === '#' || href.startsWith('javascript:')) add('fake-link', a, `href="${href.slice(0, 30)}"`);
+  });
+
+  // 33. 글 속 링크가 색으로만 구분됨
+  doc.querySelectorAll('p a[href], li a[href], td a[href], span a[href]').forEach((a) => {
+    if (full('link-color-only') || !isShown(a)) return;
+    const parent = a.parentElement;
+    if (!parent) return;
+    const around = (parent.textContent ?? '').replace(/\s+/g, '').length - (a.textContent ?? '').replace(/\s+/g, '').length;
+    if (around < 4) return; // 링크만 있는 줄(메뉴·버튼식 링크)은 제외
+    const ls = getComputedStyle(a);
+    const ps = getComputedStyle(parent);
+    if (/underline/.test(ls.textDecorationLine || ls.textDecoration) || ls.fontWeight !== ps.fontWeight || ls.fontStyle !== ps.fontStyle) return;
+    if (parseFloat(ls.borderBottomWidth) > 0 || (ls.backgroundColor !== ps.backgroundColor && ls.backgroundColor !== 'rgba(0, 0, 0, 0)')) return;
+    const fg = parseColor(ls.color);
+    const base = parseColor(ps.color);
+    if (!fg || !base) return;
+    const l1 = luminance(fg);
+    const l2 = luminance(base);
+    const ratio = (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    if (ratio < 3) add('link-color-only', a, `주변 글자와 색 대비 ${ratio.toFixed(1)}:1, 밑줄 없음`);
+  });
+
+  // 34. 너무 작은 글자 (12px 미만)
+  for (const el of candidates) {
+    if (full('text-small')) break;
+    if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'SVG', 'SUB', 'SUP'].includes(el.tagName.toUpperCase())) continue;
+    const text = Array.from(el.childNodes).filter((n) => n.nodeType === 3).map((n) => (n.textContent ?? '').trim()).join('');
+    if (text.length < 2 || !isShown(el)) continue;
+    const size = parseFloat(getComputedStyle(el).fontSize);
+    if (size > 0 && size < 12) add('text-small', el, `글자 ${size}px`);
+  }
+
+  // 35. 계속 움직이는 애니메이션인데 움직임 줄이기 설정 처리가 없음
+  if (infiniteAnimation && !reducedMotionHandled) add('reduced-motion', null, 'infinite 애니메이션, prefers-reduced-motion 없음');
+
+  // 36. role="img" 인데 이름이 없음
+  doc.querySelectorAll('[role="img"]').forEach((el) => {
+    if (full('role-img-alt') || !isShown(el) || el.getAttribute('aria-hidden') === 'true') return;
+    if (nameOf(el) === '') add('role-img-alt', el, `<${el.tagName.toLowerCase()} role="img">`);
+  });
+
+  // 37. html lang 값이 올바르지 않음 (비어 있으면 html-lang 이 이미 알린다)
+  const langValue = (doc.documentElement.getAttribute('lang') ?? '').trim();
+  if (langValue !== '' && !/^[a-z]{2,3}(-[a-z0-9]{2,8})*$/i.test(langValue)) add('html-lang-valid', null, `lang="${langValue.slice(0, 20)}"`);
+
+  // 38. 영상에 자막이 없음 (소리 없이 자동 재생되는 장식용 영상은 제외)
+  doc.querySelectorAll('video').forEach((video) => {
+    if (full('video-captions') || !isShown(video)) return;
+    const decorative = video.hasAttribute('autoplay') && (video.hasAttribute('muted') || (video as HTMLVideoElement).muted);
+    if (decorative || video.querySelector('track[kind="captions"], track[kind="subtitles"]') !== null) return;
+    add('video-captions', video, '<video> 에 자막 track 없음');
+  });
 
   return {
     url: location.href,

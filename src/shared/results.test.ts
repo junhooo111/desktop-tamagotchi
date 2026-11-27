@@ -59,7 +59,7 @@ describe('buildResults', () => {
     const view = buildResults([f('img-alt', 'img#hero', 'http://localhost:5173/b'), f('contrast', 'p', 'http://localhost:3000/a')], ctx());
     expect(view.pages.map((p) => p.url)).toEqual(['http://localhost:3000/a', 'http://localhost:5173/b']);
     const item = view.pages[1]?.items[0];
-    expect(item).toMatchObject({ ruleId: 'img-alt', category: 'a11y', categoryLabel: '접근성', title: LESSONS['img-alt'].title, where: 'img#hero', state: 'new' });
+    expect(item).toMatchObject({ ruleId: 'img-alt', category: 'screenreader', categoryLabel: '접근성 · 스크린 리더(화면을 소리로 듣는 사람)', title: LESSONS['img-alt'].title, where: 'img#hero', state: 'new' });
     expect(item?.fix).toBe(LESSONS['img-alt'].fix);
   });
 

@@ -12,6 +12,8 @@
   16. meta description 없음    17. 너무 큰 이미지(1600px→120px)   18. 링크 글자 "여기"
   19. iframe 제목 없음   20. aria-hidden 안의 버튼   21. 빈 제목   22. main 없음   23. 소리 나는 autoplay
   24. 없는 id(label for)   25. 버튼 안의 버튼   26. 자동 완성 없는 이메일 칸   27. meta refresh(5초)
+  28. 포커스 표시 제거   29. role=button 인데 tabindex 없음   30. href="#" 링크   31. 색으로만 구분된 링크
+  32. 작은 글자(10px)   33. 영상 자막 없음   34. 무한 애니메이션(움직임 줄이기 없음)
   (확대 막음은 viewport 메타가 있어야 볼 수 있어서 여기엔 없습니다. 3번을 고친 뒤 content 에
    user-scalable=no 를 넣어 보세요.)
 -->
@@ -94,7 +96,17 @@
       <label for="nothing">이름</label>
       <a href="/x"><button>안쪽 버튼</button></a>
       <input type="email" aria-label="이메일" />
+      <div role="button">저장(role 만 있음)</div>
+      <a href="#">메뉴 열기(가짜 링크)</a>
+      <p style="color:#000">문장 속 <a href="/docs" style="color:#222;text-decoration:none">배송 정책</a> 링크</p>
+      <p style="font-size:10px">아주 작은 글자예요</p>
+      <video controls width="120"></video>
     </div>
+    <style>
+      button:focus { outline: none; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .spin { animation: spin 2s linear infinite; }
+    </style>
 
     <div class="wide">이 요소는 화면보다 훨씬 넓어서 가로 스크롤이 생겨요.</div>
   </body>

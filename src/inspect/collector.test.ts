@@ -290,7 +290,7 @@ describe('collectPage 규칙: 검색·성능·링크 3종', () => {
   });
 
   it('autoplay-media: muted 없이 autoplay 인 영상·오디오만 찾는다', () => {
-    const found = run('<video autoplay src="/a.mp4"></video><video autoplay muted src="/b.mp4"></video><audio autoplay src="/c.mp3"></audio><video src="/d.mp4"></video>');
+    const found = run('<video autoplay src="/a.mp4"><track kind="captions"></video><video autoplay muted src="/b.mp4"></video><audio autoplay src="/c.mp3"></audio><video src="/d.mp4"><track kind="captions"></video>');
     expect(found.map((f) => f.ruleId)).toEqual(['autoplay-media', 'autoplay-media']);
   });
 
@@ -316,6 +316,72 @@ describe('collectPage 규칙: 검색·성능·링크 3종', () => {
     const head = '<title>t</title><meta name="viewport" content="width=device-width"><meta name="description" content="d">';
     expect(run('<p>글</p>', head + '<meta http-equiv="refresh" content="5; url=/home">').map((f) => [f.ruleId, f.detail])).toEqual([['meta-refresh', '5초 뒤 이동']]);
     expect(run('<p>글</p>', head + '<meta http-equiv="refresh" content="0; url=/home">')).toEqual([]);
+  });
+
+  it('focus-outline: :focus 에서 outline 을 지우고 대체 표시가 없을 때만 찾는다', () => {
+    const style = (css: string) => `<title>t</title><meta name="viewport" content="width=device-width"><meta name="description" content="d"><style>${css}</style>`;
+    expect(rules(run('<button>x</button>', style('button:focus { outline: none; }')))).toEqual(['focus-outline']);
+    expect(rules(run('<button>x</button>', style('*:focus { outline: 0 }')))).toEqual(['focus-outline']);
+    expect(rules(run('<button>x</button>', style('button:focus { outline: none; box-shadow: 0 0 0 3px blue; }')))).toEqual([]);
+    expect(rules(run('<button>x</button>', style('button:focus { outline: none } button:focus-visible { outline: 2px solid blue; }')))).toEqual([]);
+    expect(rules(run('<button>x</button>', style('button { outline: none; }')))).toEqual([]); // :focus 규칙이 아니면 다루지 않는다
+  });
+
+  it('role-no-focus: role 은 버튼류인데 tabindex 도 없고 기본으로 포커스가 가지 않는 요소를 찾는다', () => {
+    const found = run('<div id="a" role="button">저장</div><div role="button" tabindex="0">ok</div><button role="button">ok</button><div role="switch" aria-disabled="true">x</div><span role="link" id="l">y</span>');
+    expect(found.map((f) => [f.ruleId, f.selector])).toEqual([['role-no-focus', 'div#a'], ['role-no-focus', 'span#l']]);
+  });
+
+  it('fake-link: href="#" 와 javascript: 링크를 찾고, 진짜 주소나 role=button 은 통과한다', () => {
+    const found = run('<a href="#">메뉴</a><a href="javascript:void(0)">x</a><a href="/real">이동</a><a href="#section">앵커</a><a href="#" role="button">버튼</a>');
+    expect(found.map((f) => f.ruleId)).toEqual(['fake-link', 'fake-link']);
+  });
+
+  it('link-color-only: 밑줄 없이 주변 글자와 비슷한 색인 글 속 링크를 찾는다', () => {
+    const found = run('<p style="color:#222">문장 속의 <a href="/x" id="a" style="color:#333;text-decoration:none">배송 정책</a> 입니다.</p>');
+    expect(found.map((f) => [f.ruleId, f.selector])).toEqual([['link-color-only', 'a#a']]);
+    expect(run('<p style="color:#222">문장 속의 <a href="/x" style="color:#333;text-decoration:underline">배송 정책</a> 입니다.</p>')).toEqual([]);
+    expect(run('<p style="color:#000">문장 속의 <a href="/x" style="color:#c00000;text-decoration:none">배송 정책</a> 입니다.</p>')).toEqual([]);
+    expect(run('<p><a href="/x" style="text-decoration:none">배송 정책 문서 전체 보기</a></p>')).toEqual([]);
+  });
+
+  it('text-small: 12px 미만 글자를 찾는다', () => {
+    const found = run('<p style="font-size:10px">작은 글자</p><p style="font-size:12px">괜찮아요</p><p style="font-size:16px">본문</p>');
+    expect(found.map((f) => [f.ruleId, f.detail])).toEqual([['text-small', '글자 10px']]);
+  });
+
+  it('reduced-motion: infinite 애니메이션이 있는데 prefers-reduced-motion 이 없을 때만 찾는다', () => {
+    const style = (css: string) => `<title>t</title><meta name="viewport" content="width=device-width"><meta name="description" content="d"><style>${css}</style>`;
+    expect(rules(run('<p>x</p>', style('.spin { animation: spin 1s linear infinite; }')))).toEqual(['reduced-motion']);
+    expect(rules(run('<p>x</p>', style('.spin { animation: spin 1s linear infinite; } @media (prefers-reduced-motion: reduce) { .spin { animation: none; } }')))).toEqual([]);
+    expect(rules(run('<p>x</p>', style('.once { animation: fade 1s; }')))).toEqual([]);
+  });
+
+  it('role-img-alt: 이름 없는 role="img" 만 찾는다', () => {
+    const found = run('<svg id="s" role="img"></svg><svg role="img" aria-label="검색"></svg><svg role="img" aria-hidden="true"></svg><div role="img" title="차트"></div>');
+    expect(found.map((f) => [f.ruleId, f.selector])).toEqual([['role-img-alt', 'svg#s']]);
+  });
+
+  it('html-lang-valid: 올바른 언어 코드가 아닌 lang 값을 찾는다', () => {
+    const head = '<title>t</title><meta name="viewport" content="width=device-width"><meta name="description" content="d">';
+    run('<p>x</p>', head);
+    document.documentElement.lang = 'korean';
+    document.body.innerHTML = '<main><p>x</p></main>';
+    expect(collectPage({ requireLayout: false }).findings.map((f) => [f.ruleId, f.detail])).toEqual([['html-lang-valid', 'lang="korean"']]);
+    for (const ok of ['ko', 'en-US', 'zh-Hant-TW']) {
+      document.documentElement.lang = ok;
+      expect(collectPage({ requireLayout: false }).findings).toEqual([]);
+    }
+  });
+
+  it('video-captions: 자막 track 이 없는 영상만 찾고, 소리 없이 자동 재생되는 장식 영상은 통과한다', () => {
+    const found = run('<video controls src="/a.mp4"></video><video controls src="/b.mp4"><track kind="captions" src="/b.vtt"></video><video autoplay muted loop src="/bg.mp4"></video>');
+    expect(found.map((f) => f.ruleId)).toEqual(['video-captions']);
+  });
+
+  it('img-alt: alt 없는 이미지 입력 버튼(input type=image)도 찾는다', () => {
+    const found = run('<input type="image" src="/go.png" id="go"><input type="image" src="/ok.png" alt="검색">');
+    expect(found.map((f) => [f.ruleId, f.selector])).toEqual([['img-alt', 'input#go']]);
   });
 
   it('img-oversized: 레이아웃이 없는 환경에서는 건너뛰고 오류도 내지 않는다', () => {

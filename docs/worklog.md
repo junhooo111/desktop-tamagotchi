@@ -295,3 +295,10 @@
 - 선물: 하루 두세 번 오는 선물은 이제 펫이 **작업 영역 한가운데로 뛰어와** 상자를 들고 기다린다(알림 자세 유지, 최대 5분). 누르면 열리고, 안 누르면 사라진다. 기다리는 동안 다른 검사 알림은 끼어들지 않는다. 다른 일로 바쁘면(끌려가는 중·카드 열림) 있던 자리에서 알린다. 자리 계산은 순수 함수 `giftSpot`.
 - 검사 규칙 19 → 28종. axe-core 규칙 목록·WCAG 2.2를 참고해 코드로 안전하게 판정할 수 있는 것만 추가했다: iframe 제목(frame-title), aria-hidden 안 포커스(aria-hidden-focus), 빈 제목(empty-heading), main 없음(landmark-main), 소리 나는 자동 재생(autoplay-media), 없는 id 참조(aria-broken-ref), 버튼·링크 중첩(nested-interactive), 자동 완성 없음(autocomplete-missing, WCAG 1.3.5), meta refresh(meta-refresh). 모두 학습 카드·퀴즈 포함.
 - 일부러 뺀 것: 영상 자막 유무·포커스 표시(outline) 제거·색에만 의존하는 정보·글자 간격 같은 항목은 코드로 정확히 판정하기 어렵거나 오탐이 많아 넣지 않았다. 앞의 규칙들과 달리 axe 가 하는 "incomplete(사람이 확인)" 개념이 없어서이다.
+
+## 2026-11-27 — 키보드·시각·청각 검사 10종과 "누구를 위한 검사인지" 분류 (규칙 38종)
+
+- 친구 조언(색약 배려, 스크린 리더용 aria-label, 키보드만 쓰는 사람, WCAG 가이드라인)을 받아 접근성 규칙을 대상별로 나눴다: 스크린 리더 · 키보드·손 · 시각(저시력·색약) · 청각 · 인지·시간. 설정 창의 분류 제목에 체크박스를 달아 분류 전체를 한 번에 켜고 끈다(일부만 켜져 있으면 중간 표시).
+- 새 규칙 10종: focus-outline(:focus 에서 outline 제거·대체 없음, WCAG 2.4.7), role-no-focus(role=button 인데 tabindex 없음), scroll-no-focus(스크롤 영역 키보드 불가), fake-link(href="#"·javascript:), link-color-only(색으로만 구분된 링크, 1.4.1), text-small(12px 미만), reduced-motion(infinite 애니메이션 + prefers-reduced-motion 없음, 2.3.3), role-img-alt, html-lang-valid, video-captions(1.2.2). 이미지 입력 버튼(input type=image)의 alt 도 img-alt 에서 본다.
+- 실제 크롬(브라우저 창)에서 시험 페이지에 수집기를 주입해 새 규칙이 동작하는 것을 확인했다. 시험 페이지의 일부 요소는 폭이 0 이라 "보이지 않는 요소"로 처리돼 잡히지 않는다(오탐 방지 동작).
+- 한계: 포커스 표시는 스타일시트(같은 출처)를 훑어 근사로 판정한다(다른 출처 CSS 는 못 읽음). 키보드 함정·논리적인 포커스 순서·자막 내용의 정확성 같은 것은 코드로 판정할 수 없다.

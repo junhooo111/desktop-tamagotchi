@@ -32,15 +32,29 @@ export const RULE_IDS = [
   'nested-interactive',
   'autocomplete-missing',
   'meta-refresh',
+  'focus-outline',
+  'role-no-focus',
+  'scroll-no-focus',
+  'fake-link',
+  'link-color-only',
+  'text-small',
+  'reduced-motion',
+  'role-img-alt',
+  'html-lang-valid',
+  'video-captions',
 ] as const;
 
 export type RuleId = (typeof RULE_IDS)[number];
 
 /** 규칙 분류: 설정 창과 검사 결과 목록에서 묶어 보여 주는 기준 */
-export type RuleCategory = 'a11y' | 'seo' | 'responsive' | 'perf';
+export type RuleCategory = 'screenreader' | 'keyboard' | 'vision' | 'hearing' | 'cognitive' | 'seo' | 'responsive' | 'perf';
 
 export const CATEGORY_LABELS: Record<RuleCategory, string> = {
-  a11y: '접근성',
+  screenreader: '접근성 · 스크린 리더(화면을 소리로 듣는 사람)',
+  keyboard: '접근성 · 키보드·손(키보드만 쓰는 사람, 손이 불편한 사람)',
+  vision: '접근성 · 시각(저시력·색약)',
+  hearing: '접근성 · 청각(소리를 못 듣는 사람)',
+  cognitive: '접근성 · 인지·시간(천천히 읽는 사람, 움직임에 민감한 사람)',
   seo: '검색·공유(SEO)',
   responsive: '반응형·모바일',
   perf: '성능',
@@ -59,7 +73,7 @@ export interface Lesson {
 
 export const LESSONS: Record<RuleId, Lesson> = {
   'img-alt': {
-    category: 'a11y',
+    category: 'screenreader',
     title: '이미지에 대체 텍스트(alt)가 없어요',
     bubble: '여기 이미지에 alt가 없어요!',
     problem: '<img> 태그에 alt 속성이 아예 없습니다.',
@@ -68,7 +82,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<img src="/team.jpg" alt="회의실에서 웃고 있는 팀원 다섯 명" />\n<img src="/divider.svg" alt="" />',
   },
   'button-name': {
-    category: 'a11y',
+    category: 'screenreader',
     title: '버튼·링크에 이름이 없어요',
     bubble: '이 버튼이 뭘 하는지 알 수가 없어요!',
     problem: '아이콘만 있는 버튼이나 링크에 글자도 aria-label 도 없습니다.',
@@ -77,7 +91,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<button aria-label="메뉴 열기">\n  <svg aria-hidden="true">…</svg>\n</button>',
   },
   'form-label': {
-    category: 'a11y',
+    category: 'screenreader',
     title: '입력칸에 라벨이 없어요',
     bubble: '이 입력칸이 무엇인지 몰라요!',
     problem: '<input>·<select>·<textarea> 에 연결된 <label> 이나 aria-label 이 없습니다. placeholder 만 있는 경우도 해당합니다.',
@@ -86,7 +100,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<label for="email">이메일</label>\n<input id="email" type="email" />',
   },
   'html-lang': {
-    category: 'a11y',
+    category: 'screenreader',
     title: '<html> 에 lang 이 없어요',
     bubble: '이 페이지가 무슨 언어인지 몰라요!',
     problem: '<html> 요소에 lang 속성이 없습니다.',
@@ -113,7 +127,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<meta name="viewport" content="width=device-width, initial-scale=1" />',
   },
   'heading-order': {
-    category: 'a11y',
+    category: 'screenreader',
     title: '제목 단계를 건너뛰었어요',
     bubble: '제목 단계가 건너뛰어졌어요!',
     problem: 'h1 다음에 바로 h3 처럼 제목 단계를 건너뛴 곳이 있습니다.',
@@ -140,7 +154,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: 'img { max-width: 100%; height: auto; }\n.card { width: min(100%, 480px); }',
   },
   contrast: {
-    category: 'a11y',
+    category: 'vision',
     title: '글자와 배경의 명암 대비가 부족해요',
     bubble: '글자가 잘 안 보여요!',
     problem: '글자색과 배경색의 명암 대비가 기준(일반 글자 4.5:1, 큰 글자 3:1)보다 낮습니다.',
@@ -149,7 +163,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '/* 대비 2.3:1 → 4.6:1 */\ncolor: #aaa;  →  color: #595959;',
   },
   'dup-id': {
-    category: 'a11y',
+    category: 'screenreader',
     title: '같은 id 가 한 페이지에 여러 번 쓰였어요',
     bubble: '같은 id 가 두 번 쓰였어요!',
     problem: '같은 id 값을 가진 요소가 한 페이지에 둘 이상 있습니다.',
@@ -158,7 +172,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '// 같은 컴포넌트를 여러 번 그릴 때\nconst id = useId();\n<label htmlFor={id}>이름</label>\n<input id={id} />',
   },
   'zoom-disabled': {
-    category: 'a11y',
+    category: 'vision',
     title: '화면 확대를 막아 놓았어요',
     bubble: '확대를 막아 놓았어요!',
     problem: 'viewport 메타 태그에 user-scalable=no 이거나 maximum-scale 이 1 이하입니다.',
@@ -167,7 +181,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<meta name="viewport" content="width=device-width, initial-scale=1" />\ninput { font-size: 16px; }',
   },
   'tabindex-positive': {
-    category: 'a11y',
+    category: 'keyboard',
     title: 'tabindex 에 양수를 썼어요',
     bubble: 'tabindex 가 양수예요!',
     problem: 'tabindex 가 1 이상인 요소가 있습니다.',
@@ -176,7 +190,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<!-- ✗ --> <div tabindex="5">…</div>\n<!-- ✓ --> <div tabindex="0">…</div>',
   },
   'alt-quality': {
-    category: 'a11y',
+    category: 'screenreader',
     title: 'alt 가 파일 이름이나 뜻 없는 말이에요',
     bubble: 'alt 가 파일 이름 같아요!',
     problem: 'alt 가 "hero.png", "image", "사진" 처럼 파일 이름이거나 이미지가 무엇인지 알려 주지 못하는 말입니다.',
@@ -185,7 +199,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<!-- ✗ --> <img src="hero.png" alt="hero.png">\n<!-- ✓ --> <img src="hero.png" alt="노트북으로 작업하는 개발자">',
   },
   'clickable-div': {
-    category: 'a11y',
+    category: 'keyboard',
     title: 'div 나 span 을 버튼처럼 썼어요',
     bubble: 'div 를 버튼처럼 썼어요!',
     problem: '클릭할 수 있는 모양(마우스 포인터가 손가락 모양)인데 버튼이나 링크가 아닌 div·span 등이고, role 이나 tabindex 도 없습니다.',
@@ -194,7 +208,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<!-- ✗ --> <div class="btn" onClick={save}>저장</div>\n<!-- ✓ --> <button type="button" class="btn" onClick={save}>저장</button>',
   },
   'table-header': {
-    category: 'a11y',
+    category: 'screenreader',
     title: '표에 제목 칸(th)이 없어요',
     bubble: '표에 제목 칸이 없어요!',
     problem: '<table> 안에 <th> 가 하나도 없습니다.',
@@ -221,7 +235,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<img\n  src="/hero-800.webp"\n  srcset="/hero-800.webp 800w, /hero-1600.webp 1600w"\n  sizes="(max-width: 800px) 100vw, 800px"\n  alt="…" />',
   },
   'vague-link': {
-    category: 'a11y',
+    category: 'screenreader',
     title: '링크 글자가 "여기"처럼 뜻이 없어요',
     bubble: '링크 이름이 "여기"예요!',
     problem: '링크 글자가 "여기", "click here", "link" 처럼 어디로 가는지 알 수 없는 말입니다.',
@@ -230,7 +244,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<!-- ✗ --> 설명서는 <a href="/docs">여기</a>를 눌러 보세요.\n<!-- ✓ --> <a href="/docs">사용 설명서</a>를 확인해 보세요.',
   },
   'frame-title': {
-    category: 'a11y',
+    category: 'screenreader',
     title: 'iframe 에 제목(title)이 없어요',
     bubble: 'iframe 에 title 이 없어요!',
     problem: '<iframe> 에 title 도 aria-label 도 없습니다.',
@@ -239,7 +253,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<iframe src="https://maps.example/…" title="매장 위치 지도"></iframe>',
   },
   'aria-hidden-focus': {
-    category: 'a11y',
+    category: 'keyboard',
     title: '숨긴 요소(aria-hidden) 안에 키보드로 갈 수 있는 것이 있어요',
     bubble: '숨긴 곳에 포커스가 가요!',
     problem: 'aria-hidden="true" 인 요소가 링크·버튼·입력칸을 품고 있어서 Tab 키로 들어갈 수 있습니다.',
@@ -248,7 +262,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<!-- ✗ --> <div aria-hidden="true"><button>닫기</button></div>\n<!-- ✓ --> <div inert hidden><button>닫기</button></div>',
   },
   'empty-heading': {
-    category: 'a11y',
+    category: 'screenreader',
     title: '내용이 없는 제목(h1~h6)이 있어요',
     bubble: '제목 태그가 비어 있어요!',
     problem: '<h1>~<h6> 또는 role="heading" 요소에 읽을 수 있는 글자가 없습니다.',
@@ -257,7 +271,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<!-- ✗ --> <h2></h2>\n<!-- ✓ --> <h2>배송 정보</h2>',
   },
   'landmark-main': {
-    category: 'a11y',
+    category: 'keyboard',
     title: '페이지에 본문 영역(main)이 없어요',
     bubble: '<main> 영역이 없어요!',
     problem: '문서에 <main> 이나 role="main" 이 없습니다.',
@@ -266,7 +280,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<header>…</header>\n<nav>…</nav>\n<main>\n  <h1>페이지 제목</h1>\n  …\n</main>',
   },
   'autoplay-media': {
-    category: 'a11y',
+    category: 'cognitive',
     title: '소리가 나는 영상·오디오가 저절로 재생돼요',
     bubble: '소리가 저절로 재생돼요!',
     problem: 'autoplay 인 <video>·<audio> 에 muted 가 없어서 페이지가 열리면 소리가 납니다.',
@@ -275,7 +289,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<video autoplay muted loop playsinline controls src="/intro.mp4"></video>',
   },
   'aria-broken-ref': {
-    category: 'a11y',
+    category: 'screenreader',
     title: '이름이 가리키는 곳(id)이 없어요',
     bubble: '가리키는 id 가 없어요!',
     problem: 'aria-labelledby·aria-describedby 또는 label 의 for 가 문서에 없는 id 를 가리킵니다.',
@@ -284,7 +298,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<label for="email">이메일</label>\n<input id="email" type="email" />   <!-- id 가 같아야 연결됩니다 -->',
   },
   'nested-interactive': {
-    category: 'a11y',
+    category: 'keyboard',
     title: '버튼·링크 안에 또 버튼·링크가 들어 있어요',
     bubble: '버튼 안에 버튼이 있어요!',
     problem: '<a href>·<button> 안에 다른 링크·버튼·입력칸이 중첩돼 있습니다.',
@@ -293,7 +307,7 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<!-- ✗ --> <a href="/p"><button>담기</button></a>\n<!-- ✓ --> <a href="/p">상품 보기</a> <button>담기</button>',
   },
   'autocomplete-missing': {
-    category: 'a11y',
+    category: 'cognitive',
     title: '이름·이메일·전화 입력칸에 자동 완성(autocomplete)이 없어요',
     bubble: '자동 완성 속성이 없어요!',
     problem: '이메일·전화·이름·주소 같은 개인 정보를 받는 입력칸에 autocomplete 가 없습니다.',
@@ -302,12 +316,102 @@ export const LESSONS: Record<RuleId, Lesson> = {
     code: '<input type="email" name="email" autocomplete="email" />\n<input name="phone" type="tel" autocomplete="tel" />',
   },
   'meta-refresh': {
-    category: 'a11y',
+    category: 'cognitive',
     title: '페이지가 저절로 새로고침·이동돼요(meta refresh)',
     bubble: '저절로 새로고침돼요!',
     problem: '<meta http-equiv="refresh"> 가 몇 초 뒤 페이지를 다시 불러오거나 다른 곳으로 보냅니다.',
     why: '내용을 천천히 읽는 사람, 스크린 리더 사용자, 키보드로 이동하는 사람은 시간이 다 되기 전에 끝내지 못하고 읽던 자리에서 쫓겨납니다. 시간 제한은 멈추거나 늘릴 수 있어야 합니다.',
     fix: '자동 이동 대신 링크나 버튼을 두고 사용자가 직접 이동하게 하세요. 즉시 이동(0초)이 필요하면 서버 리다이렉트(301/302)를 쓰세요.',
     code: '<!-- ✗ --> <meta http-equiv="refresh" content="5; url=/home">\n<!-- ✓ --> <a href="/home">홈으로 이동</a>',
+  },
+  'focus-outline': {
+    category: 'keyboard',
+    title: '포커스 표시를 없애 놓고 대신하는 표시가 없어요',
+    bubble: '포커스 표시가 사라졌어요!',
+    problem: 'CSS 에서 :focus 일 때 outline 을 none/0 으로 지웠는데, 테두리·그림자·배경 같은 대체 표시가 없습니다.',
+    why: '키보드로 이동하는 사람은 지금 포커스가 어디에 있는지 보여 주는 테두리가 유일한 길잡이입니다. 이것을 지우면 Tab 을 눌러도 화면의 어디가 선택됐는지 알 수 없어 길을 잃습니다(WCAG 2.4.7). 디자인이 투박해 보인다고 지우는 경우가 많습니다.',
+    fix: 'outline 을 지우지 말고 디자인에 맞게 바꾸세요. 마우스 클릭에는 안 보이고 키보드에만 보이게 하려면 :focus-visible 을 쓰세요. 대비는 주변과 3:1 이상이 좋습니다.',
+    code: ':focus-visible {\n  outline: 3px solid #2563eb;\n  outline-offset: 2px;\n}\n/* ✗ */ button:focus { outline: none; }',
+  },
+  'role-no-focus': {
+    category: 'keyboard',
+    title: 'role 은 버튼인데 키보드로 갈 수 없어요',
+    bubble: 'role 은 있는데 Tab 이 안 돼요!',
+    problem: 'div·span 에 role="button"(link·checkbox·switch 등)을 줬지만 tabindex 가 없어서 Tab 키로 포커스가 가지 않습니다.',
+    why: 'role 은 "이것은 버튼이에요"라고 읽어 주기만 할 뿐 키보드 동작은 만들어 주지 않습니다. 스크린 리더는 버튼이라고 읽는데 키보드로는 누를 수도 없는 모순이 생깁니다. 직접 Enter·Space 처리까지 해 줘야 하는 일이 많아져서 위험합니다.',
+    fix: '가능하면 진짜 <button>·<a> 를 쓰세요. 꼭 div 여야 하면 tabindex="0" 과 Enter·Space 키 처리를 함께 넣으세요.',
+    code: '<!-- ✗ --> <div role="button" onclick="save()">저장</div>\n<!-- ✓ --> <button type="button" onclick="save()">저장</button>',
+  },
+  'scroll-no-focus': {
+    category: 'keyboard',
+    title: '스크롤되는 영역을 키보드로 움직일 수 없어요',
+    bubble: '스크롤 영역에 Tab 이 안 가요!',
+    problem: '내용이 넘쳐서 스크롤되는 영역인데 안에 포커스가 갈 수 있는 요소도 tabindex 도 없습니다.',
+    why: '마우스 휠을 쓸 수 없는 사람은 포커스를 영역에 두고 화살표·PageDown 으로 스크롤합니다. 영역이 포커스를 못 받으면 넘친 내용을 영영 볼 수 없습니다. 코드 블록·표·채팅 목록에서 자주 생깁니다.',
+    fix: '스크롤 영역에 tabindex="0" 을 주고 role 과 이름(aria-label)을 붙이세요. 안에 링크·버튼이 있으면 그쪽으로 충분합니다.',
+    code: '<div tabindex="0" role="region" aria-label="주문 내역" style="overflow:auto; height:200px">…</div>',
+  },
+  'fake-link': {
+    category: 'keyboard',
+    title: '이동하지 않는 가짜 링크예요 (href="#")',
+    bubble: '가짜 링크가 있어요!',
+    problem: '<a href="#"> 또는 href="javascript:…" 링크라서 눌러도 다른 페이지로 이동하지 않습니다.',
+    why: '스크린 리더는 "링크"라고 읽는데 실제로는 동작을 실행하는 버튼이라 기대와 다릅니다. 키보드에서도 Space 가 안 먹고, 누르면 페이지 맨 위로 튀기도 합니다. 중간 클릭·새 탭 열기도 이상하게 동작합니다.',
+    fix: '이동이 아니라 동작이면 <button type="button"> 을 쓰세요. 이동이면 진짜 주소를 href 에 쓰세요.',
+    code: '<!-- ✗ --> <a href="#" onclick="openMenu()">메뉴</a>\n<!-- ✓ --> <button type="button" onclick="openMenu()">메뉴</button>',
+  },
+  'link-color-only': {
+    category: 'vision',
+    title: '글 속 링크가 색깔로만 구분돼요',
+    bubble: '링크가 색으로만 구분돼요!',
+    problem: '문장 안의 링크가 밑줄·굵기 같은 다른 표시 없이, 주변 글자와 3:1 보다 비슷한 색으로만 구분됩니다.',
+    why: '색약·색맹이 있는 사람이나 흑백 화면, 햇빛 아래 화면에서는 링크가 일반 글자와 똑같아 보입니다. 색만으로 정보를 전달하면 안 된다는 기준입니다(WCAG 1.4.1).',
+    fix: '링크에 밑줄을 유지하세요(기본값입니다). 밑줄을 없앴다면 굵기·테두리 같은 두 번째 단서를 주거나, 색 대비를 주변 글자와 3:1 이상으로 만드세요.',
+    code: 'a { text-decoration: underline; }\n/* 문장 속 링크에는 밑줄이 가장 확실합니다 */',
+  },
+  'text-small': {
+    category: 'vision',
+    title: '글자가 너무 작아요 (12px 미만)',
+    bubble: '글자가 너무 작아요!',
+    problem: '화면에 보이는 글자의 크기가 12px 보다 작습니다.',
+    why: '저시력 사용자와 나이가 든 사용자는 작은 글자를 읽기 어렵고, 모바일에서는 더 심합니다. 작은 글자에 연한 색까지 겹치면 사실상 읽을 수 없습니다. 브라우저 확대를 막아 두었다면 더 큰 문제입니다.',
+    fix: '본문은 16px(1rem) 안팎, 보조 글자도 12px 이상으로 하세요. px 대신 rem 을 쓰면 사용자가 정한 기본 글자 크기를 따라갑니다.',
+    code: 'body { font-size: 1rem; }\n.caption { font-size: 0.8125rem; } /* 13px */',
+  },
+  'reduced-motion': {
+    category: 'cognitive',
+    title: '계속 움직이는 효과인데 "움직임 줄이기" 설정을 지켜 주지 않아요',
+    bubble: '움직임 줄이기가 없어요!',
+    problem: '무한 반복(infinite) 애니메이션이 있는데 prefers-reduced-motion 처리가 CSS 어디에도 없습니다.',
+    why: '움직임에 민감한 사람(어지럼증·멀미·집중장애)은 운영체제에서 "움직임 줄이기"를 켭니다. 이 설정을 무시하면 계속 흔들리는 화면 때문에 페이지를 보기 어렵거나 몸이 아픈 사람이 있습니다(WCAG 2.3.3).',
+    fix: '@media (prefers-reduced-motion: reduce) 안에서 애니메이션을 끄거나 아주 약하게 하세요.',
+    code: '@media (prefers-reduced-motion: reduce) {\n  * { animation: none !important; transition: none !important; }\n}',
+  },
+  'role-img-alt': {
+    category: 'screenreader',
+    title: 'role="img" 인 요소에 설명이 없어요',
+    bubble: 'role="img" 에 이름이 없어요!',
+    problem: 'role="img"(아이콘 svg·CSS 그림 등)인데 aria-label·aria-labelledby·title 이 없습니다.',
+    why: '스크린 리더는 "이미지"라고만 읽고 무엇인지 알려 주지 못합니다. img 태그가 아니라서 alt 검사에도 걸리지 않아 놓치기 쉽습니다.',
+    fix: '의미가 있으면 aria-label 로 설명하고, 장식이면 role="img" 를 빼고 aria-hidden="true" 를 쓰세요.',
+    code: '<svg role="img" aria-label="검색"><use href="#icon-search" /></svg>\n<svg aria-hidden="true">…</svg> <!-- 장식 -->',
+  },
+  'html-lang-valid': {
+    category: 'screenreader',
+    title: 'html lang 값이 올바르지 않아요',
+    bubble: 'lang 값이 이상해요!',
+    problem: '<html lang> 값이 ko, en-US 같은 올바른 언어 코드가 아닙니다(예: "korean", "kr").',
+    why: '스크린 리더는 lang 으로 읽는 발음 규칙을 고릅니다. 틀린 값이면 한국어 문서를 영어 발음으로 읽는 등 엉뚱하게 들립니다. 번역 도구와 검색엔진도 이 값을 참고합니다.',
+    fix: 'ISO 언어 코드를 쓰세요: 한국어 ko, 영어 en, 미국 영어 en-US.',
+    code: '<html lang="ko">   <!-- ✗ lang="korean" / lang="kr" -->',
+  },
+  'video-captions': {
+    category: 'hearing',
+    title: '영상에 자막이 없어요',
+    bubble: '영상에 자막이 없어요!',
+    problem: '<video> 에 <track kind="captions">(또는 subtitles)가 없습니다. (소리 없이 자동 재생되는 장식용 영상은 제외)',
+    why: '소리를 못 듣는 사람, 소리를 켤 수 없는 장소(지하철·도서관)에서 영상을 보는 사람은 내용을 알 수 없습니다. 자막은 외국어 학습자와 시끄러운 곳에서도 도움이 됩니다(WCAG 1.2.2).',
+    fix: 'WebVTT 자막 파일을 만들어 <track> 으로 붙이세요. 말소리뿐 아니라 중요한 소리(박수·경고음)도 적으면 좋습니다.',
+    code: '<video controls src="/intro.mp4">\n  <track kind="captions" src="/intro.ko.vtt" srclang="ko" label="한국어" default />\n</video>',
   },
 };
