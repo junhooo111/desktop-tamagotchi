@@ -157,6 +157,24 @@ describe('뽑기권 획득 대기열', () => {
   });
 });
 
+describe('GitHub 기여 동기화', () => {
+  it('서버가 알려 준 만큼만 반영하고, 준비되지 않았거나 닿지 않으면 null', async () => {
+    const calls: string[] = [];
+    const base = fakeRpc({}, profileTables).rpc;
+    const g = new ServerGame({ ...base, invoke: async <T,>(n: string) => { calls.push(n); return ok({ granted: 12, coins: 342 }) as RpcResult<T>; } }, tmpDir());
+    await g.refresh();
+    expect(await g.syncCommits()).toEqual({ granted: 12, coins: 342 });
+    expect(calls).toEqual(['commits']);
+    expect(g.state?.coins).toBe(342);
+    expect(await new ServerGame({ ...base, invoke: async <T,>() => fail('not_configured') as RpcResult<T> }, tmpDir()).syncCommits()).toBeNull();
+    expect(await new ServerGame(base, tmpDir()).syncCommits()).toBeNull();
+  });
+
+  it('준비 안 된 서버 오류는 알아듣게 바꾼다', () => {
+    expect(friendlyError('not_configured')).toMatch(/준비되지/);
+  });
+});
+
 describe('컬렉션에 반영', () => {
   const now = 1_700_000_000_000;
   const local = () => startCollection(createPet('rabbit', now), now);

@@ -282,3 +282,10 @@
 - 앱: `🏪 경매장…` 메뉴(로그인했을 때만)와 창(`static/market.*`, `src/renderer/market.ts`: 사기 / 내 펫 팔기·내리기). 사고판 뒤 서버 상태를 다시 읽어 컬렉션에 반영하고, 이미 가져온 계정은 서버가 가진 동물이 기준이다(판 동물은 사라지고 산 동물이 생김).
 - 돌봄 10회(뽑기권 받을 때)와 업적마다 서버에 게임머니를 신청한다. 꾸미기 창은 이름 저장 뒤 닫히고 '이제 내 이름은 …' 말풍선을 띄운다.
 - 한계/남은 것: 학습 이벤트(`report_learning`)로 받는 게임머니는 앱이 아직 보고하지 않는다. 실제 두 계정으로 사고파는 왕복은 사람이 눌러 확인해야 한다. 같은 종을 여러 마리 가졌을 때 로컬 화면은 종마다 한 마리(경험치 최고)만 보여 준다.
+
+## 2026-11-27 — GitHub 기여 → 게임머니(0011, 로드맵 G 단계)
+
+- `0011_github_commits.sql`: `grant_commit_coins(user, days)`(service_role 전용 — 앱은 수를 보낼 수 없다). 기여 1건 = 2 게임머니, 하루 40, 같은 날 재조회는 모자란 만큼만(멱등), 최근 3일(UTC)만. `my_commit_days()` 로 내 기록 조회. SQL 147건 통과, 운영 DB 적용.
+- Edge Function `commits`(`supabase/functions/commits`): 사용자 JWT 로 누구인지 정하고, 시크릿 `GITHUB_READ_TOKEN` 으로 GitHub GraphQL 의 일별 기여를 읽어 위 함수에 넘긴다. 토큰이 없으면 503 not_configured. 배포 완료.
+- 앱: 로그인 8초 뒤와 1시간마다 `syncGithubCommits`. 받으면 말풍선.
+- 남은 일(사용자): GitHub 읽기 토큰을 만들어 Supabase 시크릿 `GITHUB_READ_TOKEN` 으로 등록해야 실제로 동작한다(채팅에 붙여 넣지 말 것). 기여 수에는 커밋 외에 PR·이슈 등도 포함된다(GitHub 기여 달력 기준), 비공개 저장소 기여는 토큰 권한에 따라 다르다.

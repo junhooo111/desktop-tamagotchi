@@ -269,6 +269,7 @@ export class AuthService {
     return {
       call: <T,>(fn: string, args?: Record<string, unknown>) => guard<T>(() => client.rpc(fn, args)),
       select: <T,>(table: string, columns: string) => guard<T[]>(() => client.from(table).select(columns)),
+      invoke: <T,>(name: string) => guard<T>(() => client.functions.invoke(name, { method: 'POST' })),
     };
   }
 

@@ -14,6 +14,8 @@ import { isAccessory, isSpeciesId, isVariant } from '../shared/species.js';
 export interface ServerRpc {
   call<T>(fn: string, args?: Record<string, unknown>): Promise<RpcResult<T>>;
   select<T>(table: string, columns: string): Promise<RpcResult<T[]>>;
+  /** 서버 쪽 Edge Function 을 부른다(로그인한 사용자의 JWT 가 자동으로 붙는다). */
+  invoke?<T>(name: string): Promise<RpcResult<T>>;
 }
 
 export interface ServerState {
@@ -52,6 +54,8 @@ const MAX_PENDING = 100;
 /** 서버 오류 코드를 사용자에게 보일 문구로 바꾼다. */
 export function friendlyError(message: string): string {
   if (/insufficient_tickets/.test(message)) return '뽑기권이 모자라요';
+  if (/not_configured/.test(message)) return '아직 GitHub 연동이 준비되지 않았어요';
+  if (/github_unavailable/.test(message)) return 'GitHub 에서 기여 수를 읽지 못했어요. 잠시 뒤에 다시 시도해요';
   if (/all_collected/.test(message)) return '꾸미기를 모두 모았어요!';
   if (/insufficient_coins/.test(message)) return '게임머니가 모자라요';
   if (/last_pet/.test(message)) return '마지막 한 마리는 팔 수 없어요';
@@ -197,6 +201,15 @@ export class ServerGame {
   async grantCoins(kind: 'care' | 'achievement', key: string): Promise<{ granted: number; coins: number } | null> {
     const r = await this.rpc.call<{ granted: number; coins: number }>('grant_coins', { p_kind: kind, p_key: key });
     if (r.error || !r.data) return null;
+    if (this.state) this.state = { ...this.state, coins: r.data.coins };
+    return r.data;
+  }
+
+  /** GitHub 기여 수를 서버가 읽어 게임머니로 바꾼다(기여 1건 = 2, 하루 40). 서버가 준비되지 않았거나 닿지 않으면 null. */
+  async syncCommits(): Promise<{ granted: number; coins: number } | null> {
+    if (!this.rpc.invoke) return null;
+    const r = await this.rpc.invoke<{ granted: number; coins: number }>('commits');
+    if (r.error || !r.data || typeof r.data.granted !== 'number') return null;
     if (this.state) this.state = { ...this.state, coins: r.data.coins };
     return r.data;
   }

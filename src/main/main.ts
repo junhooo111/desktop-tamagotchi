@@ -1540,6 +1540,15 @@ async function activateServer(): Promise<void> {
   }
   saveCollectionSafe();
   say(`서버와 연결됐어요. 뽑기권 ${collection.tickets}장 · 어느 PC에서든 같은 계정이에요`);
+  setTimeout(() => void syncGithubCommits(false), 8_000);
+}
+
+/** GitHub 기여를 게임머니로 바꾼다(서버가 읽는다). 로그인 직후와 1시간마다. */
+async function syncGithubCommits(announce: boolean): Promise<void> {
+  if (!serverOn() || !serverGame) return;
+  const r = await serverGame.syncCommits();
+  if (r && r.granted > 0) say(`GitHub 기여 덕분에 게임머니 +${r.granted}!`);
+  else if (announce && !r) say('GitHub 기여는 아직 읽지 못했어요. 나중에 다시 시도해요');
 }
 
 /** 연결이 없어서 대기 중이던 뽑기권 획득을 다시 보낸다. */
@@ -2083,6 +2092,7 @@ if (!app.requestSingleInstanceLock()) {
         if (auth?.user) void accountSync?.tick(auth.user.id);
         void flushServerGrants();
       }, 10 * 60_000);
+      setInterval(() => void syncGithubCommits(false), 60 * 60_000);
     }
     void auth.restore();
     const startUrl = process.argv.find((a) => a.startsWith(AUTH_SCHEME + '://'));
