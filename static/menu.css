@@ -1,0 +1,333 @@
+/* 우클릭 도트 메뉴. 테두리는 box-shadow 네 방향으로 그려서 모서리가 한 칸씩 깎인 도트 모양이 된다. */
+:root {
+  --ink: #3b2a20;
+  --paper: #fff4d6;
+  --paper2: #ffe7a8;
+  --paper3: #f3d894;
+  --accent: #e8a21c;
+  --muted: #8a7355;
+  --focus: #2563eb;
+  --low: #e0523f;
+  --mid: #f2b134;
+  --high: #5fbf5a;
+  font-family: 'Galmuri11', 'DotGothic16', 'Malgun Gothic', 'Apple SD Gothic Neo', 'Segoe UI', sans-serif;
+}
+html,
+body {
+  margin: 0;
+  background: transparent;
+  overflow: hidden;
+  user-select: none;
+}
+body {
+  padding: 8px;
+}
+button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  margin: 0;
+  cursor: pointer;
+}
+button[aria-disabled='true'] {
+  opacity: 0.45;
+  cursor: default;
+}
+button:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 1px;
+}
+.icon {
+  flex: none;
+  color: var(--ink);
+  --accent: #e8a21c;
+  image-rendering: pixelated;
+}
+
+.panel {
+  position: relative;
+  box-sizing: border-box;
+  width: 304px;
+  padding: 10px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.35;
+  box-shadow: 0 -3px 0 0 var(--ink), 0 3px 0 0 var(--ink), -3px 0 0 0 var(--ink), 3px 0 0 0 var(--ink), 3px 6px 0 0 rgba(59, 42, 32, 0.3), 6px 3px 0 0 rgba(59, 42, 32, 0.3);
+}
+.pbox {
+  background: var(--paper2);
+  box-shadow: 0 -2px 0 0 var(--ink), 0 2px 0 0 var(--ink), -2px 0 0 0 var(--ink), 2px 0 0 0 var(--ink);
+}
+
+/* 머리말 */
+.head {
+  padding: 4px 6px 8px;
+}
+.head-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.name {
+  font-size: 15px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 150px;
+}
+.lv {
+  padding: 0 5px;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.45);
+  box-shadow: 0 -2px 0 0 var(--ink), 0 2px 0 0 var(--ink), -2px 0 0 0 var(--ink), 2px 0 0 0 var(--ink);
+}
+.tier {
+  color: var(--muted);
+  font-size: 11px;
+}
+.sub {
+  color: var(--muted);
+  font-size: 11px;
+  margin-top: 1px;
+}
+.bars {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 3px;
+  margin-top: 6px;
+}
+.bar-line {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.bar-label {
+  width: 40px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.bar {
+  display: flex;
+  gap: 2px;
+}
+.seg {
+  width: 14px;
+  height: 8px;
+  background: #e6d3a3;
+}
+.seg.on.low {
+  background: var(--low);
+}
+.seg.on.mid {
+  background: var(--mid);
+}
+.seg.on.high {
+  background: var(--high);
+}
+
+/* 새 버전 안내 */
+.row.update {
+  margin: 4px 0 6px;
+  background: #ffd24a;
+  font-weight: 800;
+  box-shadow: 0 -2px 0 0 var(--ink), 0 2px 0 0 var(--ink), -2px 0 0 0 var(--ink), 2px 0 0 0 var(--ink);
+}
+
+/* 돌보기: 큰 도트 단추 다섯 개 */
+.care-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+  margin: 6px 3px 10px;
+}
+.care {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 0 4px;
+  background: var(--paper2);
+  box-shadow: 0 -2px 0 0 var(--ink), 0 2px 0 0 var(--ink), -2px 0 0 0 var(--ink), 2px 0 0 0 var(--ink);
+}
+.care .label {
+  font-size: 11px;
+  font-weight: 700;
+}
+.care:hover:not([aria-disabled='true']),
+.foot:hover:not([aria-disabled='true']) {
+  background: #ffd77a;
+}
+
+/* 탭 */
+.tabs {
+  display: flex;
+  gap: 4px;
+  margin: 0 3px;
+}
+.tab {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 2px 5px;
+  background: var(--paper3);
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 -2px 0 0 var(--ink), -2px 0 0 0 var(--ink), 2px 0 0 0 var(--ink);
+}
+.tab.sel {
+  background: var(--paper2);
+  padding-bottom: 7px;
+  margin-bottom: -2px;
+  position: relative;
+  z-index: 1;
+}
+.tab .icon {
+  width: 16px;
+  height: 16px;
+}
+
+/* 항목 목록 */
+.list {
+  margin: 0 3px;
+  padding: 4px;
+  background: var(--paper2);
+  box-shadow: 0 -2px 0 0 var(--ink), 0 2px 0 0 var(--ink), -2px 0 0 0 var(--ink), 2px 0 0 0 var(--ink);
+}
+.row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 6px;
+  background: transparent;
+  text-align: left;
+}
+.row:hover:not([aria-disabled='true']) {
+  background: #ffd77a;
+}
+.icon-gap {
+  width: 24px;
+  flex: none;
+}
+.text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+.label {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.hint {
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.badge {
+  padding: 0 6px;
+  background: var(--ink);
+  color: var(--paper);
+  font-size: 11px;
+  font-weight: 800;
+  box-shadow: 0 -2px 0 0 var(--ink), 0 2px 0 0 var(--ink), -2px 0 0 0 var(--ink), 2px 0 0 0 var(--ink);
+}
+.chev {
+  flex: none;
+  width: 0;
+  height: 0;
+  border-left: 6px solid var(--ink);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+}
+.check {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
+  background: var(--paper);
+  box-shadow: 0 -2px 0 0 var(--ink), 0 2px 0 0 var(--ink), -2px 0 0 0 var(--ink), 2px 0 0 0 var(--ink);
+  text-align: center;
+  font-size: 11px;
+  line-height: 14px;
+  font-weight: 900;
+}
+.check.on {
+  background: var(--accent);
+}
+.empty {
+  padding: 10px;
+  color: var(--muted);
+  text-align: center;
+}
+
+/* 아래 줄: 설정 · 공지 · 더보기 · 종료 */
+.footer {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin: 10px 3px 2px;
+}
+.foot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 5px 0 3px;
+  background: var(--paper2);
+  box-shadow: 0 -2px 0 0 var(--ink), 0 2px 0 0 var(--ink), -2px 0 0 0 var(--ink), 2px 0 0 0 var(--ink);
+}
+.foot .label {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+/* 하위 페이지 */
+.subhead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 3px 8px;
+}
+.back {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 8px 3px 4px;
+  background: var(--paper2);
+  font-size: 12px;
+  font-weight: 700;
+  box-shadow: 0 -2px 0 0 var(--ink), 0 2px 0 0 var(--ink), -2px 0 0 0 var(--ink), 2px 0 0 0 var(--ink);
+}
+.subtitle {
+  font-size: 14px;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .panel {
+    animation: pop 0.08s steps(2) 1;
+  }
+  @keyframes pop {
+    from {
+      transform: translateY(2px);
+    }
+    to {
+      transform: none;
+    }
+  }
+}

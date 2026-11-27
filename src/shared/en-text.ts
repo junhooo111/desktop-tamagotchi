@@ -23,6 +23,7 @@ export const NAMES_EN: Record<string, string> = {
   '일주일 연속': 'One-week streak', '한 달 연속': 'One-month streak', '다정한 친구': 'Kind friend', '금손 집사': 'Golden-hand keeper',
   깔끔쟁이: 'Neat freak', '산책 친구': 'Walking buddy', '동물 수집가': 'Animal collector', '뽑기 단골': 'Gacha regular', '전설의 만남': 'Legendary encounter',
   // 등급·단계
+  경험치: 'XP', 배부름: 'Fullness', 기분: 'Mood', 청결: 'Clean',
   새내기: 'Newbie', 숙련: 'Skilled', 베테랑: 'Veteran', 달인: 'Master', 명인: 'Grandmaster', 신화: 'Mythic',
   알: 'Egg', 새끼: 'Baby', 성체: 'Adult', 전설: 'Legend',
 };

@@ -118,6 +118,7 @@ import { petTargetFor } from './inspect-target.js';
 import { loadGrowth, saveGrowth } from './growth-store.js';
 import { loadSettings, saveSettings } from './settings-store.js';
 import { newsLocal, newsText, pickNews, type NewsItem } from '../shared/news.js';
+import { toNativeTemplate, type MenuItem, type MenuModel, type NativeItem } from '../shared/menu.js';
 import { buildStatus } from '../shared/status.js';
 import { GIFT_LIFE_MS, GIFT_WINDOW, giftHtml, giftSpot, giftText, nextGiftDelayMs, offerGift, rollGift } from '../shared/gift.js';
 import { POOP_LIFE_MS, POOP_SIZE, poopHtml } from '../shared/poop.js';
@@ -1731,149 +1732,292 @@ function announceAuth(r: { handled: boolean; ok: boolean; message?: string }): v
 }
 
 /** 계정 메뉴: 서버가 설정되지 않았거나, 로그인·로그아웃. */
-function accountMenuItem(): Electron.MenuItemConstructorOptions {
-  if (!auth?.enabled) return { label: L('☁ 계정 (서버 준비 중)', '☁ Account (server not ready)'), enabled: false };
-  const user = auth.user;
-  if (user) {
-    return {
-      label: `☁ ${user.login}`,
-      submenu: [
-        { label: L('지금 계정과 맞추기', 'Sync with account now'), click: () => void accountSync?.reconcile(user.id) },
-        { label: L('GitHub 기여 지금 확인', 'Check GitHub contributions now'), enabled: serverOn(), click: () => void syncGithubCommits(true, true) },
-        {
-          label: L('GitHub 프로필용 카드 주소 복사', 'Copy card URL for GitHub profile'),
-          click: () => {
-            const md = cardMarkdown(user.login);
-            if (!md) return say(L('이 이름으로는 카드 주소를 만들 수 없어요', 'Cannot build a card URL for this name'));
-            clipboard.writeText(md);
-            say(L('카드 주소를 복사했어요! 프로필 저장소(내이름/내이름)의 README.md 에 붙여 넣으면 돼요', 'Copied the card URL! Paste it into README.md of your profile repo (yourname/yourname)'));
-          },
-        },
-        { label: L('로그아웃', 'Log out'), click: () => void auth?.signOut().then(() => say(L('로그아웃했어요. 펫은 이 PC에 그대로 있어요', 'Logged out. Your pet stays on this PC'))) },
-      ],
-    };
-  }
-  return {
-    label: L('☁ GitHub로 로그인…', '☁ Log in with GitHub…'),
-    click: () => {
-      say(L('브라우저에서 GitHub 로그인을 마치면 돌아와요', 'I will be back once you finish GitHub login in the browser'));
-      void auth?.signIn().catch((e: unknown) => say(L('로그인을 시작하지 못했어요: ', 'Could not start login: ') + String(e instanceof Error ? e.message : e)));
-    },
-  };
-}
+// ---- 우클릭 메뉴: 내용(모델)을 한 번 만들어 도트 메뉴 창과 트레이가 함께 쓴다(shared/menu.ts) ----
+/** 지금 열린 메뉴의 id → 동작. 메뉴를 만들 때마다 새로 채운다. */
+let menuHandlers = new Map<string, () => void>();
+let lastMenuTab = 'pet';
 
-function buildMenu(): Menu {
+function buildMenuModel(): MenuModel {
+  const handlers = new Map<string, () => void>();
+  const on = (id: string, fn: () => void): string => {
+    handlers.set(id, fn);
+    return id;
+  };
   const egg = stageOf(pet) === 'egg';
-  const demo = (label: string, what: Trigger) => ({
+  const now = Date.now();
+  const strolling = isStrolling(behavior, now);
+  const logged = serverOn();
+  const needLogin = L('로그인하면 쓸 수 있어요', 'Log in to use');
+  const st = buildStatus(applyElapsedInPlace(), settings.petName, settings.displayStage);
+
+  const demo = (id: string, label: string, what: Trigger): MenuItem => ({
+    id: on(id, () => {
+      behavior = trigger(behavior, what, stepContext(Date.now(), TICK_MS));
+      sendView();
+    }),
     label,
     enabled: !egg,
-    click: () => {
-      const now = Date.now();
-      behavior = trigger(behavior, what, stepContext(now, TICK_MS));
-      sendView();
-    },
   });
-  return Menu.buildFromTemplate([
-    ...(updates?.ready
-      ? [{ label: L('🆕 새 버전 ', '🆕 Install version ') + updates.ready + L(' 설치하고 다시 시작', ' and restart'), click: () => void updates?.installNow() }, { type: 'separator' as const }]
-      : []),
-    { label: L('상태 보기', 'Show status'), click: () => showStatus() },
-    { label: L('검사 결과…', 'Inspection results…'), click: () => openResults() },
-    { label: L('도감·기록…', 'Codex & records…'), click: () => openCodex() },
-    { label: serverOn() ? L('🏆 랭킹…', '🏆 Rankings…') : L('🏆 랭킹 (로그인하면 볼 수 있어요)', '🏆 Rankings (log in to view)'), enabled: serverOn(), click: () => openRanking() },
-    { label: serverOn() ? L('🏪 경매장…', '🏪 Auction house…') : L('🏪 경매장 (로그인하면 쓸 수 있어요)', '🏪 Auction house (log in to use)'), enabled: serverOn(), click: () => openMarket() },
-    { label: L('🎟 뽑기·컬렉션… (' + collection.tickets + '장)', '🎟 Gacha & Collection… (' + collection.tickets + ')'), click: () => openCollection() },
-    { label: L('프로필 카드 내보내기…', 'Export profile card…'), click: () => void exportCard() },
-    {
-      label: L('📢 공지', '📢 News'),
-      enabled: newsItems.length > 0,
-      submenu: newsItems.slice(0, 5).flatMap((item) => [
-        { label: `${item.date} ${newsLocal(item, currentLang()).title}`, click: () => say(newsText(item, currentLang())) },
-        ...(item.url ? [{ label: L('    ↗ 자세히 보기', '    ↗ Learn more'), click: () => void shell.openExternal(item.url) }] : []),
-      ]),
-    },
-    accountMenuItem(),
-    { label: L('설정…', 'Settings…'), click: () => openSettings() },
-    {
-      // 새 버전이 준비돼 있지 않을 때도 직접 확인할 수 있게 항상 둔다
-      label: app.isPackaged ? L(`업데이트 확인 (현재 v${app.getVersion()})`, `Check for updates (current v${app.getVersion()})`) : L('업데이트 확인 (설치본에서만)', 'Check for updates (installed app only)'),
-      enabled: app.isPackaged,
-      click: () => {
-        say(L('새 버전이 있는지 확인하고 있어요…', 'Checking for a new version…'));
-        void updates?.check(true).then((text) => {
-          if (text) say(text);
-        });
-      },
-    },
-    { label: scanStatus, enabled: false },
-    { label: L('지금 검사하기', 'Inspect now'), enabled: !egg, click: () => void scanOnce() },
-    {
-      label: L('검사 도구', 'Inspection tools'),
-      submenu: [
-        {
-          label: L('검사용 브라우저 열기', 'Open inspection browser'),
-          click: () => {
-            if (openInspectBrowser('about:blank')) say(L('여기서 localhost 주소를 열면 제가 살펴볼게요', 'Open a localhost address here and I will take a look'));
-          },
-        },
-        { label: L('검사 체험 (시험 페이지 열기)', 'Try inspection (open demo page)'), click: () => void openDemo() },
-        { label: L('크롬 확장 폴더 열기 (평소 쓰는 크롬에서 검사)', 'Open Chrome extension folder (inspect in your usual Chrome)'), click: () => openExtensionFolder() },
-        { type: 'separator' },
-        { label: L(`확장 수신 포트 ${FEED_PORT} · 디버그 포트 ${CDP_PORT} · localhost 페이지만 검사`, `Extension port ${FEED_PORT} · debug port ${CDP_PORT} · localhost pages only`), enabled: false },
-      ],
-    },
-    {
-      label: L('오늘의 FE 지식', 'FE tip of the day'),
-      enabled: !egg,
-      click: () => offerTip(Date.now(), true),
-    },
-    { type: 'separator' },
-    { label: L('쓰다듬기', 'Pet'), click: () => act('touch') },
-    { label: L('밥 주기', 'Feed'), enabled: !egg, click: () => act('feed') },
-    { label: L('놀아주기', 'Play'), enabled: !egg, click: () => act('play') },
-    { label: L('씻기기', 'Wash'), enabled: !egg, click: () => act('wash') },
-    behavior.home
+
+  // 계정: 로그인 전에는 한 줄, 로그인하면 아래에 계정 작업이 모인다
+  const user = auth?.user;
+  const account: MenuItem = !auth?.enabled
+    ? { id: 'account', label: L('계정 (서버 준비 중)', 'Account (server not ready)'), icon: 'cloud', enabled: false }
+    : user
       ? {
-          label: L('자유롭게 돌아다니게 하기', 'Let it roam freely'),
-          click: () => {
-            behavior = clearHome(behavior);
-            say(L('이제 마음대로 돌아다닐게요!', 'I will roam freely now!'));
-          },
+          id: 'account',
+          label: user.login,
+          icon: 'cloud',
+          children: [
+            { id: on('account:sync', () => void accountSync?.reconcile(user.id)), label: L('지금 계정과 맞추기', 'Sync with account now'), icon: 'refresh' },
+            { id: on('account:commits', () => void syncGithubCommits(true, true)), label: L('GitHub 기여 지금 확인', 'Check GitHub contributions now'), icon: 'refresh', enabled: logged },
+            {
+              id: on('account:card', () => {
+                const md = cardMarkdown(user.login);
+                if (!md) return say(L('이 이름으로는 카드 주소를 만들 수 없어요', 'Cannot build a card URL for this name'));
+                clipboard.writeText(md);
+                say(L('카드 주소를 복사했어요! 프로필 저장소(내이름/내이름)의 README.md 에 붙여 넣으면 돼요', 'Copied the card URL! Paste it into README.md of your profile repo (yourname/yourname)'));
+              }),
+              label: L('GitHub 프로필용 카드 주소 복사', 'Copy card URL for GitHub profile'),
+              icon: 'card',
+            },
+            { id: on('account:logout', () => void auth?.signOut().then(() => say(L('로그아웃했어요. 펫은 이 PC에 그대로 있어요', 'Logged out. Your pet stays on this PC')))), label: L('로그아웃', 'Log out'), icon: 'power' },
+          ],
         }
       : {
-          label: L('혼자 놀게 두기 (여기서만)', 'Let it play alone (here only)'),
-          enabled: !egg,
-          click: () => {
-            const p = menuPoint ?? { x: behavior.x + petSize / 2, y: behavior.y + petSize / 2 };
-            behavior = setHome(behavior, p.x, p.y);
-            say(L('여기서 혼자 놀고 있을게요!', 'I will play here by myself!'));
+          id: on('account:login', () => {
+            say(L('브라우저에서 GitHub 로그인을 마치면 돌아와요', 'I will be back once you finish GitHub login in the browser'));
+            void auth?.signIn().catch((e: unknown) => say(L('로그인을 시작하지 못했어요: ', 'Could not start login: ') + String(e instanceof Error ? e.message : e)));
+          }),
+          label: L('GitHub로 로그인…', 'Log in with GitHub…'),
+          icon: 'cloud',
+        };
+
+  const news: MenuItem = {
+    id: 'news',
+    label: L('공지', 'News'),
+    icon: 'bell',
+    enabled: newsItems.length > 0,
+    children: newsItems.slice(0, 5).flatMap((item, i): MenuItem[] => [
+      { id: on(`news:${i}`, () => say(newsText(item, currentLang()))), label: `${item.date} ${newsLocal(item, currentLang()).title}`, icon: 'bell' },
+      ...(item.url ? [{ id: on(`news:${i}:link`, () => void shell.openExternal(item.url)), label: L('↗ 자세히 보기', '↗ Learn more'), icon: 'globe' as const }] : []),
+    ]),
+  };
+
+  const more: MenuItem = {
+    id: 'more',
+    label: L('더보기', 'More'),
+    icon: 'dots',
+    children: [
+      {
+        // 새 버전이 준비돼 있지 않을 때도 직접 확인할 수 있게 항상 둔다
+        id: on('update:check', () => {
+          say(L('새 버전이 있는지 확인하고 있어요…', 'Checking for a new version…'));
+          void updates?.check(true).then((text) => {
+            if (text) say(text);
+          });
+        }),
+        label: app.isPackaged ? L(`업데이트 확인 (현재 v${app.getVersion()})`, `Check for updates (current v${app.getVersion()})`) : L('업데이트 확인 (설치본에서만)', 'Check for updates (installed app only)'),
+        icon: 'update',
+        enabled: app.isPackaged,
+      },
+      {
+        // 설치본에서만 동작한다(개발 실행에서 켜면 electron.exe 가 로그인 항목에 등록되기 때문).
+        id: on('autostart', () => app.setLoginItemSettings({ openAtLogin: !app.getLoginItemSettings().openAtLogin })),
+        label: app.isPackaged ? L('로그인할 때 자동 실행', 'Launch at login') : L('로그인할 때 자동 실행 (설치본에서만)', 'Launch at login (installed app only)'),
+        icon: 'power',
+        enabled: app.isPackaged,
+        checked: app.isPackaged && app.getLoginItemSettings().openAtLogin,
+      },
+      {
+        id: 'demo',
+        label: L('동작 보기 (테스트용)', 'Preview moves (test)'),
+        icon: 'play',
+        children: [
+          demo('demo:sleep', L('잠자기', 'Sleep'), 'sleep'),
+          demo('demo:run', L('달리기', 'Run'), 'run'),
+          demo('demo:climb', L('벽 타기', 'Climb'), 'climb'),
+          demo('demo:play', L('혼자 놀기', 'Play alone'), 'play'),
+          { id: 'demo:hang', label: L('마우스에 매달리기: 마우스를 10초 가만히 두세요', 'Hang on the mouse: keep the mouse still for 10 seconds'), enabled: false },
+        ],
+      },
+      { id: 'version', label: L(`버전 ${app.getVersion()}`, `Version ${app.getVersion()}`), icon: 'info', enabled: false },
+    ],
+  };
+
+  const model: MenuModel = {
+    header: {
+      // 직접 지은 이름은 번역하지 않는다. 종 이름·단계·막대 이름만 영어 모드에서 영어로 바꾼다.
+      name: st.named || currentLang() !== 'en' ? st.name : nameEn(st.name),
+      sub: currentLang() === 'en' ? st.sub.split(' · ').map((part) => nameEn(part)).join(' · ') : st.sub,
+      level: st.level,
+      tierName: currentLang() === 'en' ? nameEn(st.tier.name) : st.tier.name,
+      tierColor: st.tier.color,
+      bars: st.bars.map((b) => ({ label: currentLang() === 'en' ? nameEn(b.label) : b.label, value: b.value, level: b.level })),
+    },
+    update: updates?.ready
+      ? { id: on('update:install', () => void updates?.installNow()), label: L('새 버전 ', 'Install version ') + updates.ready + L(' 설치하고 다시 시작', ' and restart'), icon: 'update' }
+      : null,
+    care: [
+      { id: on('care:touch', () => act('touch')), label: L('쓰다듬기', 'Pet'), icon: 'touch' },
+      { id: on('care:feed', () => act('feed')), label: L('밥 주기', 'Feed'), icon: 'feed', enabled: !egg },
+      { id: on('care:play', () => act('play')), label: L('놀아주기', 'Play'), icon: 'play', enabled: !egg },
+      { id: on('care:wash', () => act('wash')), label: L('씻기기', 'Wash'), icon: 'wash', enabled: !egg },
+      { id: on('care:walk', () => startStrollNow()), label: strolling ? L('산책 중…', 'Walking…') : L('산책하기', 'Walk'), icon: 'walk', enabled: !egg && !strolling },
+    ],
+    tabs: [
+      {
+        id: 'pet',
+        label: L('내 펫', 'My pet'),
+        icon: 'paw',
+        items: [
+          { id: on('wardrobe', () => openWardrobe()), label: L('꾸미기…', 'Customize…'), icon: 'star' },
+          { id: on('collection', () => openCollection()), label: L('뽑기·컬렉션…', 'Gacha & Collection…'), icon: 'ticket', badge: String(collection.tickets) },
+          { id: on('codex', () => openCodex()), label: L('도감·기록…', 'Codex & records…'), icon: 'book' },
+          behavior.home
+            ? {
+                id: on('home:free', () => {
+                  behavior = clearHome(behavior);
+                  say(L('이제 마음대로 돌아다닐게요!', 'I will roam freely now!'));
+                }),
+                label: L('자유롭게 돌아다니게 하기', 'Let it roam freely'),
+                icon: 'home',
+              }
+            : {
+                id: on('home:here', () => {
+                  const p = menuPoint ?? { x: behavior.x + petSize / 2, y: behavior.y + petSize / 2 };
+                  behavior = setHome(behavior, p.x, p.y);
+                  say(L('여기서 혼자 놀고 있을게요!', 'I will play here by myself!'));
+                }),
+                label: L('혼자 놀게 두기 (여기서만)', 'Let it play alone (here only)'),
+                icon: 'home',
+                enabled: !egg,
+              },
+          { id: on('card:export', () => void exportCard()), label: L('프로필 카드 내보내기…', 'Export profile card…'), icon: 'card' },
+        ],
+      },
+      {
+        id: 'play',
+        label: L('함께', 'Together'),
+        icon: 'shop',
+        items: [
+          { id: on('market', () => openMarket()), label: L('경매장…', 'Auction house…'), icon: 'shop', enabled: logged, ...(logged ? {} : { hint: needLogin }) },
+          { id: on('ranking', () => openRanking()), label: L('랭킹…', 'Rankings…'), icon: 'trophy', enabled: logged, ...(logged ? {} : { hint: needLogin }) },
+          account,
+        ],
+      },
+      {
+        id: 'dev',
+        label: L('개발', 'Dev'),
+        icon: 'tool',
+        items: [
+          { id: on('scan', () => void scanOnce()), label: L('지금 검사하기', 'Inspect now'), icon: 'scan', enabled: !egg, hint: scanStatus },
+          { id: on('results', () => openResults()), label: L('검사 결과…', 'Inspection results…'), icon: 'list' },
+          { id: on('tip', () => offerTip(Date.now(), true)), label: L('오늘의 FE 지식', 'FE tip of the day'), icon: 'bulb', enabled: !egg },
+          {
+            id: 'tools',
+            label: L('검사 도구', 'Inspection tools'),
+            icon: 'tool',
+            children: [
+              {
+                id: on('tools:browser', () => {
+                  if (openInspectBrowser('about:blank')) say(L('여기서 localhost 주소를 열면 제가 살펴볼게요', 'Open a localhost address here and I will take a look'));
+                }),
+                label: L('검사용 브라우저 열기', 'Open inspection browser'),
+                icon: 'globe',
+              },
+              { id: on('tools:demo', () => void openDemo()), label: L('검사 체험 (시험 페이지 열기)', 'Try inspection (open demo page)'), icon: 'bug' },
+              { id: on('tools:extension', () => openExtensionFolder()), label: L('크롬 확장 폴더 열기 (평소 쓰는 크롬에서 검사)', 'Open Chrome extension folder (inspect in your usual Chrome)'), icon: 'tool' },
+              { id: 'tools:info', label: L(`확장 수신 포트 ${FEED_PORT} · 디버그 포트 ${CDP_PORT} · localhost 페이지만 검사`, `Extension port ${FEED_PORT} · debug port ${CDP_PORT} · localhost pages only`), enabled: false },
+            ],
           },
-        },
-    { label: isStrolling(behavior, Date.now()) ? L('산책 중…', 'Walking…') : L('산책하기', 'Take a walk'), enabled: !egg && !isStrolling(behavior, Date.now()), click: () => startStrollNow() },
-    { type: 'separator' },
-    {
-      label: L('동작 보기 (테스트용)', 'Preview moves (test)'),
-      submenu: [
-        demo(L('잠자기', 'Sleep'), 'sleep'),
-        demo(L('달리기', 'Run'), 'run'),
-        demo(L('벽 타기', 'Climb'), 'climb'),
-        demo(L('혼자 놀기', 'Play alone'), 'play'),
-        { label: L('마우스에 매달리기: 마우스를 10초 가만히 두세요', 'Hang on the mouse: keep the mouse still for 10 seconds'), enabled: false },
-      ],
-    },
-    { label: L('꾸미기…', 'Customize…'), click: () => openWardrobe() },
-    { type: 'separator' },
-    {
-      // 설치본에서만 동작한다(개발 실행에서 켜면 electron.exe 가 로그인 항목에 등록되기 때문).
-      label: app.isPackaged ? L('로그인할 때 자동 실행', 'Launch at login') : L('로그인할 때 자동 실행 (설치본에서만)', 'Launch at login (installed app only)'),
-      type: 'checkbox',
-      enabled: app.isPackaged,
-      checked: app.isPackaged && app.getLoginItemSettings().openAtLogin,
-      click: (item) => app.setLoginItemSettings({ openAtLogin: item.checked }),
-    },
-    { label: L(`버전 ${app.getVersion()}`, `Version ${app.getVersion()}`), enabled: false },
-    { label: L('종료', 'Quit'), click: () => app.quit() },
-  ]);
+        ],
+      },
+    ],
+    tab: lastMenuTab,
+    footer: [
+      { id: on('settings', () => openSettings()), label: L('설정', 'Settings'), icon: 'gear' },
+      news,
+      more,
+      { id: on('quit', () => app.quit()), label: L('종료', 'Quit'), icon: 'power' },
+    ],
+    text: { back: L('뒤로', 'Back'), close: L('닫기', 'Close'), empty: L('아직 없어요', 'Nothing yet') },
+  };
+  menuHandlers = handlers; // 모델과 함께 바뀐다(메뉴를 만들 때마다 새로 채운다)
+  return model;
+}
+
+/** 트레이 아이콘의 기본(네이티브) 메뉴: 같은 모델을 바꿔서 쓴다. */
+function buildMenu(): Menu {
+  const model = buildMenuModel();
+  const handlers = menuHandlers;
+  const toNative = (items: NativeItem[]): Electron.MenuItemConstructorOptions[] =>
+    items.map((i) => {
+      const { submenu, click, type, ...rest } = i;
+      return { ...rest, ...(type ? { type } : {}), ...(submenu ? { submenu: toNative(submenu) } : {}), ...(click ? { click } : {}) } as Electron.MenuItemConstructorOptions;
+    });
+  return Menu.buildFromTemplate(toNative(toNativeTemplate(model, (id) => handlers.get(id)?.())));
+}
+
+// ---- 펫을 우클릭하면 뜨는 도트 스타일 메뉴 창 ----
+let menuWin: BrowserWindow | null = null;
+let menuModel: MenuModel | null = null;
+let menuIdleTimer: ReturnType<typeof setTimeout> | undefined;
+const MENU_WIDTH = 320;
+
+function closeContextMenu(): void {
+  clearTimeout(menuIdleTimer);
+  const w = menuWin;
+  menuWin = null;
+  if (w && !w.isDestroyed()) w.close();
+}
+
+/** 메뉴 창을 마우스 근처에 놓는다(화면 밖으로 나가지 않게). height 는 화면에 그려진 내용 높이다. */
+function placeContextMenu(height: number): void {
+  const w = menuWin;
+  if (!w || w.isDestroyed()) return;
+  const point = menuPoint ?? screen.getCursorScreenPoint();
+  const area = screen.getDisplayNearestPoint(point).workArea;
+  const h = Math.max(160, Math.min(Math.round(height), area.height - 16));
+  const x = Math.min(Math.max(area.x + 4, point.x), area.x + area.width - MENU_WIDTH - 4);
+  const y = Math.min(Math.max(area.y + 4, point.y), area.y + area.height - h - 4);
+  w.setBounds({ x: Math.round(x), y: Math.round(y), width: MENU_WIDTH, height: h });
+}
+
+function openContextMenu(): void {
+  closeContextMenu();
+  menuPoint = screen.getCursorScreenPoint();
+  menuModel = buildMenuModel();
+  const w = new BrowserWindow({
+    width: MENU_WIDTH,
+    height: 480,
+    x: menuPoint.x,
+    y: menuPoint.y,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    skipTaskbar: true,
+    hasShadow: false,
+    show: false,
+    webPreferences: { preload: path.join(projectRoot, 'static', 'menu-preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true },
+  });
+  w.setMenu(null);
+  w.setAlwaysOnTop(true, 'screen-saver');
+  // 바깥을 누르면(포커스를 잃으면) 닫힌다.
+  w.on('blur', () => {
+    if (menuWin === w) closeContextMenu();
+  });
+  w.on('closed', () => {
+    if (menuWin === w) menuWin = null;
+  });
+  menuWin = w;
+  // 아무것도 안 누르고 한참 두면 저절로 닫는다.
+  menuIdleTimer = setTimeout(() => closeContextMenu(), 60_000);
+  void w.loadFile(path.join(projectRoot, 'static', 'menu.html'));
 }
 
 function trayIcon() {
@@ -2043,6 +2187,7 @@ function tick(lastAt: number): number {
 function setupIpc(): void {
   ipcMain.handle('pet:get-view', () => currentView());
   ipcMain.handle('pet:act', (_event, type: unknown) => {
+    closeContextMenu();
     if (type === 'touch' || type === 'feed' || type === 'play' || type === 'wash') return act(type).ok;
     return false;
   });
@@ -2050,6 +2195,7 @@ function setupIpc(): void {
     win?.setIgnoreMouseEvents(value !== true, { forward: true });
   });
   ipcMain.on('pet:drag', (_event, phase: unknown) => {
+    closeContextMenu();
     const now = Date.now();
     if (phase === 'start') {
       const p = screen.getCursorScreenPoint();
@@ -2063,19 +2209,40 @@ function setupIpc(): void {
   });
   ipcMain.on('pet:context-menu', () => {
     if (!win) return;
-    menuPoint = screen.getCursorScreenPoint();
-    const w = win;
-    // 펫 창은 포커스를 받지 않는 창이라, 그대로 메뉴를 띄우면 바깥을 눌러도 메뉴가 닫히지 않는다.
-    // 메뉴가 떠 있는 동안만 포커스를 받게 하고, 닫히면(바깥 클릭·선택·Esc) 원래대로 돌린다.
-    w.setFocusable(true);
-    w.focus();
-    buildMenu().popup({
-      window: w,
-      callback: () => {
-        if (!w.isDestroyed()) w.setFocusable(false);
-      },
-    });
+    openContextMenu();
   });
+  // 도트 메뉴 창: 모델을 주고, 그려진 높이에 맞춰 놓은 뒤 보여 주고, 눌린 항목의 동작을 id 로 실행한다.
+  ipcMain.handle('menu:get', () => menuModel);
+  ipcMain.on('menu:ready', (_event, height: unknown) => {
+    const w = menuWin;
+    if (!w || w.isDestroyed()) return;
+    placeContextMenu(typeof height === 'number' && Number.isFinite(height) ? height : 480);
+    w.show();
+    w.focus();
+    // 개발 확인용: TAMA_MENU_SHOT=<파일.png> 이면 메뉴 창을 그림으로 저장하고 앱을 끝낸다.
+    const shot = process.env['TAMA_MENU_SHOT'];
+    if (shot && !app.isPackaged) {
+      setTimeout(() => {
+        void w.webContents.capturePage().then((img) => {
+          fs.writeFileSync(shot, img.toPNG());
+          app.exit(0);
+        });
+      }, 600);
+    }
+  });
+  ipcMain.on('menu:resize', (_event, height: unknown) => {
+    if (typeof height === 'number' && Number.isFinite(height)) placeContextMenu(height);
+  });
+  ipcMain.on('menu:tab', (_event, id: unknown) => {
+    if (id === 'pet' || id === 'play' || id === 'dev') lastMenuTab = id;
+  });
+  ipcMain.on('menu:click', (_event, id: unknown) => {
+    if (typeof id !== 'string') return;
+    const run = menuHandlers.get(id);
+    closeContextMenu();
+    if (run) setTimeout(run, 0); // 메뉴 창이 닫힌 뒤에 실행한다(열리는 창에 포커스가 가게)
+  });
+  ipcMain.on('menu:close', () => closeContextMenu());
   ipcMain.handle('card:get', () => {
     if (!active) return null;
     return {
@@ -2289,6 +2456,8 @@ if (!app.requestSingleInstanceLock()) {
     nextGiftAt = Date.now() + (process.env['TAMA_GIFT_SOON'] === '1' ? 10_000 : nextGiftDelayMs(Math.random, true));
     setInterval(() => maybeOfferGift(Date.now()), 60_000);
     setTimeout(() => checkDaily(), 9_000);
+    // 개발 확인용: TAMA_OPEN_MENU=1 이면 켠 지 4초 뒤에 우클릭 메뉴를 연다.
+    if (process.env['TAMA_OPEN_MENU'] === '1' && !app.isPackaged) setTimeout(() => openContextMenu(), 4_000);
     setTimeout(() => recordGrowth({ kind: 'sync' }), 12_000); // 이미 조건을 채운 업적(예전 사용자) 확인
     setInterval(() => checkDaily(), 30 * 60_000);
 

@@ -78,7 +78,7 @@ It is unsigned, so this step is needed. New versions are downloaded by the app a
 | Pet it | **Click** the pet (it works once per 30 seconds; for an egg once per 5 seconds) |
 | Open the menu | **Right-click** the pet or the tray icon |
 | Move it | **Drag** the pet and drop it; it falls to the floor |
-| See its status | Right-click → `Show status` |
+| See its status | Right-click → the header at the top of the menu (name, level, bars) |
 | Quit | Right-click → `Quit` |
 
 Clicks on the transparent part around the pet **pass straight through to the window below**, so it does not get in your way.
@@ -160,20 +160,19 @@ It only looks at `localhost`, `127.0.0.1`, and `*.localhost` pages. Right-click 
 
 ## Right-click menu at a glance
 
-| Menu | What it does |
+Right-click the pet to open a **pixel-style menu**. You can use the mouse or the keyboard (arrow keys, Enter, Esc). Clicking outside closes it.
+
+| Area | What is in it |
 |---|---|
-| Show status | Name, level rank, and bars for XP, fullness, mood, cleanliness |
-| Inspection results… | Problems found per page, with fixes and an ignore list |
-| Codex & records… | Streak, codex of problem types, achievements |
-| 🏪 Auction house… | Buy and sell pets (logged-in players) |
-| 🏆 Rankings… | Rankings for codex, hidden, pets, level, pulls, cosmetics (logged-in players) |
-| 🎟 Gacha & Collection… | Pull and take out animals |
-| 📢 News | Re-read recent news |
-| ☁ Log in with GitHub… / ☁ your name | Log in, sync, copy the profile card URL, log out |
-| Settings… | Size, language, intervals, rules, updates |
-| Feed / Play / Wash / Take a walk | Care |
-| Customize… | Name, color, accessory, appearance, profile card pet |
-| Quit | Quit the app |
+| **Header** | Pet name, level rank, and bars for XP, fullness, mood, and cleanliness (the old `Show status`) |
+| **5 care buttons** | Pet · Feed · Play · Wash · Walk |
+| Tab **My pet** | Customize… · 🎟 Gacha & Collection… (ticket count) · Codex & records… · Let it play alone (here only) / Let it roam freely · Export profile card… |
+| Tab **Together** | 🏪 Auction house… · 🏆 Rankings… (logged-in players) · ☁ Log in with GitHub / your account (sync, contribution check, copy card URL, log out) |
+| Tab **Dev** | Inspect now · Inspection results… · FE tip of the day · Inspection tools (inspection browser, demo page, Chrome extension folder) |
+| **Bottom row** | ⚙ Settings · 🔔 News · ⋯ More (check for updates, launch at login, preview moves (test), version) · ⏻ Quit |
+| When a new version is ready | An **Install version … and restart** line appears under the header |
+
+The tray icon menu has the same content (tabs appear as submenus).
 
 ## Settings and updates
 
