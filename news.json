@@ -1,6 +1,17 @@
 {
   "items": [
     {
+      "id": "v0.12.3-card-sales-updates",
+      "date": "2026-11-27",
+      "title": "풍성한 프로필 카드, 판매 알림",
+      "body": "프로필 카드에 꾸미기·연속일·도감·업적이 채워졌어요. 내 펫이 경매장에서 팔리면 펫이 알려 주고, 업데이트 실패 원인도 안내해요.",
+      "en": {
+        "title": "Richer profile card and sale alerts",
+        "body": "Your profile card now shows cosmetics, streak, codex, and achievements. The pet tells you when your listed pet sells, and update failures now explain why."
+      },
+      "url": "https://github.com/junhooo111/desktop-tamagotchi/releases/tag/v0.12.3"
+    },
+    {
       "id": "v0.12.2-english-polish",
       "date": "2026-11-27",
       "title": "영어 모드 다듬기, 영어 README",
