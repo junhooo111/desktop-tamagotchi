@@ -26,6 +26,7 @@ import { addIgnored, buildResults, isMuted, visibleFindings } from '../shared/re
 import { DEFAULT_SETTINGS, sanitizeSettings, tipIntervalMs, type Settings } from '../shared/settings.js';
 import { TIP_PENDING_MS, pickTip, shouldOfferTip, tipText, type Tip } from '../shared/tips.js';
 import { resolveLang, type Lang } from '../shared/i18n.js';
+import { randomUUID } from 'node:crypto';
 import { nameEn, toEnglish } from '../shared/en-text.js';
 import { lessonFor, quizFor } from '../shared/lessons-en.js';
 import { BUBBLE_GAP, TIP_BUBBLE, WINDOW, bubbleShift, petPixelSize } from '../shared/layout.js';
@@ -288,6 +289,19 @@ function offerTip(now: number, requested = false): void {
   sendTip();
 }
 
+/**
+ * 배움(카드 확인·퀴즈 보너스·문제 고침·지식 읽기)을 서버에 알려 게임머니를 받는다(로그인했을 때만).
+ * 양(확인 10·퀴즈 5·고침 20·지식 2)과 하루 상한(150)은 서버가 정하고, 이벤트 번호가 겹치면 한 번만 인정한다.
+ * 연결이 없으면 이번 보상은 건너뛴다(작은 양이라 대기열을 두지 않는다).
+ */
+function earnLearningCoins(kinds: Array<'confirm' | 'quiz_bonus' | 'fixed' | 'tip'>): void {
+  const game = serverGame;
+  if (!serverOn() || !game || kinds.length === 0) return;
+  void game.reportLearning(kinds.slice(0, 50).map((kind) => ({ id: randomUUID(), kind }))).then((r) => {
+    if (r && r.granted > 0) setTimeout(() => say(L(`💰 배움 덕분에 게임머니 +${r.granted}`, `💰 Game money +${r.granted} for learning`)), 3_000);
+  });
+}
+
 /** 말풍선의 `확인`: 처음 읽는 지식이면 경험치를 주고, 말풍선을 지운다. */
 function confirmTip(): void {
   const current = pendingTip;
@@ -297,6 +311,7 @@ function confirmTip(): void {
     const result = learn(applyElapsedInPlace(), 'tip');
     pet = result.pet;
     say(result.message);
+    earnLearningCoins(['tip']);
     persist();
     updateTray();
   }
@@ -598,6 +613,7 @@ async function scanOnce(): Promise<void> {
     if (fixed.length > 0) {
       progress = markFixed(progress, fixed);
       let message = '';
+      earnLearningCoins(fixed.map(() => 'fixed' as const));
       for (let i = 0; i < fixed.length; i++) {
         const r = learn(applyElapsedInPlace(), 'fixed');
         pet = r.pet;
@@ -1226,6 +1242,7 @@ function finishCard(kind: 'confirm' | 'later' | 'ignore', choice: number | null 
       const result = learn(applyElapsedInPlace(), 'confirm', correct ? QUIZ_BONUS : 0);
       pet = result.pet;
       say(result.message);
+      earnLearningCoins(correct ? ['confirm', 'quiz_bonus'] : ['confirm']);
       persist();
       updateTray();
     } else if (kind === 'ignore') {

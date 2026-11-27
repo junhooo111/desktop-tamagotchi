@@ -157,6 +157,29 @@ describe('뽑기권 획득 대기열', () => {
   });
 });
 
+describe('배움 보고(게임머니)', () => {
+  it('이벤트를 서버에 보내고 서버가 인정한 만큼만 반영한다', async () => {
+    const calls: unknown[] = [];
+    const { rpc } = fakeRpc({ report_learning: (args) => { calls.push(args); return ok({ granted: 15, coins: 245 }); } }, profileTables);
+    const g = new ServerGame(rpc, tmpDir());
+    await g.refresh();
+    const events = [{ id: 'a', kind: 'confirm' as const }, { id: 'b', kind: 'quiz_bonus' as const }];
+    expect(await g.reportLearning(events)).toEqual({ granted: 15, coins: 245 });
+    expect(calls).toEqual([{ p_events: events }]);
+    expect(g.state?.coins).toBe(245);
+  });
+
+  it('보낼 것이 없거나 서버 오류면 아무것도 바꾸지 않고 null', async () => {
+    const { rpc, calls } = fakeRpc({ report_learning: () => fail('invalid_events') }, profileTables);
+    const g = new ServerGame(rpc, tmpDir());
+    await g.refresh();
+    expect(await g.reportLearning([])).toBeNull();
+    expect(calls.some((c) => c.fn === 'report_learning')).toBe(false);
+    expect(await g.reportLearning([{ id: 'a', kind: 'tip' }])).toBeNull();
+    expect(g.state?.coins).toBe(230);
+  });
+});
+
 describe('GitHub 기여 동기화', () => {
   it('서버가 알려 준 만큼만 반영하고, 준비되지 않았거나 닿지 않으면 null', async () => {
     const calls: string[] = [];
