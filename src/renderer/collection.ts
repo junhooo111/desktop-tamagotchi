@@ -7,7 +7,7 @@ import type { Lang } from '../shared/i18n.js';
 import { startUiLocalization } from './dom-i18n.js';
 import type { CollectionEntry, CollectionView } from '../shared/collection.js';
 import { levelTier } from '../shared/pet.js';
-import { spriteSet, type SpeciesId } from '../shared/species.js';
+import { ACCESSORIES, VARIANTS, spriteSet, type Accessory, type SpeciesId, type Variant } from '../shared/species.js';
 
 type PullResult =
   | { ok: false; message: string; view: CollectionView }
@@ -38,8 +38,12 @@ const setText = (id: string, value: string): void => {
 };
 
 const STAGE_NAME = { egg: '알', baby: '새끼', adult: '성체', legend: '전설' } as const;
-/** 뽑는 연출에 걸리는 시간(ms) */
-const SUSPENSE_MS = 900;
+/** 룰렛이 도는 시간과, 멈춘 뒤 결과를 보여 주는 시간(ms). "동작 줄이기" 설정이면 거의 바로 보여 준다. */
+const SPIN_MS = 2800;
+const REVEAL_MS = 700;
+const CELL = 76;
+const CELLS = 38;
+const motionScale = (): number => (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0.1 : 1);
 
 let data: CollectionView;
 let busy = false;
@@ -59,6 +63,84 @@ function drawSprite(canvas: HTMLCanvasElement, rows: readonly string[], palette:
       ctx.fillRect(x * scale, y * scale, scale, scale);
     });
   });
+}
+
+type Rarity = 'common' | 'hidden' | 'plain';
+interface ReelItem {
+  rows: readonly string[];
+  palette: Readonly<Record<string, string>>;
+  rarity: Rarity;
+}
+
+const pick = <T,>(list: readonly T[]): T => list[Math.floor(Math.random() * list.length)]!;
+
+function speciesItem(e: { id: SpeciesId; hidden: boolean }): ReelItem {
+  const set = spriteSet(e.id, 'adult');
+  return { rows: set.frames.idleA, palette: set.palette, rarity: e.hidden ? 'hidden' : 'common' };
+}
+
+/**
+ * 룰렛에 지나갈 칸들. 결과는 이미 서버(메인)가 확률대로 정했고, 여기서는 그 결과가 가운데에 멈추도록 꾸밀 뿐이다.
+ * 지나가는 칸은 "???" 가 아니라 살짝 어두운 동물 모습이라서, 히든이 있다는 것을 어렴풋이 알아볼 수 있다.
+ * 가끔 결과 바로 옆에 히든을 놓아 "아깝다" 느낌을 준다(결과에는 영향 없음).
+ */
+export function buildReel(result: PullResult & { ok: true }, entries: readonly CollectionEntry[], activeStyle?: { id: SpeciesId; stage: 'baby' | 'adult' | 'legend' }): { items: ReelItem[]; final: number } {
+  const final = CELLS - 4;
+  const items: ReelItem[] = [];
+  if ('id' in result) {
+    const commons = entries.filter((e) => !e.hidden);
+    const hiddens = entries.filter((e) => e.hidden);
+    for (let i = 0; i < CELLS; i++) items.push(speciesItem(hiddens.length > 0 && Math.random() < 0.2 ? pick(hiddens) : pick(commons.length > 0 ? commons : entries)));
+    const mine = entries.find((e) => e.id === result.id) ?? { id: result.id, hidden: result.hidden };
+    items[final] = speciesItem(mine);
+    if (!result.hidden && hiddens.length > 0 && Math.random() < 0.4) items[final + (Math.random() < 0.5 ? -1 : 1)] = speciesItem(pick(hiddens));
+  } else {
+    const id = activeStyle?.id ?? 'cat';
+    const stage = activeStyle?.stage ?? 'adult';
+    const styled = (variant: Variant, accessory: Accessory): ReelItem => {
+      const set = spriteSet(id, stage, { variant, accessory });
+      return { rows: set.frames.idleA, palette: set.palette, rarity: 'plain' };
+    };
+    const accessories = ACCESSORIES.filter((a) => a !== 'none');
+    for (let i = 0; i < CELLS; i++) items.push(Math.random() < 0.7 ? styled('default', pick(accessories)) : styled(pick(VARIANTS), 'none'));
+    items[final] = result.kind === 'accessory' ? styled('default', result.itemId as Accessory) : styled(result.itemId as Variant, 'none');
+  }
+  return { items, final };
+}
+
+/** 룰렛을 돌린다. 끝나면(가운데 칸을 밝히고 잠깐 보여 준 뒤) 풀린다. */
+async function spinReel(result: PullResult & { ok: true }): Promise<void> {
+  const reel = $('reel');
+  const strip = $('strip');
+  const k = motionScale();
+  const active = data.entries.find((e) => e.active);
+  const { items, final } = buildReel(result, data.entries, active ? { id: active.id, stage: active.stage === 'egg' ? 'baby' : active.stage } : undefined);
+  strip.textContent = '';
+  items.forEach((it, i) => {
+    const cell = document.createElement('div');
+    cell.className = `cell ${it.rarity}` + (i === final ? ' final' : '');
+    const canvas = document.createElement('canvas');
+    canvas.width = 64;
+    canvas.height = 64;
+    drawSprite(canvas, it.rows, it.palette, 2);
+    cell.append(canvas);
+    strip.append(cell);
+  });
+  $('result-canvas').hidden = true;
+  reel.hidden = false;
+  reel.classList.remove('stopped');
+  const half = Math.max(reel.clientWidth, 300) / 2;
+  strip.style.transition = 'none';
+  strip.style.transform = 'translateX(0)';
+  void strip.offsetWidth; // 처음 자리를 먼저 적용한 다음에 움직이게 한다
+  strip.style.transition = `transform ${Math.round(SPIN_MS * k)}ms cubic-bezier(0.1, 0.75, 0.15, 1)`;
+  strip.style.transform = `translateX(${Math.round(half - (final * CELL + CELL / 2))}px)`;
+  await new Promise((r) => setTimeout(r, Math.round(SPIN_MS * k)));
+  strip.children[final]?.classList.add('reveal');
+  reel.classList.add('stopped');
+  await new Promise((r) => setTimeout(r, Math.round(REVEAL_MS * k)));
+  reel.hidden = true;
+  $('result-canvas').hidden = false;
 }
 
 function petCard(e: CollectionEntry): HTMLElement {
@@ -173,7 +255,11 @@ async function pull(kind: 'species' | 'cosmetic'): Promise<void> {
   const egg = spriteSet('rabbit', 'egg');
   drawSprite($<HTMLCanvasElement>('result-canvas'), egg.frames.idleA, egg.palette, 4);
   const result = await (kind === 'species' ? window.collectionApi.pullSpecies() : window.collectionApi.pullCosmetic());
-  await new Promise((r) => setTimeout(r, SUSPENSE_MS));
+  if (result.ok) {
+    box.classList.remove('shaking');
+    $('result-text').textContent = '';
+    await spinReel(result);
+  }
   data = result.view;
   busy = false;
   render();

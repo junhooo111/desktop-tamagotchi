@@ -15,6 +15,13 @@ const flush = async (ms = 0): Promise<void> => {
   await new Promise((r) => setTimeout(r, ms));
 };
 
+/** 뽑기 연출(룰렛)이 끝날 때까지 기다린다. 컴퓨터가 바쁠 때도 흔들리지 않게 시간을 고정하지 않고 상태를 본다. */
+const settle = async (): Promise<void> => {
+  for (let i = 0; i < 250; i++) {
+    await new Promise((r) => setTimeout(r, 20));
+    if (el('reel').hidden && el('result-text').textContent !== '뽑는 중…' && !el('result').classList.contains('shaking') && el('result-text').textContent !== '') return;
+  }
+};
 const base = (tickets: number): Collection => ({ ...startCollection({ ...createPet('cat', 1), xp: 300 }, 1), tickets });
 const view = (c: Collection, left = 5): CollectionView => buildCollectionView(c, left);
 const pets = (): HTMLElement[] => [...document.querySelectorAll<HTMLElement>('#grid .pet')];
@@ -31,6 +38,8 @@ beforeEach(() => {
     original(type, listener);
   });
   document.body.innerHTML = body;
+  // "동작 줄이기"로 룰렛을 짧게 돌려, 시험이 오래 기다리지 않게 한다
+  (window as unknown as { matchMedia: unknown }).matchMedia = () => ({ matches: true });
 });
 afterEach(() => {
   for (const [type, listener] of attached.splice(0)) document.removeEventListener(type, listener);
@@ -101,13 +110,14 @@ describe('뽑기·컬렉션 창', () => {
   it('동물 뽑기: 누르면 연출을 하고, 결과(새 동물)와 늘어난 목록을 보여 준다', async () => {
     const after = pullSpecies(base(3), 2, () => 0.99).collection;
     const { api } = await open(view(base(3)));
-    api.pullSpecies.mockResolvedValue({ ok: true, message: '부엉이(이)가 새로 왔어요!', id: 'owl', isNew: true, hidden: false, count: 1, view: view(after) });
+    // 서버 응답이 오기 전까지는 알이 흔들리며 "뽑는 중"이 보인다
+    api.pullSpecies.mockImplementation(() => new Promise((r) => setTimeout(() => r({ ok: true, message: '부엉이(이)가 새로 왔어요!', id: 'owl', isNew: true, hidden: false, count: 1, view: view(after) }), 50)));
     el('pull-species').click();
     await flush();
     expect(el('result').hidden).toBe(false);
     expect(el('result').classList.contains('shaking')).toBe(true);
     expect(el('result-text').textContent).toBe('뽑는 중…');
-    await flush(1_000);
+    await settle();
     expect(el('result').classList.contains('shaking')).toBe(false);
     expect(el('result-text').textContent).toContain('부엉이');
     expect(el('tickets').textContent).toContain('0장');
@@ -126,7 +136,7 @@ describe('뽑기·컬렉션 창', () => {
     expect(el('owned-count').textContent).toContain('1/20');
     api.pullSpecies.mockResolvedValue({ ok: true, message: '부엉이(이)가 새로 왔어요!', id: 'owl', isNew: true, hidden: false, count: 1, view: view(after) });
     el('pull-species').click();
-    await flush(1_000);
+    await settle();
     expect(el('pity').textContent).toContain('39번 안에');
     expect(el('pity').textContent).toContain('지금까지 1번');
     expect(el('tickets').textContent).toContain('4장');
@@ -143,7 +153,7 @@ describe('뽑기·컬렉션 창', () => {
     await flush();
     set(view(newer));
     refresh(); // 연출 중이라 바로 반영하지 못한다
-    await flush(1_000);
+    await settle();
     expect(api.get).toHaveBeenCalledTimes(2); // 처음 한 번 + 연출이 끝난 뒤 한 번
     expect(el('tickets').textContent).toContain('6장');
   });
@@ -153,7 +163,7 @@ describe('뽑기·컬렉션 창', () => {
     const { api } = await open(view(base(3)));
     api.pullSpecies.mockResolvedValue({ ok: true, message: '용(이)가 새로 왔어요! ✨히든 동물!', id: 'dragon', isNew: true, hidden: true, count: 1, view: view(after) });
     el('pull-species').click();
-    await flush(1_000);
+    await settle();
     expect(el('result').classList.contains('win-hidden')).toBe(true);
     expect(pet('dragon').textContent).toContain('용');
   });
@@ -162,7 +172,7 @@ describe('뽑기·컬렉션 창', () => {
     const { api } = await open(view(base(9)));
     api.pullCosmetic.mockResolvedValue({ ok: false, message: '꾸미기를 모두 모았어요!', view: view(base(9), 0) });
     el('pull-cosmetic').click();
-    await flush(1_000);
+    await settle();
     expect(el('result-text').textContent).toContain('모두 모았어요');
   });
 
@@ -195,5 +205,33 @@ describe('뽑기·컬렉션 창', () => {
     el('close').click();
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
     expect(api.close).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('뽑기 룰렛', () => {
+  it('결과 칸이 정해진 자리에 놓이고, 지나가는 칸은 동물 모습(히든도 ???가 아님)이며 희귀도 표시가 있다', async () => {
+    const { buildReel } = await import('./collection.js');
+    const entries = view(base(0)).entries;
+    const owl = entries.find((e) => e.id === 'owl')!;
+    const result = { ok: true as const, message: '', view: view(base(0)), id: 'owl' as const, isNew: true, hidden: false, count: 1 };
+    const { items, final } = buildReel(result, entries);
+    expect(items.length).toBeGreaterThan(final + 2);
+    expect(items[final]!.rarity).toBe(owl.hidden ? 'hidden' : 'common');
+    expect(items.every((i) => i.rows.length > 0)).toBe(true);
+    const dragon = buildReel({ ...result, id: 'dragon' as const, hidden: true }, entries);
+    expect(dragon.items[dragon.final]!.rarity).toBe('hidden');
+  });
+
+  it('동물 뽑기를 하면 룰렛이 칸을 만들고 끝나면 결과 그림이 다시 보인다', async () => {
+    const after = pullSpecies(base(3), 2, () => 0.99).collection;
+    const { api } = await open(view(base(3)));
+    api.pullSpecies.mockResolvedValue({ ok: true, message: '부엉이(이)가 새로 왔어요!', id: 'owl', isNew: true, hidden: false, count: 1, view: view(after) });
+    el('pull-species').click();
+    await flush(100);
+    expect(el('strip').children.length).toBeGreaterThan(10);
+    expect(el('strip').querySelector('.final')).not.toBeNull();
+    await settle();
+    expect(el('reel').hidden).toBe(true);
+    expect(el<HTMLCanvasElement>('result-canvas').hidden).toBe(false);
   });
 });
