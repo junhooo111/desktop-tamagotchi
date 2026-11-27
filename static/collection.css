@@ -288,6 +288,34 @@ footer button {
   z-index: 2;
 }
 
+/* 전설의 후광: 주황·금빛이 뒤에서 숨 쉬듯 퍼진다. 히든(무지개가 돈다)보다는 작고 얌전하지만 다른 등급보다는 확실히 눈에 띈다 */
+.cell.legend::before {
+  content: '';
+  position: absolute;
+  inset: 8px 8px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 214, 90, 0.95) 0%, rgba(255, 140, 30, 0.75) 45%, rgba(255, 110, 0, 0) 75%);
+  filter: blur(6px);
+  animation: halo-pulse 1.3s ease-in-out infinite;
+}
+
+.cell.legend canvas {
+  position: relative;
+  z-index: 1;
+}
+
+@keyframes halo-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+    scale: 0.9;
+  }
+  50% {
+    opacity: 1;
+    scale: 1.12;
+  }
+}
+
 @keyframes aura-spin {
   to {
     transform: rotate(360deg);
@@ -307,7 +335,8 @@ footer button {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .cell.hidden::before {
+  .cell.hidden::before,
+  .cell.legend::before {
     animation: none;
   }
 }
