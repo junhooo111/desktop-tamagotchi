@@ -35,6 +35,8 @@ export const UI_EN: Record<string, string> = {
   '검색·공유(SEO)': 'Search & sharing (SEO)',
   '반응형·모바일': 'Responsive & mobile',
   성능: 'Performance',
+  보안: 'Security',
+  '코드 품질': 'Code quality',
   // 배움 카드
   '배움 카드': 'Learning card',
   '무엇이 문제인가요?': 'What is the problem?',

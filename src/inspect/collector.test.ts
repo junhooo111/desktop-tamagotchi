@@ -2,10 +2,13 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { collectPage, collectorExpression, type RawFinding } from './collector.js';
 
-const run = (html: string, head = '<title>테스트</title><meta name="viewport" content="width=device-width"><meta name="description" content="설명">'): RawFinding[] => {
+const OG = '<meta property="og:title" content="t"><meta property="og:image" content="https://example.com/a.png">';
+/** 시험 페이지를 만들어 검사한다. 새 규칙(og 태그·이미지 크기·main)에 걸리지 않게 기본값을 채워 준다(raw 면 그대로). */
+const run = (html: string, head = '<title>테스트</title><meta name="viewport" content="width=device-width"><meta name="description" content="설명">', raw = false): RawFinding[] => {
   document.documentElement.lang = 'ko';
-  document.head.innerHTML = head;
-  document.body.innerHTML = html + '<main hidden></main>'; // main 이 없다는 규칙에 걸리지 않게 한다
+  document.head.innerHTML = raw || head.includes('og:title') ? head : head + OG;
+  const body = raw ? html : html.replace(/<img\b(?![^>]*\swidth=)/g, '<img width="10" height="10"');
+  document.body.innerHTML = body + (raw ? '' : '<main hidden></main>'); // main 이 없다는 규칙에 걸리지 않게 한다
   return collectPage({ requireLayout: false }).findings;
 };
 const rules = (found: RawFinding[]): string[] => found.map((f) => f.ruleId);
@@ -72,7 +75,7 @@ describe('collectPage 규칙', () => {
     document.head.innerHTML = '';
     document.body.innerHTML = '<main><p>내용</p></main>';
     const found = collectPage({ requireLayout: false }).findings;
-    expect(rules(found).sort()).toEqual(['html-lang', 'meta-description', 'page-title', 'viewport-meta']);
+    expect(rules(found).sort()).toEqual(['html-lang', 'meta-description', 'og-missing', 'page-title', 'viewport-meta']);
     expect(found.every((f) => f.rect === null && f.selector === 'document')).toBe(true);
   });
 
@@ -81,6 +84,7 @@ describe('collectPage 규칙', () => {
     expect(found.map((f) => [f.ruleId, f.detail])).toEqual([
       ['heading-order', 'h1 다음에 h3'],
       ['heading-order', 'h2 다음에 h4'],
+      ['multiple-h1', 'h1 이 2개'], // h1 이 둘이라 함께 알린다
     ]);
   });
 
@@ -280,7 +284,7 @@ describe('collectPage 규칙: 검색·성능·링크 3종', () => {
 
   it('landmark-main: 내용이 있는데 main 이 없으면 페이지 전체 문제로 찾고, main·role=main 이 있으면 통과한다', () => {
     document.documentElement.lang = 'ko';
-    document.head.innerHTML = '<title>t</title><meta name="viewport" content="width=device-width"><meta name="description" content="d">';
+    document.head.innerHTML = '<title>t</title><meta name="viewport" content="width=device-width"><meta name="description" content="d">' + OG;
     document.body.innerHTML = '<p>내용</p>';
     expect(collectPage({ requireLayout: false }).findings.map((f) => [f.ruleId, f.selector])).toEqual([['landmark-main', 'document']]);
     document.body.innerHTML = '<div role="main">내용</div>';
@@ -384,7 +388,61 @@ describe('collectPage 규칙: 검색·성능·링크 3종', () => {
     expect(found.map((f) => [f.ruleId, f.selector])).toEqual([['img-alt', 'input#go']]);
   });
 
+  it('img-dimensions: width·height 가 없는 이미지를 찾고, 둘 다 있으면 통과한다', () => {
+    const found = run('<img src="/a.png" alt="가" id="a"><img src="/b.png" alt="나" width="100" height="50">', undefined, true);
+    expect(found.filter((f) => f.ruleId === 'img-dimensions').map((f) => [f.ruleId, f.selector])).toEqual([['img-dimensions', 'img#a']]);
+  });
+
+  it('render-blocking-script: head 의 script 에 async·defer·module 이 없을 때만 찾는다', () => {
+    const head = '<title>t</title><meta name="viewport" content="width=device-width"><meta name="description" content="d">' + OG;
+    const found = run('<p>x</p>', head + '<script src="/a.js"></script><script src="/b.js" defer></script><script src="/c.js" async></script><script src="/d.js" type="module"></script>', true);
+    expect(found.map((f) => [f.ruleId, f.detail])).toEqual([['landmark-main', '<main> 없음'], ['render-blocking-script', '/a.js']]);
+  });
+
+  it('font-display-missing: font-display 없는 @font-face 만 찾는다', () => {
+    const style = (css: string) => '<title>t</title><meta name="viewport" content="width=device-width"><meta name="description" content="d"><style>' + css + '</style>';
+    expect(rules(run('<p>x</p>', style('@font-face { font-family: A; src: url(/a.woff2); }')))).toEqual(['font-display-missing']);
+    expect(rules(run('<p>x</p>', style('@font-face { font-family: A; src: url(/a.woff2); font-display: swap; }')))).toEqual([]);
+  });
+
+  it('large-dom: 요소가 1500개를 넘으면 찾는다', () => {
+    expect(rules(run('<ul>' + '<li>a</li>'.repeat(1600) + '</ul>'))).toEqual(['large-dom']);
+    expect(rules(run('<ul>' + '<li>a</li>'.repeat(50) + '</ul>'))).toEqual([]);
+  });
+
+  it('multiple-h1: 보이는 h1 이 둘 이상이면 찾는다', () => {
+    expect(rules(run('<h1>가</h1><h1>나</h1>'))).toEqual(['multiple-h1']);
+    expect(rules(run('<h1>가</h1><h2>나</h2>'))).toEqual([]);
+  });
+
+  it('og-missing: og:title·og:image 중 빠진 것을 알린다', () => {
+    const head = '<title>t</title><meta name="viewport" content="width=device-width"><meta name="description" content="d">';
+    expect(run('<p>x</p>', head, true).map((f) => [f.ruleId, f.detail]).filter(([r]) => r === 'og-missing')).toEqual([['og-missing', 'og:title, og:image 없음']]);
+    expect(run('<p>x</p>', head + '<meta property="og:title" content="t">', true).filter((f) => f.ruleId === 'og-missing').map((f) => f.detail)).toEqual(['og:image 없음']);
+    expect(rules(run('<p>x</p>')).includes('og-missing')).toBe(false);
+  });
+
+  it('viewport-fixed-width: width=숫자 로 고정한 viewport 를 찾는다', () => {
+    const head = (v: string) => '<title>t</title><meta name="viewport" content="' + v + '"><meta name="description" content="d">';
+    expect(rules(run('<p>x</p>', head('width=1024, initial-scale=1')))).toEqual(['viewport-fixed-width']);
+    expect(rules(run('<p>x</p>', head('width=device-width, initial-scale=1')))).toEqual([]);
+  });
+
+  it('button-type-missing: form 안에서 type 없는 button 만 찾는다', () => {
+    const found = run('<form><button id="a">더 보기</button><button type="button">ok</button><button type="submit">저장</button></form><button>밖의 버튼</button>');
+    expect(found.map((f) => [f.ruleId, f.selector])).toEqual([['button-type-missing', 'button#a']]);
+  });
+
+  it('deprecated-tags: center·font·marquee 같은 오래된 태그를 찾는다', () => {
+    const found = run('<center>가</center><font>나</font><p>다</p>');
+    expect(found.map((f) => [f.ruleId, f.detail])).toEqual([['deprecated-tags', '<center>'], ['deprecated-tags', '<font>']]);
+  });
+
+  it('mixed-content·input-font-small·img-lazy-below-fold: 조건이 안 맞는 환경(http, 레이아웃 없음)에서는 아무 것도 찾지 않는다', () => {
+    expect(rules(run('<img src="http://example.com/a.png" alt="가" width="1" height="1"><input aria-label="a" style="font-size:10px">'))).toEqual([]);
+  });
+
   it('img-oversized: 레이아웃이 없는 환경에서는 건너뛰고 오류도 내지 않는다', () => {
-    expect(run('<img src="/big.png" alt="큰 그림" width="100">')).toEqual([]);
+    expect(run('<img src="/big.png" alt="큰 그림" width="100" height="50">')).toEqual([]);
   });
 });

@@ -285,6 +285,90 @@ export const LESSONS_EN: Record<RuleId, LessonEn> = {
     why: "People who cannot hear, and people watching where sound cannot be turned on (subway, library), cannot follow the content. Captions also help language learners and noisy places (WCAG 1.2.2).",
     fix: "Create a WebVTT caption file and attach it with <track>. Writing important sounds too (applause, alarms), not only speech, makes it better.",
   },
+  "img-dimensions": {
+    title: "The image has no width and height",
+    bubble: "The image size is not given!",
+    problem: "An <img> has no width/height attributes and no aspect-ratio.",
+    why: "When the image arrives late it only then gets its space, and the content below jumps (CLS). Text may shift while you read and make you tap the wrong button.",
+    fix: "Set width and height attributes at the image real ratio, or reserve the space with CSS aspect-ratio.",
+  },
+  "img-lazy-below-fold": {
+    title: "Images far below the fold are all downloaded up front",
+    bubble: "Lower images have no lazy!",
+    problem: "An image well below the first screen has no loading=\"lazy\".",
+    why: "Images nobody can see yet are downloaded all at once, slowing the first load and wasting data.",
+    fix: "Add loading=\"lazy\" to images below the first screen. Do not use it on the large image on the first screen.",
+  },
+  "render-blocking-script": {
+    title: "A script is blocking rendering",
+    bubble: "A script blocks the page!",
+    problem: "A <script src> in <head> has no async, defer, or type=\"module\".",
+    why: "While the browser downloads and runs the script it cannot parse the HTML, so the page appears later.",
+    fix: "Usually adding defer is enough. For order-independent analytics scripts, async is fine too.",
+  },
+  "font-display-missing": {
+    title: "@font-face has no font-display",
+    bubble: "font-display is missing!",
+    problem: "An @font-face rule has no font-display.",
+    why: "Text stays invisible until the font arrives (FOIT), or swaps much later and shakes the layout.",
+    fix: "Use font-display: swap to show a fallback first and swap when the font arrives.",
+  },
+  "large-dom": {
+    title: "There are too many elements (DOM)",
+    bubble: "Too many elements!",
+    problem: "The page has more than 1,500 DOM elements.",
+    why: "The more elements there are, the slower first paint, style calculation, and scroll and input response get, and the more memory is used.",
+    fix: "Use virtual scrolling for long lists, render hidden parts later, and cut needless nested wrapper divs.",
+  },
+  "multiple-h1": {
+    title: "There is more than one h1",
+    bubble: "There are two or more h1!",
+    problem: "Two or more h1 elements are visible on a page.",
+    why: "The h1 is the page main topic. With several, search engines and screen readers cannot tell what the core is.",
+    fix: "Use just one h1 per page and structure the rest with h2 and below.",
+  },
+  "og-missing": {
+    title: "Link preview (og tags) is missing",
+    bubble: "No link preview!",
+    problem: "The og:title or og:image meta tag is missing.",
+    why: "When the address is pasted into a chat app or social media, the title and image come out wrong or the card is empty.",
+    fix: "Add og:title, og:description, and og:image on every page (use an absolute image URL).",
+  },
+  "mixed-content": {
+    title: "An https page loads http resources",
+    bubble: "http resources are mixed in!",
+    problem: "An https page loads images, scripts, styles, or frames from http:// addresses.",
+    why: "Unencrypted resources can be altered in transit, so browsers block or warn. If a script is altered, the whole site is at risk.",
+    fix: "Change resource URLs to https://. For servers that do not support it, use another source.",
+  },
+  "viewport-fixed-width": {
+    title: "The viewport width is fixed to a number",
+    bubble: "The viewport width is fixed!",
+    problem: "The viewport meta tag fixes a number width like width=1024.",
+    why: "It renders at that width regardless of the device and scales down, so text becomes tiny on small screens.",
+    fix: "Change it to width=device-width, initial-scale=1.",
+  },
+  "input-font-small": {
+    title: "Input text is smaller than 16px",
+    bubble: "Input text is small!",
+    problem: "The font size of an input or select is under 16px.",
+    why: "iOS Safari automatically zooms in when you tap an input under 16px, shifting the layout and confusing users.",
+    fix: "Make input text at least 16px (1rem). Blocking zoom with user-scalable=no is bad for accessibility.",
+  },
+  "button-type-missing": {
+    title: "A button inside a form has no type",
+    bubble: "The button has no type!",
+    problem: "A <button> inside a <form> has no type attribute.",
+    why: "Without a type, the default is submit, so pressing a \"Cancel\" or \"Show more\" button submits the form and reloads the page.",
+    fix: "Use type=\"button\" for non-submit buttons and type=\"submit\" for submit buttons.",
+  },
+  "deprecated-tags": {
+    title: "An obsolete tag is used",
+    bubble: "An old tag is used!",
+    problem: "Tags that are no longer used such as <center>, <font>, <marquee>, or <blink> are present.",
+    why: "They were removed from the standards, so browsers may behave differently or drop support any time. Moving text (marquee, blink) in particular harms accessibility.",
+    fix: "Handle the look with CSS (text-align, font-family, animation, and so on).",
+  },
 };
 
 export const QUIZZES_EN: Record<RuleId, QuizEn> = {
@@ -477,6 +561,66 @@ export const QUIZZES_EN: Record<RuleId, QuizEn> = {
     question: "What must you attach to an explainer video that has sound?",
     options: ["A thumbnail image", "Captions (<track kind=\"captions\">)", "A playback speed button"],
     explain: "People who cannot hear, or cannot turn sound on, cannot follow the content without captions.",
+  },
+  "img-dimensions": {
+    question: "How do you reserve space before an image loads so the page does not jump?",
+    options: ["Use loading=\"lazy\"","Write a long alt","Give width and height attributes (or aspect-ratio)"],
+    explain: "If the ratio is known, the browser leaves room before the image arrives. It is the easiest way to prevent CLS.",
+  },
+  "img-lazy-below-fold": {
+    question: "Which attribute suits images far down a long page?",
+    options: ["fetchpriority=\"high\"","loading=\"lazy\"","decoding=\"sync\""],
+    explain: "lazy fetches when the image gets near the screen, lightening the first load. Images on the first screen should load early instead.",
+  },
+  "render-blocking-script": {
+    question: "What is the simplest attribute so a head script does not block display?",
+    options: ["defer","blocking","sync"],
+    explain: "defer does not block parsing and runs in order after the document is built.",
+  },
+  "font-display-missing": {
+    question: "How do you show a fallback font before the web font arrives?",
+    options: ["font-weight: bold","font-display: block","font-display: swap"],
+    explain: "swap shows text immediately and swaps when the font arrives.",
+  },
+  "large-dom": {
+    question: "How do you lighten a list with thousands of items?",
+    options: ["Wrap each item in one more div","Use virtual scrolling that draws only what is visible","Hide them with CSS"],
+    explain: "Creating DOM only for what is visible stays light no matter the count. Merely hiding leaves the elements in place.",
+  },
+  "multiple-h1": {
+    question: "How many h1 elements, the page main heading, are best?",
+    options: ["Several, one per design block","None","One per page"],
+    explain: "One h1 states the core topic; build the hierarchy with h2 to h6.",
+  },
+  "og-missing": {
+    question: "Which tag sets the preview image shown when a link is pasted into chat?",
+    options: ["og:image","meta viewport","link rel=\"icon\""],
+    explain: "og:image becomes the preview card image. Use an absolute URL.",
+  },
+  "mixed-content": {
+    question: "What happens if you put an http:// script on an https page?",
+    options: ["It gets faster","The browser blocks or warns, and it could be altered in transit","No effect"],
+    explain: "Mixed content undermines security, so browsers block it. Use https everywhere.",
+  },
+  "viewport-fixed-width": {
+    question: "What is the right viewport width for a responsive page?",
+    options: ["1024","320","device-width"],
+    explain: "device-width follows the real screen width so responsive CSS works properly.",
+  },
+  "input-font-small": {
+    question: "What is the right way to stop iOS from zooming when an input is tapped?",
+    options: ["Make input text at least 16px","Add user-scalable=no","Make the input small"],
+    explain: "At 16px or more no auto-zoom happens. Blocking zoom itself harms low-vision users.",
+  },
+  "button-type-missing": {
+    question: "What is the right type for a \"Show more\" button inside a form that should not submit?",
+    options: ["submit","reset","button"],
+    explain: "Without a type it is submit, so pressing it submits the form. For non-submit use type=\"button\".",
+  },
+  "deprecated-tags": {
+    question: "What do you use instead of <center> to center text?",
+    options: ["<font align=\"center\">","<mid>","text-align: center"],
+    explain: "Presentation belongs to CSS in the standard. Tags like center and font are no longer used.",
   },
 };
 

@@ -317,3 +317,9 @@
 - 창 화면(설정·경매장·랭킹)은 한국어로 그린 뒤 `localize()`(`src/renderer/dom-i18n.ts`, 사전 `ui-en.ts`)가 글자·aria-label·placeholder·창 제목을 영어로 바꿔 끼운다. 한국어로 되돌릴 때를 위해 원본을 기억한다. 메인의 `lang:get` IPC 로 언어를 받는다.
 - 남은 영어화: 검사 카드 38종·퀴즈(lessons/quizzes), 도감·업적·꾸미기·뽑기·검사 결과 창, 프로필 카드, README.
 - 영어 모드 2단계: 검사 카드 38종·확인 퀴즈 38종을 영어로(`src/shared/lessons-en.ts`, 코드 예시는 원본 그대로), 검사 말풍선(`noticeOf(f, lang)`)·배움 카드 창(메인이 언어에 맞는 카드·퀴즈를 보냄)·설정의 규칙 목록 제목을 언어에 맞춘다. 규칙을 추가하면 영어도 같은 id 로 추가해야 한다(시험이 빠진 것을 잡는다).
+
+## 2026-11-27 — 검사 규칙 50종 (성능·SEO·반응형·보안·코드 품질 12종 추가)
+
+- 새 규칙 12종: img-dimensions, img-lazy-below-fold, render-blocking-script, font-display-missing, large-dom(성능), multiple-h1, og-missing(SEO), mixed-content(보안), viewport-fixed-width, input-font-small(반응형), button-type-missing, deprecated-tags(코드 품질). 분류에 `security`(보안)·`quality`(코드 품질)를 더했다. 모두 한/영 카드·퀴즈 포함.
+- 레이아웃이 있어야 판정되는 것(img-lazy-below-fold, input-font-small, scroll-no-focus 등)은 jsdom 시험에서 건너뛴다. 실제 크롬에서 시험 페이지에 수집기를 주입해 새 규칙이 동작하는 것을 확인했다.
+- 시험 도우미 `run()` 이 이미지 크기·og 태그·main 을 채워 주도록 바뀌었다. 새 규칙을 추가하면 그 규칙이 기존 시험 페이지를 오탐하지 않는지 같이 확인한다.

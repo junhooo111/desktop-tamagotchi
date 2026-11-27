@@ -412,6 +412,7 @@
     const focusRules = [];
     let infiniteAnimation = false;
     let reducedMotionHandled = false;
+    let missingFontDisplay = false;
     const walkRules = (rules, depth) => {
         for (const rule of Array.from(rules)) {
             const anyRule = rule;
@@ -420,6 +421,8 @@
             if (anyRule.cssRules && depth < 4)
                 walkRules(anyRule.cssRules, depth + 1);
             const style = anyRule.style;
+            if (rule.type === 5 && style && style.getPropertyValue('font-display').trim() === '')
+                missingFontDisplay = true;
             if (!style || typeof anyRule.selectorText !== 'string')
                 continue;
             if (/infinite/i.test(style.getPropertyValue('animation') + ' ' + style.getPropertyValue('animation-iteration-count')))
@@ -538,6 +541,81 @@
         if (decorative || video.querySelector('track[kind="captions"], track[kind="subtitles"]') !== null)
             return;
         add('video-captions', video, '<video> 에 자막 track 없음');
+    });
+    // 39. 이미지에 가로·세로 크기(width·height)가 없음 (CLS)
+    doc.querySelectorAll('img').forEach((img) => {
+        if (full('img-dimensions') || !isShown(img))
+            return;
+        if (img.hasAttribute('width') && img.hasAttribute('height'))
+            return;
+        if (opts.requireLayout && getComputedStyle(img).aspectRatio !== 'auto')
+            return;
+        add('img-dimensions', img, (img.getAttribute('src') ?? '').slice(0, 60));
+    });
+    // 40. 첫 화면 아래 이미지에 loading="lazy" 없음 (레이아웃이 있을 때만)
+    if (opts.requireLayout) {
+        doc.querySelectorAll('img:not([loading="lazy"])').forEach((img) => {
+            if (full('img-lazy-below-fold') || !isShown(img))
+                return;
+            const top = img.getBoundingClientRect().top;
+            if (top > window.innerHeight * 1.5)
+                add('img-lazy-below-fold', img, `화면 위에서 ${Math.round(top)}px 아래`);
+        });
+    }
+    // 41. head 의 스크립트가 async·defer 없이 렌더링을 막음
+    doc.querySelectorAll('head script[src]:not([async]):not([defer]):not([type="module"])').forEach((script) => {
+        if (!full('render-blocking-script'))
+            add('render-blocking-script', script, (script.getAttribute('src') ?? '').slice(0, 60));
+    });
+    // 42. @font-face 에 font-display 가 없음
+    if (missingFontDisplay)
+        add('font-display-missing', null, '@font-face 에 font-display 없음');
+    // 43. DOM 요소가 너무 많음
+    const domCount = doc.querySelectorAll('*').length;
+    if (domCount > 1500)
+        add('large-dom', null, `요소 ${domCount}개`);
+    // 44. h1 이 둘 이상
+    const shownH1 = Array.from(doc.querySelectorAll('h1')).filter((h) => isShown(h));
+    if (shownH1.length > 1)
+        add('multiple-h1', shownH1[1] ?? null, `h1 이 ${shownH1.length}개`);
+    // 45. 링크 미리보기(og:title·og:image) 없음
+    const hasOg = (prop) => (doc.querySelector(`meta[property="${prop}"]`)?.getAttribute('content') ?? '').trim() !== '';
+    const missingOg = ['og:title', 'og:image'].filter((p) => !hasOg(p));
+    if (missingOg.length > 0)
+        add('og-missing', null, `${missingOg.join(', ')} 없음`);
+    // 46. https 페이지에서 http 자원을 불러옴
+    if (location.protocol === 'https:') {
+        doc.querySelectorAll('img[src], script[src], iframe[src], source[src], video[src], audio[src], link[rel="stylesheet"][href], form[action]').forEach((el) => {
+            if (full('mixed-content'))
+                return;
+            const url = el.getAttribute('src') ?? el.getAttribute('href') ?? el.getAttribute('action') ?? '';
+            if (/^http:\/\//i.test(url.trim()))
+                add('mixed-content', el, url.trim().slice(0, 60));
+        });
+    }
+    // 47. viewport 가 고정 폭 (width=1024 등)
+    const viewportMeta = doc.querySelector('meta[name="viewport"]')?.getAttribute('content') ?? '';
+    if (/width\s*=\s*\d+/i.test(viewportMeta))
+        add('viewport-fixed-width', null, viewportMeta.slice(0, 60));
+    // 48. 입력칸 글자가 16px 미만 (iOS 가 입력할 때 화면을 확대함, 레이아웃이 있을 때만)
+    if (opts.requireLayout) {
+        doc.querySelectorAll('input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), select, textarea').forEach((input) => {
+            if (full('input-font-small') || !isShown(input))
+                return;
+            const size = parseFloat(getComputedStyle(input).fontSize);
+            if (size > 0 && size < 16)
+                add('input-font-small', input, `글자 ${size}px`);
+        });
+    }
+    // 49. form 안의 button 에 type 이 없음 (뜻하지 않게 제출됨)
+    doc.querySelectorAll('form button:not([type])').forEach((button) => {
+        if (!full('button-type-missing') && isShown(button))
+            add('button-type-missing', button, (button.textContent ?? '').trim().slice(0, 20) || 'button');
+    });
+    // 50. 오래되어 쓰지 않는 태그
+    doc.querySelectorAll('center, font, marquee, blink, frame, frameset, big, strike, tt, acronym').forEach((el) => {
+        if (!full('deprecated-tags') && isShown(el))
+            add('deprecated-tags', el, `<${el.tagName.toLowerCase()}>`);
     });
     return {
         url: location.href,
