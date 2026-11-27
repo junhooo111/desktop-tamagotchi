@@ -2,6 +2,9 @@
  * 랭킹 창 화면: 서버가 계산한 점수를 항목별로 보여 준다.
  * 값은 메인이 서버에서 읽어서 넘겨 주고, 여기서는 textContent 로만 그린다(남이 쓴 이름이 그대로 들어오므로 HTML 로 해석하지 않는다).
  */
+import type { Lang } from '../shared/i18n.js';
+import { initUiLang, localize } from './dom-i18n.js';
+
 export const METRICS = [
   { id: 'species', label: '도감(종 수)', unit: '종' },
   { id: 'hidden', label: '히든', unit: '종' },
@@ -31,6 +34,7 @@ interface RankingApi {
   get(metric: MetricId): Promise<RankingView>;
   setVisible(visible: boolean): Promise<void>;
   close(): void;
+  lang?(): Promise<Lang>;
 }
 declare global {
   interface Window {
@@ -56,6 +60,7 @@ export function render(v: RankingView): void {
   if (!v.ok) {
     note.textContent = v.message ?? '랭킹을 불러오지 못했어요';
     me.textContent = '';
+    localize();
     return;
   }
   if (v.me) {
@@ -89,6 +94,7 @@ export function render(v: RankingView): void {
     board.append(li);
   }
   note.textContent = v.rows.length === 0 ? '아직 이 항목에 기록이 있는 사람이 없어요' : '점수는 서버가 가진 데이터로 계산해요. 이름과 점수만 보여요(이메일·재화는 보이지 않아요).';
+  localize();
 }
 
 async function load(metric: MetricId): Promise<void> {
@@ -110,7 +116,7 @@ function init(): void {
   }
   $('visible').addEventListener('change', (e) => void window.rankingApi.setVisible((e.target as HTMLInputElement).checked).then(() => load(current)));
   $('close').addEventListener('click', () => window.rankingApi.close());
-  void load(current);
+  void initUiLang(window.rankingApi.lang?.bind(window.rankingApi)).then(() => load(current));
 }
 
 if (typeof window !== 'undefined' && 'rankingApi' in window) init();

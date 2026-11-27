@@ -1,0 +1,88 @@
+import { nameEn } from '../shared/en-text.js';
+
+/** 설정·경매장·랭킹 창의 영어 사전. 한국어 글자 그대로를 키로 쓴다(dom-i18n.ts 가 바꿔 끼운다). */
+export const UI_EN: Record<string, string> = {
+  // 공통
+  닫기: 'Close',
+  '확인하는 중…': 'Checking…',
+  // 설정
+  설정: 'Settings',
+  'Desktop Tamagotchi 설정': 'Desktop Tamagotchi Settings',
+  '펫 크기': 'Pet size',
+  '1배가 마우스 커서 정도입니다. 크게 하면 도트가 선명하게 커집니다.': 'At 1x the pet is about the size of a mouse cursor. Larger sizes keep the pixels crisp.',
+  '1배 (커서 크기)': '1x (cursor size)',
+  '문제 검사': 'Page inspection',
+  '열려 있는 localhost 페이지에서 놓친 부분 찾기': 'Find missed basics on open localhost pages',
+  '검사 주기': 'Inspection interval',
+  '검사할 규칙': 'Rules to check',
+  '끄면 그 종류의 문제는 찾아도 알리지 않아요.': 'If turned off, I will not mention that kind of problem.',
+  '모두 켜기': 'Turn all on',
+  'FE 지식 알림': 'FE tip notifications',
+  '펫이 가만히 있을 때 머리 위 말풍선으로 알려 줍니다.': 'The pet shows a tip bubble above its head when it is idle.',
+  '지식 알림 주기': 'Tip interval',
+  끄기: 'Off',
+  업데이트: 'Updates',
+  '새 버전이 나오면 알려 주고 받아 두기': 'Notify me and download when a new version is out',
+  '업데이트 확인': 'Check for updates',
+  공지: 'News',
+  '새 공지가 있으면 펫이 알려 주기': 'Let the pet tell me about new news',
+  '이 저장소의 공지 파일(news.json)을 1시간마다 읽어 옵니다. 읽기만 하고 내 정보는 보내지 않아요.': "Reads this repository's news file (news.json) every hour. It only reads and sends none of your information.",
+  '접근성 · 스크린 리더(화면을 소리로 듣는 사람)': 'Accessibility · Screen readers (people who listen to the screen)',
+  '접근성 · 키보드·손(키보드만 쓰는 사람, 손이 불편한 사람)': 'Accessibility · Keyboard & hands (keyboard-only users, limited hand use)',
+  '접근성 · 시각(저시력·색약)': 'Accessibility · Vision (low vision, color blindness)',
+  '접근성 · 청각(소리를 못 듣는 사람)': 'Accessibility · Hearing (people who cannot hear)',
+  '접근성 · 인지·시간(천천히 읽는 사람, 움직임에 민감한 사람)': 'Accessibility · Cognition & time (slow readers, motion-sensitive people)',
+  '검색·공유(SEO)': 'Search & sharing (SEO)',
+  '반응형·모바일': 'Responsive & mobile',
+  성능: 'Performance',
+  // 경매장
+  경매장: 'Auction house',
+  사기: 'Buy',
+  '내 펫 팔기': 'Sell my pets',
+  '내가 올림': 'Yours',
+  내리기: 'Remove',
+  팔기: 'Sell',
+  '마지막 한 마리': 'Last pet',
+  가격: 'Price',
+  일반: 'Common',
+  히든: 'Hidden',
+  '지금 키우는 펫': 'Current pet',
+  '판매 중': 'Listed',
+  '지금 팔고 있는 펫이 없어요': 'No pets for sale right now',
+  '사면 바로 내 펫이 돼요. 파는 사람은 수수료 없이 가격만큼 받아요.': 'Buying makes it yours right away. Sellers receive the full price with no fee.',
+  '펫이 없어요': 'You have no pets',
+  '마지막 한 마리는 팔 수 없어요. 팔 때 가격은 1~1,000,000 게임머니예요.': 'You cannot sell your last pet. Prices range from 1 to 1,000,000 game money.',
+  '경매장을 불러오지 못했어요': 'Could not load the auction house',
+  // 랭킹
+  랭킹: 'Rankings',
+  '내 이름을 랭킹에 보이기': 'Show my name in rankings',
+  '도감(종 수)': 'Codex (species)',
+  '펫 수': 'Pets',
+  '최고 레벨': 'Top level',
+  뽑기: 'Pulls',
+  꾸미기: 'Cosmetics',
+  '아직 이 항목에 기록이 있는 사람이 없어요': 'Nobody has a record in this category yet',
+  '점수는 서버가 가진 데이터로 계산해요. 이름과 점수만 보여요(이메일·재화는 보이지 않아요).': 'Scores are calculated from data on the server. Only names and scores are shown (no email or currency).',
+  '랭킹을 불러오지 못했어요': 'Could not load rankings',
+};
+
+const UNIT_EN: Record<string, string> = { 종: 'species', 마리: 'pets', 레벨: 'levels', 회: 'pulls', 개: 'items' };
+const RARITY_EN: Record<string, string> = { 일반: 'Common', 히든: 'Hidden' };
+
+/** 숫자가 들어 있는 문장 규칙 */
+export const UI_RULES: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
+  [/^(.+) Lv\.(\d+)$/, (m) =>`${nameEn(m[1] ?? '')} Lv.${m[2]}`],
+  [/^(\d+)배$/, (m) => `${m[1]}x`],
+  [/^(\d+)초$/, (m) => `${m[1]} s`],
+  [/^(\d+)분$/, (m) => `${m[1]} min`],
+  [/^버전 (.+)$/, (m) => `Version ${m[1]}`],
+  [/^(.+) 전체 켜기·끄기$/, (m) => `Toggle all: ${UI_EN[m[1] ?? ''] ?? m[1]}`],
+  [/^내 게임머니: ([\d,]+) 게임머니$/, (m) => `Game money: ${m[1]}`],
+  [/^([\d,]+) 게임머니$/, (m) => `${m[1]} game money`],
+  [/^판매자 (.+)$/, (m) => `seller ${m[1]}`],
+  [/^(\d+)위$/, (m) => `#${m[1]}`],
+  [/^(\d+)(종|마리|레벨|회|개)$/, (m) => `${m[1]} ${UNIT_EN[m[2] ?? ''] ?? ''}`],
+  [/^내 기록: (\d+)(종|마리|레벨|회|개)(?: \(랭킹에서 숨김\))?$/, (m) => `My record: ${m[1]} ${UNIT_EN[m[2] ?? ''] ?? ''}${m[0].includes('숨김') ? ' (hidden from rankings)' : ''}`],
+  [/^내 기록: (\d+)(종|마리|레벨|회|개) · (\d+)위$/, (m) => `My record: ${m[1]} ${UNIT_EN[m[2] ?? ''] ?? ''} · #${m[3]}`],
+  [/^(일반|히든)$/, (m) => RARITY_EN[m[1] ?? ''] ?? (m[1] ?? '')],
+];

@@ -26,6 +26,7 @@ import { addIgnored, buildResults, isMuted, visibleFindings } from '../shared/re
 import { DEFAULT_SETTINGS, sanitizeSettings, tipIntervalMs, type Settings } from '../shared/settings.js';
 import { TIP_PENDING_MS, pickTip, shouldOfferTip, tipText, type Tip } from '../shared/tips.js';
 import { resolveLang, type Lang } from '../shared/i18n.js';
+import { nameEn, toEnglish } from '../shared/en-text.js';
 import { BUBBLE_GAP, TIP_BUBBLE, WINDOW, bubbleShift, petPixelSize } from '../shared/layout.js';
 import {
   LEARN_XP,
@@ -152,7 +153,8 @@ const CDP_PORT = Number(process.env['PET_CDP_PORT'] ?? 9222);
 const FEED_PORT = Number(process.env['PET_FEED_PORT'] ?? FEED_PORT_DEFAULT);
 /** 문제를 찾아 알린 뒤 다음 문제를 알리기까지 최소 간격 */
 const INSPECT_GAP_MS = 30_000;
-const STATUS_OFF = '검사: 연결 안 됨 (크롬 확장을 켜고 localhost 페이지를 여세요)';
+const STATUS_OFF_KO = '검사: 연결 안 됨 (크롬 확장을 켜고 localhost 페이지를 여세요)';
+const STATUS_OFF_EN = 'Inspection: not connected (turn on the Chrome extension and open a localhost page)';
 const CARD_SIZE = { width: 380, height: 600 } as const;
 /** 검사 체험용 시험 페이지 서버 포트 */
 const DEMO_PORT = Number(process.env['PET_DEMO_PORT'] ?? 5199);
@@ -222,7 +224,7 @@ let notice: Finding | null = null;
 let announcedKey = '';
 let lastInspectAt = 0;
 let scanning = false;
-let scanStatus = STATUS_OFF;
+let scanStatus = STATUS_OFF_KO;
 let cardWin: BrowserWindow | null = null;
 
 // FE 지식: 펫 위 말풍선으로 보여 주고 사용자가 확인하기를 기다리는 지식
@@ -232,6 +234,9 @@ let pendingTip: { tip: Tip; until: number } | null = null;
 function currentLang(): Lang {
   return resolveLang(settings.language, app.getLocale(), app.getLocaleCountryCode());
 }
+
+/** 언어에 맞는 문구를 고른다(ko, en). */
+const L = (ko: string, en: string): string => (currentLang() === 'en' ? en : ko);
 let lastTipAt = Date.now();
 /** 지식 말풍선이 화면 밖으로 잘리지 않도록 옆으로 미는 거리 */
 let tipShift = 0;
@@ -337,7 +342,7 @@ function showStatus(): void {
 }
 
 function say(text: string): void {
-  if (text && win && !win.isDestroyed()) win.webContents.send('pet:say', text);
+  if (text && win && !win.isDestroyed()) win.webContents.send('pet:say', currentLang() === 'en' ? toEnglish(text) : text);
 }
 
 function persist(): void {
@@ -351,8 +356,8 @@ function persist(): void {
   collection = syncActive(collection, pet, settings.petName);
   const reward = levelRewards(collection, collection.active);
   collection = reward.collection;
-  if (reward.tickets > 0 && !serverAward('level', reward.tickets, reward.tickets, `${collection.active}:${reward.level}`, (g) => `레벨 ${reward.level} 보상! 뽑기권 +${g}장`)) {
-    announceTickets(`레벨 ${reward.level} 보상! 뽑기권 +${reward.tickets}장`);
+  if (reward.tickets > 0 && !serverAward('level', reward.tickets, reward.tickets, `${collection.active}:${reward.level}`, (g) => L(`레벨 ${reward.level} 보상! 뽑기권 +${g}장`, `Level ${reward.level} reward! +${g} ticket(s)`))) {
+    announceTickets(L(`레벨 ${reward.level} 보상! 뽑기권 +${reward.tickets}장`, `Level ${reward.level} reward! +${reward.tickets} ticket(s)`));
   }
   saveCollectionSafe();
 }
@@ -392,7 +397,7 @@ function serverAward(kind: Grant['kind'], count: number, perCall: number, keyBas
 
 /** 뽑기권을 받았다고 알린다(방금 한 일의 말풍선이 지나간 뒤에). */
 function announceTickets(text: string): void {
-  setTimeout(() => say(`🎟 ${text}\n메뉴의 '뽑기·컬렉션…'에서 뽑아 보세요 (보유 ${collection.tickets}장)`), 3_000);
+  setTimeout(() => say(`🎟 ${text}\n` + L(`메뉴의 '뽑기·컬렉션…'에서 뽑아 보세요 (보유 ${collection.tickets}장)`, `Pull in the menu's 'Gacha & Collection…' (you have ${collection.tickets})`)), 3_000);
 }
 
 // ---- 선물 상자: 하루 두세 번 펫이 선물을 가져온다(뽑기권·경험치·응가(꽝)) ----
@@ -445,12 +450,12 @@ function openGiftBox(): void {
     const spot = giftSpot(area, petSize);
     behavior = callToSpot(behavior, stepContext(now, TICK_MS), spot.x, spot.y);
   }
-  say('선물을 가져왔어요! 🎁 눌러 보세요');
+  say(L('선물을 가져왔어요! 🎁 눌러 보세요', 'I brought a gift! 🎁 Click it'));
   // 누르지 않으면 잠시 뒤 사라진다.
   giftTimer = setTimeout(() => {
     if (giftWin === w) {
       closeGift();
-      say('선물 상자가 사라졌어요…');
+      say(L('선물 상자가 사라졌어요…', 'The gift box disappeared…'));
     }
   }, GIFT_LIFE_MS);
 }
@@ -465,7 +470,7 @@ function resolveGift(): void {
   if (result.kind === 'ticket') {
     collection = { ...collection, tickets: collection.tickets + result.tickets };
     saveCollectionSafe();
-    serverAward('gift', result.tickets, 1, `gift:${Date.now()}`, (g) => `선물 상자에서 뽑기권 +${g}장!`);
+    serverAward('gift', result.tickets, 1, `gift:${Date.now()}`, (g) => L(`선물 상자에서 뽑기권 +${g}장!`, `+${g} ticket(s) from the gift box!`));
   } else if (result.kind === 'xp') {
     const gained = gainXp(applyElapsedInPlace(), result.xp);
     pet = gained.pet;
@@ -505,8 +510,8 @@ function accrueUptime(): void {
   collection = r.collection;
   if (r.tickets > 0) {
     saveCollectionSafe();
-    if (!serverAward('uptime', r.tickets, 1, localDay(now), (g) => `함께 있어 줘서 고마워요! 뽑기권 +${g}장`)) {
-      announceTickets(`함께 있어 줘서 고마워요! 뽑기권 +${r.tickets}장`);
+    if (!serverAward('uptime', r.tickets, 1, localDay(now), (g) => L(`함께 있어 줘서 고마워요! 뽑기권 +${g}장`, `Thanks for staying with me! +${g} ticket(s)`))) {
+      announceTickets(L(`함께 있어 줘서 고마워요! 뽑기권 +${r.tickets}장`, `Thanks for staying with me! +${r.tickets} ticket(s)`));
     }
   }
 }
@@ -520,7 +525,7 @@ function checkDaily(): void {
       if (!r) return;
       collection = { ...collection, tickets: r.tickets };
       saveCollectionSafe();
-      if (r.granted > 0) announceTickets(`오늘의 출석 보상! 뽑기권 +${r.granted}장`);
+      if (r.granted > 0) announceTickets(L(`오늘의 출석 보상! 뽑기권 +${r.granted}장`, `Daily check-in reward! +${r.granted} ticket(s)`));
     });
     return;
   }
@@ -528,7 +533,7 @@ function checkDaily(): void {
   if (r.tickets === 0) return;
   collection = r.collection;
   saveCollectionSafe();
-  announceTickets(`오늘의 출석 보상! 뽑기권 +${r.tickets}장`);
+  announceTickets(L(`오늘의 출석 보상! 뽑기권 +${r.tickets}장`, `Daily check-in reward! +${r.tickets} ticket(s)`));
 }
 
 function stepContext(now: number, dtMs: number): StepContext {
@@ -564,12 +569,12 @@ async function scanOnce(): Promise<void> {
   if (scanning) return;
   if (!settings.inspectEnabled) {
     queue = [];
-    setScanStatus('검사: 꺼져 있어요 (설정에서 켤 수 있어요)');
+    setScanStatus(L('검사: 꺼져 있어요 (설정에서 켤 수 있어요)', 'Inspection: off (turn it on in Settings)'));
     return;
   }
   if (stageOf(pet) === 'egg') {
     queue = [];
-    setScanStatus('검사: 알이 부화하면 시작해요');
+    setScanStatus(L('검사: 알이 부화하면 시작해요', 'Inspection: starts when the egg hatches'));
     return;
   }
   scanning = true;
@@ -583,10 +588,10 @@ async function scanOnce(): Promise<void> {
     if (!result.reachable) {
       queue = [];
       if (notice) setNotice(null, false);
-      setScanStatus(STATUS_OFF);
+      setScanStatus(L(STATUS_OFF_KO, STATUS_OFF_EN));
       return;
     }
-    setScanStatus(`검사: ${fromExtension.reachable ? '확장 연결됨' : '연결됨'} · 로컬 페이지 ${result.scannedUrls.length}개`);
+    setScanStatus(L(`검사: ${fromExtension.reachable ? '확장 연결됨' : '연결됨'} · 로컬 페이지 ${result.scannedUrls.length}개`, `Inspection: ${fromExtension.reachable ? 'extension connected' : 'connected'} · ${result.scannedUrls.length} local page(s)`));
 
     const fixed = detectFixes(progress, result.scannedUrls, new Set(result.findings.map((f) => f.key)));
     if (fixed.length > 0) {
@@ -597,7 +602,7 @@ async function scanOnce(): Promise<void> {
         pet = r.pet;
         message = r.message;
       }
-      say(fixed.length === 1 ? message : `${fixed.length}개나 고쳤네요! 경험치 +${fixed.length * LEARN_XP.fixed}`);
+      say(fixed.length === 1 ? message : L(`${fixed.length}개나 고쳤네요! 경험치 +${fixed.length * LEARN_XP.fixed}`, `You fixed ${fixed.length} issues! XP +${fixed.length * LEARN_XP.fixed}`));
       for (const key of fixed) {
         const ruleId = ruleIdOfKey(key);
         if (ruleId) recordGrowth({ kind: 'fix', ruleId });
@@ -675,9 +680,9 @@ function recordGrowth(event: GrowthEvent): void {
     if (care.tickets > 0) {
       collection = care.collection;
       saveCollectionSafe();
-      if (serverOn()) void serverGame?.grantCoins('care', `care:${collection.careTicketsGiven}`).then((r) => { if (r && r.granted > 0) say(`게임머니 +${r.granted}`); });
-      if (!serverAward('care', care.tickets, 1, `care:${collection.careTicketsGiven - care.tickets}`, (g) => `열심히 돌봐 줘서 뽑기권 +${g}장!`)) {
-        announceTickets(`열심히 돌봐 줘서 뽑기권 +${care.tickets}장!`);
+      if (serverOn()) void serverGame?.grantCoins('care', `care:${collection.careTicketsGiven}`).then((r) => { if (r && r.granted > 0) say(L(`게임머니 +${r.granted}`, `Game money +${r.granted}`)); });
+      if (!serverAward('care', care.tickets, 1, `care:${collection.careTicketsGiven - care.tickets}`, (g) => L(`열심히 돌봐 줘서 뽑기권 +${g}장!`, `Thanks for taking care of me! +${g} ticket(s)!`))) {
+        announceTickets(L(`열심히 돌봐 줘서 뽑기권 +${care.tickets}장!`, `Thanks for taking care of me! +${care.tickets} ticket(s)!`));
       }
     }
   }
@@ -702,15 +707,15 @@ function recordGrowth(event: GrowthEvent): void {
   updateTray();
   sendView();
   // 방금 한 일의 말풍선이 지나간 뒤에 알린다.
-  const names = result.unlocked.map((a) => a.name).join(', ');
+  const names = result.unlocked.map((a) => (currentLang() === 'en' ? nameEn(a.name) : a.name)).join(', ');
   const rewards = rewardsFor(result.unlocked.map((a) => a.id));
-  let text = '업적 달성: ' + names + '! 경험치 +' + xp + note;
+  let text = L('업적 달성: ', 'Achievement unlocked: ') + names + L('! 경험치 +', '! XP +') + xp + note;
   const reward = rewardText(rewards);
   if (reward) text += '\n' + reward;
   const firstAccessory = rewards.accessories[0];
   if (firstAccessory && settings.accessory === 'none') {
     applySettings({ accessory: firstAccessory });
-    text += '\n' + ACCESSORY_NAMES[firstAccessory] + ' 을(를) 바로 달아 줬어요!';
+    text += '\n' + L(ACCESSORY_NAMES[firstAccessory] + ' 을(를) 바로 달아 줬어요!', `I put on the ${nameEn(ACCESSORY_NAMES[firstAccessory])} right away!`);
   }
   refreshWardrobe();
   setTimeout(() => say(text), 2_500);
@@ -743,7 +748,7 @@ function openResults(): void {
     minimizable: false,
     maximizable: false,
     autoHideMenuBar: true,
-    title: '검사 결과',
+    title: L('검사 결과', 'Inspection results'),
     backgroundColor: '#fffdf5',
     show: false,
     webPreferences: {
@@ -801,7 +806,7 @@ function applyWardrobe(raw: unknown) {
   if (Object.keys(settingsPatch).length > 0) applySettings(settingsPatch);
   // 이름을 바꿨으면 펫이 말풍선으로 알려 준다(창이 닫혀도 적용됐다는 걸 알 수 있게).
   if (ok.name !== undefined && ok.name !== previousName) {
-    say(ok.name === '' ? '이름을 지웠어요' : `이제 내 이름은 '${ok.name}'(이)에요!`);
+    say(ok.name === '' ? L('이름을 지웠어요', 'Name cleared') : L(`이제 내 이름은 '${ok.name}'(이)에요!`, `My name is '${ok.name}' now!`));
   }
   return wardrobeData();
 }
@@ -833,7 +838,7 @@ function openWardrobe(): void {
     minimizable: false,
     maximizable: false,
     autoHideMenuBar: true,
-    title: '꾸미기',
+    title: L('꾸미기', 'Customize'),
     backgroundColor: '#fffdf5',
     show: false,
     webPreferences: {
@@ -868,18 +873,18 @@ async function exportCard(): Promise<void> {
     codex: buildCodex(growth, growthCtx(), Date.now()),
   });
   const result = await dialog.showSaveDialog({
-    title: '프로필 카드 저장',
+    title: L('프로필 카드 저장', 'Save profile card'),
     defaultPath: path.join(app.getPath('documents'), 'pet-card.svg'),
-    filters: [{ name: 'SVG 이미지', extensions: ['svg'] }],
+    filters: [{ name: L('SVG 이미지', 'SVG image'), extensions: ['svg'] }],
   });
   if (result.canceled || !result.filePath) return;
   try {
     fs.writeFileSync(result.filePath, svg + '\n', 'utf8');
-    say('움직이는 프로필 카드를 저장했어요! 프로필 저장소의 assets 폴더에 올리면 돼요');
+    say(L('움직이는 프로필 카드를 저장했어요! 프로필 저장소의 assets 폴더에 올리면 돼요', 'Saved the animated profile card! Upload it to the assets folder of your profile repo'));
     shell.showItemInFolder(result.filePath);
   } catch (error) {
     console.error('프로필 카드 저장 실패', error);
-    say('프로필 카드를 저장하지 못했어요');
+    say(L('프로필 카드를 저장하지 못했어요', 'Could not save the profile card'));
   }
 }
 
@@ -895,7 +900,7 @@ const RANKING_METRICS = ['species', 'hidden', 'pets', 'level', 'pulls', 'cosmeti
 async function rankingData(metric: unknown) {
   const m = RANKING_METRICS.find((x) => x === metric) ?? 'species';
   const rpc = auth?.serverRpc;
-  if (!rpc || !serverOn()) return { ok: false, message: '로그인하면 랭킹을 볼 수 있어요', metric: m, rows: [] };
+  if (!rpc || !serverOn()) return { ok: false, message: L('로그인하면 랭킹을 볼 수 있어요', 'Log in to see rankings'), metric: m, rows: [] };
   const [board, me] = await Promise.all([
     rpc.call<unknown[]>('leaderboard', { p_metric: m, p_limit: 20 }),
     rpc.call<{ github_login: string; show_in_ranking: boolean; scores: Record<string, number>; ranks: Record<string, number> }>('my_summary'),
@@ -922,7 +927,7 @@ function openRanking(): void {
     minimizable: false,
     maximizable: false,
     autoHideMenuBar: true,
-    title: '랭킹',
+    title: L('랭킹', 'Rankings'),
     backgroundColor: '#fffdf5',
     show: false,
     webPreferences: {
@@ -947,7 +952,7 @@ let marketWin: BrowserWindow | null = null;
 
 async function marketData() {
   const rpc = auth?.serverRpc;
-  if (!rpc || !serverOn() || !serverGame) return { ok: false, message: '로그인하면 경매장을 쓸 수 있어요', coins: 0, listings: [], pets: [] };
+  if (!rpc || !serverOn() || !serverGame) return { ok: false, message: L('로그인하면 경매장을 쓸 수 있어요', 'Log in to use the auction house'), coins: 0, listings: [], pets: [] };
   const [list, mine, st] = await Promise.all([rpc.call<unknown[]>('market_listings', { p_limit: 50 }), rpc.call<unknown[]>('my_pets'), serverGame.refresh()]);
   if (list.error || mine.error) return { ok: false, message: friendlyError((list.error ?? mine.error)?.message ?? ''), coins: 0, listings: [], pets: [] };
   return { ok: st.ok, coins: serverGame.state?.coins ?? 0, listings: list.data ?? [], pets: mine.data ?? [] };
@@ -968,7 +973,7 @@ async function marketAfter(ok: boolean, message: string) {
 
 async function marketAct(fn: string, args: Record<string, unknown>, done: string) {
   const rpc = auth?.serverRpc;
-  if (!rpc || !serverOn()) return { ok: false, message: '로그인하면 경매장을 쓸 수 있어요', view: await marketData() };
+  if (!rpc || !serverOn()) return { ok: false, message: L('로그인하면 경매장을 쓸 수 있어요', 'Log in to use the auction house'), view: await marketData() };
   const r = await rpc.call(fn, args);
   if (r.error) return { ok: false, message: friendlyError(r.error.message), view: await marketData() };
   await serverGame?.refresh();
@@ -995,7 +1000,7 @@ function openMarket(): void {
     minimizable: false,
     maximizable: false,
     autoHideMenuBar: true,
-    title: '경매장',
+    title: L('경매장', 'Auction house'),
     backgroundColor: '#fffdf5',
     show: false,
     webPreferences: {
@@ -1033,7 +1038,7 @@ function openCodex(): void {
     minimizable: false,
     maximizable: false,
     autoHideMenuBar: true,
-    title: '도감·기록',
+    title: L('도감·기록', 'Codex & records'),
     backgroundColor: '#fffdf5',
     show: false,
     webPreferences: {
@@ -1076,7 +1081,7 @@ function openSettings(): void {
     minimizable: false,
     maximizable: false,
     autoHideMenuBar: true,
-    title: 'Desktop Tamagotchi 설정',
+    title: L('Desktop Tamagotchi 설정', 'Desktop Tamagotchi Settings'),
     backgroundColor: '#fffdf5',
     show: false,
     webPreferences: {
@@ -1138,7 +1143,7 @@ async function checkNews(): Promise<void> {
   }
   pick.show.forEach((item, i) => setTimeout(() => say(newsText(item)), i * NEWS_GAP_MS));
   const first = pick.show[0];
-  if (first && Notification.isSupported()) new Notification({ title: 'Desktop Tamagotchi 공지', body: first.title }).show();
+  if (first && Notification.isSupported()) new Notification({ title: L('Desktop Tamagotchi 공지', 'Desktop Tamagotchi news'), body: first.title }).show();
   updateTray();
 }
 
@@ -1153,7 +1158,7 @@ function remindUpdate(): void {
   if (!r) return;
   say(r.text);
   if (r.toast && Notification.isSupported()) {
-    const n = new Notification({ title: 'Desktop Tamagotchi 새 버전', body: r.text.replace(/^새 버전 /, '') + '\n이 알림을 누르면 바로 설치해요.', silent: false });
+    const n = new Notification({ title: L('Desktop Tamagotchi 새 버전', 'Desktop Tamagotchi update'), body: r.text.replace(/^새 버전 /, '') + '\n' + L('이 알림을 누르면 바로 설치해요.', 'Click this notification to install now.'), silent: false });
     n.on('click', () => void updates?.installNow());
     n.show();
   }
@@ -1223,7 +1228,7 @@ function finishCard(kind: 'confirm' | 'later' | 'ignore', choice: number | null 
       updateTray();
     } else if (kind === 'ignore') {
       applySettings({ ignored: addIgnored(settings.ignored, finding.key) });
-      say('이 문제는 더 알리지 않을게요. 검사 결과에서 되돌릴 수 있어요');
+      say(L('이 문제는 더 알리지 않을게요. 검사 결과에서 되돌릴 수 있어요', 'I will not mention this one again. You can undo it in the inspection results'));
     } else {
       progress = snooze(progress, finding.key, now);
     }
@@ -1286,11 +1291,11 @@ function startStrollNow(): void {
   }
   if (isOccupied(behavior, now)) return;
   if (isStrolling(behavior, now)) {
-    say('지금 산책 중이에요!');
+    say(L('지금 산책 중이에요!', 'I am on a walk right now!'));
     return;
   }
   if (now < behavior.restUntil) {
-    say('아직 지쳐서 쉬는 중이에요…');
+    say(L('아직 지쳐서 쉬는 중이에요…', 'Still tired and resting…'));
     return;
   }
   behavior = wake(startStroll(behavior, stepContext(now, TICK_MS)), now);
@@ -1333,10 +1338,10 @@ function act(type: 'touch' | 'feed' | 'play' | 'wash'): ActionResult {
 
 /** 가진 동물 중 하나를 꺼내서 키운다(한 번에 한 마리). 지금 동물은 상태를 저장해 넣어 둔다. */
 function switchPet(id: SpeciesId): { ok: boolean; message: string } {
-  if (id === collection.active) return { ok: false, message: '이미 키우고 있어요' };
+  if (id === collection.active) return { ok: false, message: L('이미 키우고 있어요', 'Already raising this one') };
   const now = Date.now();
   const r = switchActive(collection, id, applyElapsedInPlace(), settings.petName, now);
-  if (!r) return { ok: false, message: '아직 없는 동물이에요' };
+  if (!r) return { ok: false, message: L('아직 없는 동물이에요', 'You do not have this animal yet') };
   collection = r.collection;
   pet = r.pet;
   behavior = { ...behavior, strollUntil: 0 };
@@ -1346,8 +1351,8 @@ function switchPet(id: SpeciesId): { ok: boolean; message: string } {
   updateTray();
   sendView(true);
   const name = r.name || getSpecies(id).name;
-  say(`${name}(이)가 나왔어요!`);
-  return { ok: true, message: `${name}(을)를 꺼냈어요` };
+  say(L(`${name}(이)가 나왔어요!`, `${nameEn(name)} came out!`));
+  return { ok: true, message: L(`${name}(을)를 꺼냈어요`, `Took out ${nameEn(name)}`) };
 }
 
 function refreshCollection(): void {
@@ -1373,12 +1378,12 @@ function collectionData() {
 /** 동물 뽑기: 로그인(서버 기준)이면 서버가 뽑고 결과만 앱에 반영한다. 서버에 닿지 않으면 뽑지 않고 안내한다. */
 async function doPullSpecies() {
   if (auth?.user && serverGame) {
-    if (!serverGame.ready) return { ok: false as const, message: '아직 서버와 연결되지 않았어요. 잠시 뒤에 다시 해 주세요', view: collectionData() };
+    if (!serverGame.ready) return { ok: false as const, message: L('아직 서버와 연결되지 않았어요. 잠시 뒤에 다시 해 주세요', 'Not connected to the server yet. Please try again shortly'), view: collectionData() };
     const r = await serverGame.pullSpecies();
     if (!r.ok) return { ok: false as const, message: r.message, view: collectionData() };
     collection = syncActive(collection, applyElapsedInPlace(), settings.petName);
     const applied = applyServerPull(collection, r.result, Date.now());
-    if (!applied) return { ok: false as const, message: '알 수 없는 동물이 나왔어요. 앱을 업데이트해 주세요', view: collectionData() };
+    if (!applied) return { ok: false as const, message: L('알 수 없는 동물이 나왔어요. 앱을 업데이트해 주세요', 'An unknown animal came out. Please update the app'), view: collectionData() };
     collection = applied.collection;
     const activeOwned = collection.owned[collection.active];
     if (activeOwned) pet = activeOwned.pet;
@@ -1388,8 +1393,8 @@ async function doPullSpecies() {
     recordGrowth({ kind: 'sync' });
     const sp = getSpecies(r.result.speciesId as Parameters<typeof getSpecies>[0]);
     const message = applied.isNew
-      ? `${sp.name}(이)가 새로 왔어요!${applied.hidden ? ' ✨히든 동물!' : ''}`
-      : `${sp.name}(이)가 또 나왔어요! (${applied.count}번째) 경험치 +${DUPLICATE_XP}`;
+      ? L(`${sp.name}(이)가 새로 왔어요!${applied.hidden ? ' ✨히든 동물!' : ''}`, `${nameEn(sp.name)} joined you!${applied.hidden ? ' ✨Hidden animal!' : ''}`)
+      : L(`${sp.name}(이)가 또 나왔어요! (${applied.count}번째) 경험치 +${DUPLICATE_XP}`, `${nameEn(sp.name)} again! (#${applied.count}) XP +${DUPLICATE_XP}`);
     return { ok: true as const, message, id: r.result.speciesId as Parameters<typeof getSpecies>[0], isNew: applied.isNew, hidden: applied.hidden, count: applied.count, view: collectionData() };
   }
   return doPullSpeciesLocal();
@@ -1411,15 +1416,15 @@ function doPullSpeciesLocal() {
   recordGrowth({ kind: 'sync' }); // 모은 동물·뽑기 횟수가 늘었으니 업적을 다시 본다
   const sp = getSpecies(r.result.id);
   const message = r.result.isNew
-    ? `${sp.name}(이)가 새로 왔어요!${r.result.hidden ? ' ✨히든 동물!' : ''}`
-    : `${sp.name}(이)가 또 나왔어요! (${r.result.count}번째) 경험치 +${DUPLICATE_XP}`;
+    ? L(`${sp.name}(이)가 새로 왔어요!${r.result.hidden ? ' ✨히든 동물!' : ''}`, `${nameEn(sp.name)} joined you!${r.result.hidden ? ' ✨Hidden animal!' : ''}`)
+    : L(`${sp.name}(이)가 또 나왔어요! (${r.result.count}번째) 경험치 +${DUPLICATE_XP}`, `${nameEn(sp.name)} again! (#${r.result.count}) XP +${DUPLICATE_XP}`);
   return { ok: true as const, message, id: r.result.id, isNew: r.result.isNew, hidden: r.result.hidden, count: r.result.count, view: collectionData() };
 }
 
 /** 꾸미기 뽑기: 로그인(서버 기준)이면 서버가 뽑는다. */
 async function doPullCosmetic() {
   if (auth?.user && serverGame) {
-    if (!serverGame.ready) return { ok: false as const, message: '아직 서버와 연결되지 않았어요. 잠시 뒤에 다시 해 주세요', view: collectionData() };
+    if (!serverGame.ready) return { ok: false as const, message: L('아직 서버와 연결되지 않았어요. 잠시 뒤에 다시 해 주세요', 'Not connected to the server yet. Please try again shortly'), view: collectionData() };
     const r = await serverGame.pullCosmetic();
     if (!r.ok) return { ok: false as const, message: r.message, view: collectionData() };
     const { kind, itemId } = r.result;
@@ -1431,8 +1436,8 @@ async function doPullCosmetic() {
     };
     saveCollectionSafe();
     refreshWardrobe();
-    const name = kind === 'accessory' ? ACCESSORY_NAMES[itemId as keyof typeof ACCESSORY_NAMES] : VARIANT_NAMES[itemId as keyof typeof VARIANT_NAMES] + ' 색';
-    return { ok: true as const, message: `${name}(을)를 얻었어요!`, kind, itemId: itemId as never, view: collectionData() };
+    const name = kind === 'accessory' ? ACCESSORY_NAMES[itemId as keyof typeof ACCESSORY_NAMES] : VARIANT_NAMES[itemId as keyof typeof VARIANT_NAMES] + L(' 색', ' color');
+    return { ok: true as const, message: L(`${name}(을)를 얻었어요!`, `Got ${nameEn(name)}!`), kind, itemId: itemId as never, view: collectionData() };
   }
   return doPullCosmeticLocal();
 }
@@ -1449,8 +1454,8 @@ function doPullCosmeticLocal() {
   saveCollectionSafe();
   refreshWardrobe();
   const item = r.result.item;
-  const name = item.kind === 'accessory' ? ACCESSORY_NAMES[item.id] : VARIANT_NAMES[item.id] + ' 색';
-  return { ok: true as const, message: `${name}(을)를 얻었어요!`, kind: item.kind, itemId: item.id, view: collectionData() };
+  const name = item.kind === 'accessory' ? ACCESSORY_NAMES[item.id] : VARIANT_NAMES[item.id] + L(' 색', ' color');
+  return { ok: true as const, message: L(`${name}(을)를 얻었어요!`, `Got ${nameEn(name)}!`), kind: item.kind, itemId: item.id, view: collectionData() };
 }
 
 function openCollection(): void {
@@ -1471,7 +1476,7 @@ function openCollection(): void {
     minimizable: false,
     maximizable: false,
     autoHideMenuBar: true,
-    title: '뽑기·컬렉션',
+    title: L('뽑기·컬렉션', 'Gacha & Collection'),
     backgroundColor: '#fffdf5',
     show: false,
     webPreferences: {
@@ -1504,8 +1509,8 @@ function extensionDir(): string {
 /** 탐색기로 확장 폴더를 연다. 크롬의 "압축해제된 확장 프로그램을 로드합니다"에서 이 폴더를 고르면 된다. */
 function openExtensionFolder(): void {
   void shell.openPath(extensionDir()).then((error) => {
-    if (error) say('확장 폴더를 열지 못했어요');
-    else say('크롬 주소창에 chrome://extensions → 개발자 모드 → 이 폴더를 로드하세요');
+    if (error) say(L('확장 폴더를 열지 못했어요', 'Could not open the extension folder'));
+    else say(L('크롬 주소창에 chrome://extensions → 개발자 모드 → 이 폴더를 로드하세요', 'In Chrome go to chrome://extensions → Developer mode → Load unpacked → this folder'));
   });
 }
 
@@ -1514,7 +1519,7 @@ function openInspectBrowser(url: string): boolean {
   const env = process.env as BrowserEnv;
   const exe = findBrowser(env);
   if (!exe) {
-    say('크롬이나 엣지를 찾지 못했어요');
+    say(L('크롬이나 엣지를 찾지 못했어요', 'Could not find Chrome or Edge'));
     return false;
   }
   const profile = debugProfileDir(env);
@@ -1532,7 +1537,7 @@ async function openDemo(): Promise<void> {
   } catch {
     // 포트가 이미 쓰이는 중이다(예: npm run demo 가 떠 있음). 그 서버를 그대로 연다.
   }
-  if (openInspectBrowser(url)) say('시험 페이지를 열었어요. 곧 문제를 찾아볼게요!');
+  if (openInspectBrowser(url)) say(L('시험 페이지를 열었어요. 곧 문제를 찾아볼게요!', 'Opened the demo page. I will look for problems soon!'));
 }
 
 /** 딥링크(desktop-tamagotchi://auth?code=…)로 돌아온 로그인 결과를 처리한다. */
@@ -1546,7 +1551,7 @@ async function activateServer(): Promise<void> {
   if (!serverGame || !auth?.user) return;
   const r = await serverGame.activate();
   if (!r.ok || !serverGame.state) {
-    say(r.message ?? '서버와 연결하지 못했어요. 뽑기는 연결된 뒤에 할 수 있어요');
+    say(r.message ?? L('서버와 연결하지 못했어요. 뽑기는 연결된 뒤에 할 수 있어요', 'Could not connect to the server. You can pull once connected'));
     return;
   }
   collection = mirrorCollection(collection, serverGame.state, Date.now());
@@ -1556,7 +1561,7 @@ async function activateServer(): Promise<void> {
     if (gift) collection = { ...collection, tickets: gift.tickets };
   }
   saveCollectionSafe();
-  say(`서버와 연결됐어요. 뽑기권 ${collection.tickets}장 · 어느 PC에서든 같은 계정이에요`);
+  say(L(`서버와 연결됐어요. 뽑기권 ${collection.tickets}장 · 어느 PC에서든 같은 계정이에요`, `Connected to the server. ${collection.tickets} ticket(s) · same account on any PC`));
   setTimeout(() => void syncGithubCommits(false), 8_000);
 }
 
@@ -1564,9 +1569,9 @@ async function activateServer(): Promise<void> {
 async function syncGithubCommits(announce: boolean, report = false): Promise<void> {
   if (!serverOn() || !serverGame) return;
   const r = await serverGame.syncCommits();
-  if (r && r.granted > 0) say(`GitHub 기여 덕분에 게임머니 +${r.granted}!`);
-  else if (announce && !r) say('GitHub 기여는 아직 읽지 못했어요. 나중에 다시 시도해요');
-  else if (report && r) say('GitHub 기여를 확인했어요. 새로 받을 게임머니가 없어요(1건당 2, 하루 40까지)');
+  if (r && r.granted > 0) say(L(`GitHub 기여 덕분에 게임머니 +${r.granted}!`, `Game money +${r.granted} thanks to your GitHub contributions!`));
+  else if (announce && !r) say(L('GitHub 기여는 아직 읽지 못했어요. 나중에 다시 시도해요', 'Could not read GitHub contributions yet. I will try again later'));
+  else if (report && r) say(L('GitHub 기여를 확인했어요. 새로 받을 게임머니가 없어요(1건당 2, 하루 40까지)', 'Checked your GitHub contributions. No new game money (2 per contribution, up to 40 a day)'));
 }
 
 /** 연결이 없어서 대기 중이던 뽑기권 획득을 다시 보낸다. */
@@ -1576,20 +1581,20 @@ async function flushServerGrants(): Promise<void> {
   if (r.tickets !== null) {
     collection = { ...collection, tickets: r.tickets };
     saveCollectionSafe();
-    if (r.granted > 0) announceTickets(`연결이 돌아와서 뽑기권 +${r.granted}장을 받았어요`);
+    if (r.granted > 0) announceTickets(L(`연결이 돌아와서 뽑기권 +${r.granted}장을 받았어요`, `Back online: +${r.granted} ticket(s) received`));
   }
 }
 
 /** 이 PC와 계정에 서로 다른 진행이 있을 때 어느 쪽을 쓸지 묻는다. 어느 쪽을 골라도 덮어쓰이는 쪽은 백업된다. */
 async function askSyncChoice(info: ConflictInfo): Promise<Choice> {
-  const line = (label: string, s: ConflictInfo['local']) => `${label}: 동물 ${s.pets}마리 · 뽑기권 ${s.tickets}장 · 뽑기 ${s.pulls}회`;
+  const line = (label: string, s: ConflictInfo['local']) => L(`${label}: 동물 ${s.pets}마리 · 뽑기권 ${s.tickets}장 · 뽑기 ${s.pulls}회`, `${label}: ${s.pets} animal(s) · ${s.tickets} ticket(s) · ${s.pulls} pull(s)`);
   const when = info.accountUpdatedAt ? new Date(info.accountUpdatedAt).toLocaleString() : '';
   const r = await dialog.showMessageBox({
     type: 'question',
-    title: 'Desktop Tamagotchi — 계정과 맞추기',
-    message: '이 PC와 계정에 서로 다른 진행이 있어요. 어느 쪽을 쓸까요?',
-    detail: [line('이 PC', info.local), line(`계정(${info.accountDevice ?? '다른 PC'}${when ? ', ' + when : ''})`, info.account), '', '덮어쓰이는 쪽의 진행은 백업돼서 나중에 되돌릴 수 있어요.'].join('\n'),
-    buttons: ['계정의 진행을 이 PC에 받기 (다시 시작)', '이 PC의 진행을 계정에 올리기', '나중에'],
+    title: L('Desktop Tamagotchi — 계정과 맞추기', 'Desktop Tamagotchi — Sync with account'),
+    message: L('이 PC와 계정에 서로 다른 진행이 있어요. 어느 쪽을 쓸까요?', 'This PC and your account have different progress. Which one should be used?'),
+    detail: [line(L('이 PC', 'This PC'), info.local), line(L(`계정(${info.accountDevice ?? '다른 PC'}${when ? ', ' + when : ''})`, `Account (${info.accountDevice ?? 'another PC'}${when ? ', ' + when : ''})`), info.account), '', L('덮어쓰이는 쪽의 진행은 백업돼서 나중에 되돌릴 수 있어요.', 'The progress that gets overwritten is backed up, so you can restore it later.')].join('\n'),
+    buttons: [L('계정의 진행을 이 PC에 받기 (다시 시작)', 'Use the account progress on this PC (restarts)'), L('이 PC의 진행을 계정에 올리기', 'Upload this PC progress to the account'), L('나중에', 'Later')],
     defaultId: 0,
     cancelId: 2,
     noLink: true,
@@ -1599,38 +1604,38 @@ async function askSyncChoice(info: ConflictInfo): Promise<Choice> {
 
 function announceAuth(r: { handled: boolean; ok: boolean; message?: string }): void {
   if (!r.handled) return;
-  if (r.ok) say(`GitHub 로그인 완료! ${auth?.user?.login ?? ''} 님, 어느 PC에서든 같은 계정이에요`);
-  else say('로그인하지 못했어요' + (r.message ? ': ' + r.message : ''));
+  if (r.ok) say(L(`GitHub 로그인 완료! ${auth?.user?.login ?? ''} 님, 어느 PC에서든 같은 계정이에요`, `GitHub login complete! Hi ${auth?.user?.login ?? ''}, same account on any PC`));
+  else say(L('로그인하지 못했어요', 'Could not log in') + (r.message ? ': ' + r.message : ''));
 }
 
 /** 계정 메뉴: 서버가 설정되지 않았거나, 로그인·로그아웃. */
 function accountMenuItem(): Electron.MenuItemConstructorOptions {
-  if (!auth?.enabled) return { label: '☁ 계정 (서버 준비 중)', enabled: false };
+  if (!auth?.enabled) return { label: L('☁ 계정 (서버 준비 중)', '☁ Account (server not ready)'), enabled: false };
   const user = auth.user;
   if (user) {
     return {
       label: `☁ ${user.login}`,
       submenu: [
-        { label: '지금 계정과 맞추기', click: () => void accountSync?.reconcile(user.id) },
-        { label: 'GitHub 기여 지금 확인', enabled: serverOn(), click: () => void syncGithubCommits(true, true) },
+        { label: L('지금 계정과 맞추기', 'Sync with account now'), click: () => void accountSync?.reconcile(user.id) },
+        { label: L('GitHub 기여 지금 확인', 'Check GitHub contributions now'), enabled: serverOn(), click: () => void syncGithubCommits(true, true) },
         {
-          label: 'GitHub 프로필용 카드 주소 복사',
+          label: L('GitHub 프로필용 카드 주소 복사', 'Copy card URL for GitHub profile'),
           click: () => {
             const md = cardMarkdown(user.login);
-            if (!md) return say('이 이름으로는 카드 주소를 만들 수 없어요');
+            if (!md) return say(L('이 이름으로는 카드 주소를 만들 수 없어요', 'Cannot build a card URL for this name'));
             clipboard.writeText(md);
-            say('카드 주소를 복사했어요! 프로필 저장소(내이름/내이름)의 README.md 에 붙여 넣으면 돼요');
+            say(L('카드 주소를 복사했어요! 프로필 저장소(내이름/내이름)의 README.md 에 붙여 넣으면 돼요', 'Copied the card URL! Paste it into README.md of your profile repo (yourname/yourname)'));
           },
         },
-        { label: '로그아웃', click: () => void auth?.signOut().then(() => say('로그아웃했어요. 펫은 이 PC에 그대로 있어요')) },
+        { label: L('로그아웃', 'Log out'), click: () => void auth?.signOut().then(() => say(L('로그아웃했어요. 펫은 이 PC에 그대로 있어요', 'Logged out. Your pet stays on this PC'))) },
       ],
     };
   }
   return {
-    label: '☁ GitHub로 로그인…',
+    label: L('☁ GitHub로 로그인…', '☁ Log in with GitHub…'),
     click: () => {
-      say('브라우저에서 GitHub 로그인을 마치면 돌아와요');
-      void auth?.signIn().catch((e: unknown) => say('로그인을 시작하지 못했어요: ' + String(e instanceof Error ? e.message : e)));
+      say(L('브라우저에서 GitHub 로그인을 마치면 돌아와요', 'I will be back once you finish GitHub login in the browser'));
+      void auth?.signIn().catch((e: unknown) => say(L('로그인을 시작하지 못했어요: ', 'Could not start login: ') + String(e instanceof Error ? e.message : e)));
     },
   };
 }
@@ -1648,104 +1653,104 @@ function buildMenu(): Menu {
   });
   return Menu.buildFromTemplate([
     ...(updates?.ready
-      ? [{ label: '🆕 새 버전 ' + updates.ready + ' 설치하고 다시 시작', click: () => void updates?.installNow() }, { type: 'separator' as const }]
+      ? [{ label: L('🆕 새 버전 ', '🆕 Install version ') + updates.ready + L(' 설치하고 다시 시작', ' and restart'), click: () => void updates?.installNow() }, { type: 'separator' as const }]
       : []),
-    { label: '상태 보기', click: () => showStatus() },
-    { label: '검사 결과…', click: () => openResults() },
-    { label: '도감·기록…', click: () => openCodex() },
-    { label: serverOn() ? '🏆 랭킹…' : '🏆 랭킹 (로그인하면 볼 수 있어요)', enabled: serverOn(), click: () => openRanking() },
-    { label: serverOn() ? '🏪 경매장…' : '🏪 경매장 (로그인하면 쓸 수 있어요)', enabled: serverOn(), click: () => openMarket() },
-    { label: '🎟 뽑기·컬렉션… (' + collection.tickets + '장)', click: () => openCollection() },
-    { label: '프로필 카드 내보내기…', click: () => void exportCard() },
+    { label: L('상태 보기', 'Show status'), click: () => showStatus() },
+    { label: L('검사 결과…', 'Inspection results…'), click: () => openResults() },
+    { label: L('도감·기록…', 'Codex & records…'), click: () => openCodex() },
+    { label: serverOn() ? L('🏆 랭킹…', '🏆 Rankings…') : L('🏆 랭킹 (로그인하면 볼 수 있어요)', '🏆 Rankings (log in to view)'), enabled: serverOn(), click: () => openRanking() },
+    { label: serverOn() ? L('🏪 경매장…', '🏪 Auction house…') : L('🏪 경매장 (로그인하면 쓸 수 있어요)', '🏪 Auction house (log in to use)'), enabled: serverOn(), click: () => openMarket() },
+    { label: L('🎟 뽑기·컬렉션… (' + collection.tickets + '장)', '🎟 Gacha & Collection… (' + collection.tickets + ')'), click: () => openCollection() },
+    { label: L('프로필 카드 내보내기…', 'Export profile card…'), click: () => void exportCard() },
     {
-      label: '📢 공지',
+      label: L('📢 공지', '📢 News'),
       enabled: newsItems.length > 0,
       submenu: newsItems.slice(0, 5).flatMap((item) => [
         { label: `${item.date} ${item.title}`, click: () => say(newsText(item)) },
-        ...(item.url ? [{ label: '    ↗ 자세히 보기', click: () => void shell.openExternal(item.url) }] : []),
+        ...(item.url ? [{ label: L('    ↗ 자세히 보기', '    ↗ Learn more'), click: () => void shell.openExternal(item.url) }] : []),
       ]),
     },
     accountMenuItem(),
-    { label: '설정…', click: () => openSettings() },
+    { label: L('설정…', 'Settings…'), click: () => openSettings() },
     {
       // 새 버전이 준비돼 있지 않을 때도 직접 확인할 수 있게 항상 둔다
-      label: app.isPackaged ? `업데이트 확인 (현재 v${app.getVersion()})` : '업데이트 확인 (설치본에서만)',
+      label: app.isPackaged ? L(`업데이트 확인 (현재 v${app.getVersion()})`, `Check for updates (current v${app.getVersion()})`) : L('업데이트 확인 (설치본에서만)', 'Check for updates (installed app only)'),
       enabled: app.isPackaged,
       click: () => {
-        say('새 버전이 있는지 확인하고 있어요…');
+        say(L('새 버전이 있는지 확인하고 있어요…', 'Checking for a new version…'));
         void updates?.check(true).then((text) => {
           if (text) say(text);
         });
       },
     },
     { label: scanStatus, enabled: false },
-    { label: '지금 검사하기', enabled: !egg, click: () => void scanOnce() },
+    { label: L('지금 검사하기', 'Inspect now'), enabled: !egg, click: () => void scanOnce() },
     {
-      label: '검사 도구',
+      label: L('검사 도구', 'Inspection tools'),
       submenu: [
         {
-          label: '검사용 브라우저 열기',
+          label: L('검사용 브라우저 열기', 'Open inspection browser'),
           click: () => {
-            if (openInspectBrowser('about:blank')) say('여기서 localhost 주소를 열면 제가 살펴볼게요');
+            if (openInspectBrowser('about:blank')) say(L('여기서 localhost 주소를 열면 제가 살펴볼게요', 'Open a localhost address here and I will take a look'));
           },
         },
-        { label: '검사 체험 (시험 페이지 열기)', click: () => void openDemo() },
-        { label: '크롬 확장 폴더 열기 (평소 쓰는 크롬에서 검사)', click: () => openExtensionFolder() },
+        { label: L('검사 체험 (시험 페이지 열기)', 'Try inspection (open demo page)'), click: () => void openDemo() },
+        { label: L('크롬 확장 폴더 열기 (평소 쓰는 크롬에서 검사)', 'Open Chrome extension folder (inspect in your usual Chrome)'), click: () => openExtensionFolder() },
         { type: 'separator' },
-        { label: `확장 수신 포트 ${FEED_PORT} · 디버그 포트 ${CDP_PORT} · localhost 페이지만 검사`, enabled: false },
+        { label: L(`확장 수신 포트 ${FEED_PORT} · 디버그 포트 ${CDP_PORT} · localhost 페이지만 검사`, `Extension port ${FEED_PORT} · debug port ${CDP_PORT} · localhost pages only`), enabled: false },
       ],
     },
     {
-      label: '오늘의 FE 지식',
+      label: L('오늘의 FE 지식', 'FE tip of the day'),
       enabled: !egg,
       click: () => offerTip(Date.now(), true),
     },
     { type: 'separator' },
-    { label: '쓰다듬기', click: () => act('touch') },
-    { label: '밥 주기', enabled: !egg, click: () => act('feed') },
-    { label: '놀아주기', enabled: !egg, click: () => act('play') },
-    { label: '씻기기', enabled: !egg, click: () => act('wash') },
+    { label: L('쓰다듬기', 'Pet'), click: () => act('touch') },
+    { label: L('밥 주기', 'Feed'), enabled: !egg, click: () => act('feed') },
+    { label: L('놀아주기', 'Play'), enabled: !egg, click: () => act('play') },
+    { label: L('씻기기', 'Wash'), enabled: !egg, click: () => act('wash') },
     behavior.home
       ? {
-          label: '자유롭게 돌아다니게 하기',
+          label: L('자유롭게 돌아다니게 하기', 'Let it roam freely'),
           click: () => {
             behavior = clearHome(behavior);
-            say('이제 마음대로 돌아다닐게요!');
+            say(L('이제 마음대로 돌아다닐게요!', 'I will roam freely now!'));
           },
         }
       : {
-          label: '혼자 놀게 두기 (여기서만)',
+          label: L('혼자 놀게 두기 (여기서만)', 'Let it play alone (here only)'),
           enabled: !egg,
           click: () => {
             const p = menuPoint ?? { x: behavior.x + petSize / 2, y: behavior.y + petSize / 2 };
             behavior = setHome(behavior, p.x, p.y);
-            say('여기서 혼자 놀고 있을게요!');
+            say(L('여기서 혼자 놀고 있을게요!', 'I will play here by myself!'));
           },
         },
-    { label: isStrolling(behavior, Date.now()) ? '산책 중…' : '산책하기', enabled: !egg && !isStrolling(behavior, Date.now()), click: () => startStrollNow() },
+    { label: isStrolling(behavior, Date.now()) ? L('산책 중…', 'Walking…') : L('산책하기', 'Take a walk'), enabled: !egg && !isStrolling(behavior, Date.now()), click: () => startStrollNow() },
     { type: 'separator' },
     {
-      label: '동작 보기 (테스트용)',
+      label: L('동작 보기 (테스트용)', 'Preview moves (test)'),
       submenu: [
-        demo('잠자기', 'sleep'),
-        demo('달리기', 'run'),
-        demo('벽 타기', 'climb'),
-        demo('혼자 놀기', 'play'),
-        { label: '마우스에 매달리기: 마우스를 10초 가만히 두세요', enabled: false },
+        demo(L('잠자기', 'Sleep'), 'sleep'),
+        demo(L('달리기', 'Run'), 'run'),
+        demo(L('벽 타기', 'Climb'), 'climb'),
+        demo(L('혼자 놀기', 'Play alone'), 'play'),
+        { label: L('마우스에 매달리기: 마우스를 10초 가만히 두세요', 'Hang on the mouse: keep the mouse still for 10 seconds'), enabled: false },
       ],
     },
-    { label: '꾸미기…', click: () => openWardrobe() },
+    { label: L('꾸미기…', 'Customize…'), click: () => openWardrobe() },
     { type: 'separator' },
     {
       // 설치본에서만 동작한다(개발 실행에서 켜면 electron.exe 가 로그인 항목에 등록되기 때문).
-      label: app.isPackaged ? '로그인할 때 자동 실행' : '로그인할 때 자동 실행 (설치본에서만)',
+      label: app.isPackaged ? L('로그인할 때 자동 실행', 'Launch at login') : L('로그인할 때 자동 실행 (설치본에서만)', 'Launch at login (installed app only)'),
       type: 'checkbox',
       enabled: app.isPackaged,
       checked: app.isPackaged && app.getLoginItemSettings().openAtLogin,
       click: (item) => app.setLoginItemSettings({ openAtLogin: item.checked }),
     },
-    { label: `버전 ${app.getVersion()}`, enabled: false },
-    { label: '종료', click: () => app.quit() },
+    { label: L(`버전 ${app.getVersion()}`, `Version ${app.getVersion()}`), enabled: false },
+    { label: L('종료', 'Quit'), click: () => app.quit() },
   ]);
 }
 
@@ -1908,7 +1913,7 @@ function tick(lastAt: number): number {
   const hungryDue = now - lastHungryNoticeAt > HUNGRY_NOTICE_MS;
   if (hungryDue && moodOf(applyElapsedInPlace()) === 'hungry' && stageOf(pet) !== 'egg') {
     lastHungryNoticeAt = now;
-    say('배고파요…');
+    say(L('배고파요…', 'I am hungry…'));
   }
   return now;
 }
@@ -1970,7 +1975,7 @@ function setupIpc(): void {
   ipcMain.handle('collection:pull-species', () => doPullSpecies());
   ipcMain.handle('collection:pull-cosmetic', () => doPullCosmetic());
   ipcMain.handle('collection:switch', (_event, id: unknown) => {
-    if (!isSpeciesId(id)) return { ok: false, message: '알 수 없는 동물이에요', view: collectionData() };
+    if (!isSpeciesId(id)) return { ok: false, message: L('알 수 없는 동물이에요', 'Unknown animal'), view: collectionData() };
     const r = switchPet(id);
     return { ...r, view: collectionData() };
   });
@@ -2001,13 +2006,14 @@ function setupIpc(): void {
   ipcMain.on('ranking:close', () => {
     if (rankingWin && !rankingWin.isDestroyed()) rankingWin.close();
   });
+  ipcMain.handle('lang:get', () => currentLang());
   ipcMain.handle('market:get', () => marketData());
-  ipcMain.handle('market:buy', (_event, id: unknown) => (isUuid(id) ? marketAct('buy_listing', { p_listing_id: id }, '샀어요! 내 컬렉션에 들어왔어요') : marketData().then((view) => ({ ok: false, message: '잘못된 요청이에요', view }))));
-  ipcMain.handle('market:cancel', (_event, id: unknown) => (isUuid(id) ? marketAct('cancel_listing', { p_listing_id: id }, '판매를 내렸어요') : marketData().then((view) => ({ ok: false, message: '잘못된 요청이에요', view }))));
+  ipcMain.handle('market:buy', (_event, id: unknown) => (isUuid(id) ? marketAct('buy_listing', { p_listing_id: id }, L('샀어요! 내 컬렉션에 들어왔어요', 'Bought! It is in your collection now')) : marketData().then((view) => ({ ok: false, message: L('잘못된 요청이에요', 'Invalid request'), view }))));
+  ipcMain.handle('market:cancel', (_event, id: unknown) => (isUuid(id) ? marketAct('cancel_listing', { p_listing_id: id }, L('판매를 내렸어요', 'Listing removed')) : marketData().then((view) => ({ ok: false, message: L('잘못된 요청이에요', 'Invalid request'), view }))));
   ipcMain.handle('market:sell', (_event, id: unknown, price: unknown) =>
     isUuid(id) && typeof price === 'number' && Number.isInteger(price)
-      ? marketAct('create_listing', { p_pet_id: id, p_price: price }, '경매장에 올렸어요. 팔리면 게임머니가 들어와요')
-      : marketData().then((view) => ({ ok: false, message: '가격은 1~1,000,000 사이의 정수로 써 주세요', view })),
+      ? marketAct('create_listing', { p_pet_id: id, p_price: price }, L('경매장에 올렸어요. 팔리면 게임머니가 들어와요', 'Listed! You get game money when it sells'))
+      : marketData().then((view) => ({ ok: false, message: L('가격은 1~1,000,000 사이의 정수로 써 주세요', 'Enter a whole-number price from 1 to 1,000,000'), view })),
   );
   ipcMain.on('market:close', () => {
     if (marketWin && !marketWin.isDestroyed()) marketWin.close();
@@ -2017,7 +2023,7 @@ function setupIpc(): void {
   ipcMain.handle('settings:get', () => settings);
   ipcMain.handle('settings:set', (_event, patch: unknown) => applySettings(patch));
   ipcMain.handle('app:version', () => app.getVersion());
-  ipcMain.handle('update:check', async () => (updates ? updates.check(true) : '설치한 앱에서만 업데이트를 확인해요'));
+  ipcMain.handle('update:check', async () => (updates ? updates.check(true) : L('설치한 앱에서만 업데이트를 확인해요', 'Updates are checked in the installed app only')));
   ipcMain.on('settings:close', () => closeSettings());
   // 사라진 말풍선을 hover 로 다시 띄운 뒤 펫을 누르면, 그 문제의 배움 카드를 연다.
   ipcMain.on('notice:open', () => {
@@ -2148,7 +2154,7 @@ if (!app.requestSingleInstanceLock()) {
     }
     pet = applyElapsed(collection.owned[collection.active]?.pet ?? starter, now);
     persist();
-    if (updateGift > 0) setTimeout(() => announceTickets(`새 버전으로 업데이트해 줘서 고마워요! 뽑기권 +${updateGift}장`), 5_000);
+    if (updateGift > 0) setTimeout(() => announceTickets(L(`새 버전으로 업데이트해 줘서 고마워요! 뽑기권 +${updateGift}장`, `Thanks for updating! +${updateGift} ticket(s)`)), 5_000);
     if (!loadedCollection) {
       setTimeout(() => say(`🎟 새 기능! 뽑기권 ${collection.tickets}장을 드렸어요.\n메뉴의 '뽑기·컬렉션…'에서 새 동물을 뽑아 보세요`), 6_000);
     }

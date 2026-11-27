@@ -2,6 +2,8 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('marketApi', {
+  // 지금 쓸 언어('ko' | 'en'). 메인이 설정과 PC 언어·지역으로 정한다.
+  lang: () => ipcRenderer.invoke('lang:get'),
   get: () => ipcRenderer.invoke('market:get'),
   buy: (listingId) => ipcRenderer.invoke('market:buy', listingId),
   sell: (petId, price) => ipcRenderer.invoke('market:sell', petId, price),

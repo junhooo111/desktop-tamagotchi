@@ -1,0 +1,126 @@
+/**
+ * 펫이 하는 말(한국어)을 영어로 바꾸는 번역기.
+ * 돌보기·학습·업적처럼 여러 모듈이 한국어 문장을 만들어 돌려주기 때문에, 말풍선으로 나가기 직전(main 의 say)에
+ * 이 함수를 한 번 거친다. 이름(동물·장식·업적)은 표로, 문장은 앞에서부터 차례로 맞는 규칙으로 바꾼다.
+ * 모르는 문장은 그대로 한국어로 남는다(번역이 없다고 말을 못 하게 하지는 않는다).
+ */
+
+export const NAMES_EN: Record<string, string> = {
+  // 동물
+  토끼: 'Rabbit', 고양이: 'Cat', 강아지: 'Puppy', 거북이: 'Turtle', 병아리: 'Chick', 오리: 'Duck', 여우: 'Fox', 햄스터: 'Hamster',
+  펭귄: 'Penguin', 판다: 'Panda', 곰: 'Bear', 돼지: 'Pig', 양: 'Sheep', 부엉이: 'Owl',
+  용: 'Dragon', 청룡: 'Azure Dragon', 백호: 'White Tiger', 현무: 'Black Tortoise', 주작: 'Vermilion Bird', 기린: 'Qilin',
+  // 장식
+  리본: 'Ribbon', 선글라스: 'Sunglasses', 왕관: 'Crown', 날개: 'Wings', 새싹: 'Sprout', 꽃: 'Flower', '파티 모자': 'Party hat',
+  '천사 고리': 'Halo', 야구모자: 'Cap', '마법사 모자': 'Witch hat', '요리사 모자': 'Chef hat', '산타 모자': 'Santa hat',
+  '별 머리띠': 'Star headband', '하트 더듬이': 'Heart antennae', '토끼 귀': 'Bunny ears', 안대: 'Eyepatch', '외알 안경': 'Monocle', '반짝 별': 'Twinkle star',
+  // 색
+  기본: 'Default', 파스텔: 'Pastel', 진하게: 'Deep', 흑백: 'Mono',
+  // 업적
+  '첫 배움': 'First lesson', '열심히 배우는 중': 'Studying hard', 'FE 꿈나무': 'FE sprout', '퀴즈 척척': 'Quiz whiz', '퀴즈 박사': 'Quiz master',
+  '첫 수정': 'First fix', '문제 해결사': 'Problem solver', 'FE 장인': 'FE artisan', '다섯 가지 기본기': 'Five basics', '열 가지 기본기': 'Ten basics',
+  '도감 완성': 'Codex complete', '지식 수집가': 'Knowledge collector', '지식 박사': 'Knowledge master', '사흘 연속': 'Three-day streak',
+  '일주일 연속': 'One-week streak', '한 달 연속': 'One-month streak', '다정한 친구': 'Kind friend', '금손 집사': 'Golden-hand keeper',
+  깔끔쟁이: 'Neat freak', '산책 친구': 'Walking buddy', '동물 수집가': 'Animal collector', '뽑기 단골': 'Gacha regular', '전설의 만남': 'Legendary encounter',
+  // 등급·단계
+  새내기: 'Newbie', 숙련: 'Skilled', 베테랑: 'Veteran', 달인: 'Master', 명인: 'Grandmaster', 신화: 'Mythic',
+  알: 'Egg', 새끼: 'Baby', 성체: 'Adult', 전설: 'Legend',
+};
+
+/** 동물·장식·업적·등급 이름의 영어(없으면 그대로). */
+export const nameEn = (ko: string): string => NAMES_EN[ko] ?? ko;
+const N = nameEn;
+
+/** 앞에서부터 맞는 규칙 하나로 한 문장 조각을 바꾼다. */
+const RULES: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
+  // 돌보기
+  [/^따뜻해요…/, () => 'So warm…'],
+  [/^좋아요!/, () => 'Feels good!'],
+  [/^알은 아직 밥을 못 먹어요\./, () => 'An egg cannot eat yet.'],
+  [/^배불러요!/, () => 'I am full!'],
+  [/^냠냠, 맛있어요!/, () => 'Yum, delicious!'],
+  [/^알은 아직 못 놀아요\./, () => 'An egg cannot play yet.'],
+  [/^배고파서 못 놀겠어요…/, () => 'Too hungry to play…'],
+  [/^신나요!/, () => 'So fun!'],
+  [/^알은 아직 못 씻어요\./, () => 'An egg cannot wash yet.'],
+  [/^이미 깨끗해요!/, () => 'Already clean!'],
+  [/^보글보글! 깨끗해졌어요!/, () => 'Bubble bubble! All clean!'],
+  [/^알은 아직 산책을 못 가요\./, () => 'An egg cannot go for a walk yet.'],
+  [/^배고파서 산책 못 가요…/, () => 'Too hungry for a walk…'],
+  [/^산책 가요! 마우스를 따라갈게요/, () => 'Walk time! I will follow your mouse'],
+  [/^산책 끝! 지쳤어요…/, () => 'Walk done! So tired…'],
+  // 학습
+  [/^정답! 배웠어요!/, () => 'Correct! I learned something!'],
+  [/^배웠어요!/, () => 'I learned something!'],
+  [/^고쳤네요, 대단해요!/, () => 'You fixed it, amazing!'],
+  [/^새로 알았어요!/, () => 'Learned something new!'],
+  // 성장 덧붙임
+  [/^ 알이 부화했어요! (.+)\(이\)가 태어났어요\./, (m) => ` The egg hatched! ${N(m[1] ?? '')} was born.`],
+  [/^ (.+)\(이\)가 전설의 모습으로 진화했어요!/, (m) => ` ${N(m[1] ?? '')} evolved into its legendary form!`],
+  [/^ ✨ '(.+)' 등급이 되었어요!/, (m) => ` ✨ Reached '${N(m[1] ?? '')}' rank!`],
+  [/^ 레벨 (\d+)이 되었어요!/, (m) => ` Level ${m[1]} reached!`],
+  [/^( ?)경험치 \+(\d+)/, (m) => `${m[1]}XP +${m[2]}`],
+  // 선물
+  [/^🎁 뽑기권 (\d+)장이 들어 있었어요!/, (m) => `🎁 There were ${m[1]} ticket(s) inside!`],
+  [/^🎁 경험치 \+(\d+)!/, (m) => `🎁 XP +${m[1]}!`],
+  [/^🎁 …앗, 응가였어요! 꽝이에요 😢/, () => '🎁 …oops, it was poop! No prize 😢'],
+  // 서버·업데이트
+  [/^새 버전 (\S+) 을 받는 중이에요/, (m) => `Downloading version ${m[1]}`],
+  [/^새 버전 (\S+) 이 있어요/, (m) => `Version ${m[1]} is available`],
+  [/^새 버전 (\S+) 이 준비됐어요! 우클릭 → '설치하고 다시 시작'을 눌러 주세요/, (m) => `Version ${m[1]} is ready! Right-click → 'Install and restart'`],
+  [/^새 버전 (\S+) 이 준비됐어요\. 펫을 종료하면 설치돼요/, (m) => `Version ${m[1]} is ready. It installs when you quit the pet`],
+  [/^최신 버전이에요/, () => 'You are up to date'],
+  [/^업데이트를 확인하지 못했어요\. 인터넷 연결을 확인해 주세요/, () => 'Could not check for updates. Please check your internet connection'],
+  [/^확인하는 중…/, () => 'Checking…'],
+  [/^🎟 새 기능! 뽑기권 (\d+)장을 드렸어요\.\n메뉴의 '뽑기·컬렉션…'에서 새 동물을 뽑아 보세요/, (m) => `🎟 New feature! You got ${m[1]} ticket(s).\nPull new animals in the menu's 'Gacha & Collection…'`],
+  // 서버 오류(friendlyError)
+  [/^뽑기권이 모자라요/, () => 'Not enough tickets'],
+  [/^게임머니가 모자라요/, () => 'Not enough game money'],
+  [/^마지막 한 마리는 팔 수 없어요/, () => 'You cannot sell your last animal'],
+  [/^이미 경매장에 올라가 있어요/, () => 'Already listed in the auction house'],
+  [/^이미 팔렸거나 내려간 펫이에요/, () => 'This pet is already sold or removed'],
+  [/^내가 올린 펫은 살 수 없어요/, () => 'You cannot buy your own listing'],
+  [/^내 펫이 아니에요/, () => 'That is not your pet'],
+  [/^꾸미기를 모두 모았어요!/, () => 'You have collected every cosmetic!'],
+  [/^가격은 1~1,000,000 사이의 정수로 써 주세요/, () => 'Enter a whole-number price from 1 to 1,000,000'],
+  [/^아직 GitHub 연동이 준비되지 않았어요/, () => 'GitHub integration is not ready yet'],
+];
+
+/** 한국어 문장 하나(여러 줄이면 줄마다)를 영어로. 규칙에 없는 조각은 그대로 둔다. */
+export function toEnglish(text: string): string {
+  return text
+    .split('\n')
+    .map((line) => translateLine(line))
+    .join('\n');
+}
+
+function translateLine(line: string): string {
+  // 앞쪽 문장 + 이어 붙는 덧붙임("… 경험치 +5 레벨 3이 되었어요! ...")을 조각내어 차례로 바꾼다.
+  let rest = line;
+  let out = '';
+  let guard = 0;
+  while (rest !== '' && guard++ < 12) {
+    const hit = firstRule(rest);
+    if (!hit) {
+      out += rest;
+      break;
+    }
+    out += hit.text;
+    rest = rest.slice(hit.length);
+  }
+  return out;
+}
+
+function firstRule(s: string): { text: string; length: number } | null {
+  for (const [re, fn] of RULES) {
+    const m = s.match(re);
+    if (m && m.index === 0 && m[0].length > 0) return { text: fn(m), length: m[0].length };
+  }
+  // 한국어 조각이 규칙 밖에 있으면 다음 규칙이 맞는 곳까지 그대로 넘긴다.
+  let best = -1;
+  for (const [re] of RULES) {
+    const m = s.slice(1).match(re);
+    if (m && m.index !== undefined && m[0].length > 0 && (best === -1 || m.index + 1 < best)) best = m.index + 1;
+  }
+  return best > 0 ? { text: s.slice(0, best), length: best } : null;
+}

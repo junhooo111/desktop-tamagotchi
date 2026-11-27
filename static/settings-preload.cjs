@@ -2,6 +2,8 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('settingsApi', {
+  // 지금 쓸 언어('ko' | 'en'). 메인이 설정과 PC 언어·지역으로 정한다.
+  lang: () => ipcRenderer.invoke('lang:get'),
   get: () => ipcRenderer.invoke('settings:get'),
   // patch 의 값은 메인 프로세스가 다시 검증한다. 저장된 전체 설정을 돌려준다.
   set: (patch) => ipcRenderer.invoke('settings:set', patch),

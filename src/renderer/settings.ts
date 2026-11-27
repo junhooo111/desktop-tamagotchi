@@ -3,13 +3,16 @@
  * 바꿀 때마다 메인에 보내서 바로 적용·저장한다(메인이 값을 다시 검증하고 저장된 전체 설정을 돌려준다).
  */
 import { CATEGORY_LABELS, LESSONS, RULE_IDS, type RuleCategory } from '../shared/lessons.js';
-import { LANG_SETTINGS, type LangSetting } from '../shared/i18n.js';
+import { LANG_SETTINGS, type Lang, type LangSetting } from '../shared/i18n.js';
+import { initUiLang, localize, setUiLang } from './dom-i18n.js';
 import { SETTING_CHOICES, type Settings } from '../shared/settings.js';
 
 interface SettingsApi {
   get(): Promise<Settings>;
   set(patch: Partial<Settings>): Promise<Settings>;
   version(): Promise<string>;
+  /** 지금 쓸 언어(설정이 auto 면 PC 를 따른 결과) */
+  lang?(): Promise<Lang>;
   checkUpdate(): Promise<string>;
   onUpdateStatus(callback: (text: string) => void): void;
   close(): void;
@@ -105,21 +108,31 @@ function render(): void {
   $<HTMLInputElement>('showNews').checked = current.showNews;
   // 검사를 껐으면 주기 선택은 의미가 없다.
   for (const b of $('scanSeconds').querySelectorAll('button')) (b as HTMLButtonElement).disabled = !current.inspectEnabled;
+  localize();
 }
 
 async function change(patch: Partial<Settings>): Promise<void> {
   current = await window.settingsApi.set(patch);
+  if ('language' in patch) await refreshLang();
   render();
+}
+
+/** 메인이 정한 지금 언어를 다시 받아 적용한다(설정이 auto 면 PC 언어·지역을 따른 결과). */
+async function refreshLang(): Promise<void> {
+  await initUiLang(window.settingsApi.lang?.bind(window.settingsApi));
 }
 
 function setStatus(text: string): void {
   $('update-status').textContent = text;
+  localize($('update-status'));
 }
 
 async function start(): Promise<void> {
   current = await window.settingsApi.get();
+  await refreshLang();
   render();
   $('version').textContent = `버전 ${await window.settingsApi.version()}`;
+  localize($('version'));
 
   $<HTMLInputElement>('inspectEnabled').addEventListener('change', (e) => void change({ inspectEnabled: (e.target as HTMLInputElement).checked }));
   $<HTMLInputElement>('autoUpdate').addEventListener('change', (e) => void change({ autoUpdate: (e.target as HTMLInputElement).checked }));

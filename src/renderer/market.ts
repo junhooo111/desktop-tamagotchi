@@ -2,6 +2,9 @@
  * 경매장 창 화면: 서버가 가진 판매 목록과 내 펫을 보여 준다.
  * 값은 메인이 서버에서 읽어서 넘겨 주고, 여기서는 textContent 로만 그린다(남이 쓴 이름이 들어오므로 HTML 로 해석하지 않는다).
  */
+import type { Lang } from '../shared/i18n.js';
+import { initUiLang, localize } from './dom-i18n.js';
+
 export interface Listing {
   listing_id: string;
   price: number;
@@ -41,6 +44,7 @@ interface MarketApi {
   sell(petId: string, price: number): Promise<ActionResult>;
   cancel(listingId: string): Promise<ActionResult>;
   close(): void;
+  lang?(): Promise<Lang>;
 }
 declare global {
   interface Window {
@@ -89,6 +93,7 @@ async function act(p: Promise<ActionResult>): Promise<void> {
   const r = await p;
   render(r.view);
   $('note').textContent = r.message;
+  localize($('note'));
 }
 
 export function render(v: MarketView): void {
@@ -99,6 +104,7 @@ export function render(v: MarketView): void {
   if (!v.ok) {
     $('wallet').textContent = '';
     note.textContent = v.message ?? '경매장을 불러오지 못했어요';
+    localize();
     return;
   }
   $('wallet').textContent = `내 게임머니: ${money(v.coins)}`;
@@ -112,6 +118,7 @@ export function render(v: MarketView): void {
       list.append(row(`${l.species_name} Lv.${l.level}`, `${RARITY[l.rarity] ?? l.rarity} · 판매자 ${l.seller_login}`, [priceTag(l.price), action]));
     }
     note.textContent = v.listings.length === 0 ? '지금 팔고 있는 펫이 없어요' : '사면 바로 내 펫이 돼요. 파는 사람은 수수료 없이 가격만큼 받아요.';
+    localize();
     return;
   }
 
@@ -135,6 +142,7 @@ export function render(v: MarketView): void {
     list.append(row(tag, sub, [input, sell]));
   }
   note.textContent = v.pets.length === 0 ? '펫이 없어요' : '마지막 한 마리는 팔 수 없어요. 팔 때 가격은 1~1,000,000 게임머니예요.';
+  localize();
 }
 
 async function load(): Promise<void> {
@@ -150,7 +158,7 @@ function init(): void {
     });
   }
   $('close').addEventListener('click', () => window.marketApi.close());
-  void load();
+  void initUiLang(window.marketApi.lang?.bind(window.marketApi)).then(load);
 }
 
 if (typeof window !== 'undefined' && 'marketApi' in window) init();
