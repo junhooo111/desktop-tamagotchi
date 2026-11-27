@@ -6,7 +6,9 @@ import { pathToFileURL } from 'node:url';
 
 const root = process.cwd();
 const load = (p) => import(pathToFileURL(path.join(root, 'dist', p)).href);
-const { SPECIES, COMMON_SPECIES, HIDDEN_SPECIES, spriteSet, ACCESSORIES } = await load('shared/species.js');
+const { SPECIES, HIDDEN_SPECIES, spriteSet, ACCESSORIES } = await load('shared/species.js');
+// 이름과 모습을 드러내는 동물(히든 빼고 전부: 일반·고급·희귀·특별·전설)
+const COMMON_SPECIES = SPECIES.filter((s) => s.rarity !== 'hidden');
 const { giftSvg } = await load('shared/gift.js');
 const { poopSvg } = await load('shared/poop.js');
 const { renderProfileCard } = await load('shared/card.js');
@@ -58,7 +60,7 @@ for (const s of COMMON_SPECIES) write(`animals/${s.id}.svg`, svgWrap(128, 128, p
 // 파일 이름에도 히든 동물의 이름을 쓰지 않는다(스포일러 방지): hidden-1.svg …
 HIDDEN_SPECIES.forEach((s, i) => write(`animals/hidden-${i + 1}.svg`, svgWrap(128, 128, silhouetteParts(s.id, 4))));
 
-// ---- 소개 그림: 일반 14종(2줄) + 히든 6종 실루엣 ----
+// ---- 소개 그림: 히든이 아닌 동물 26종(4줄) + 히든 5종 실루엣 ----
 {
   const U = 3;
   const cell = 32 * U + 8;

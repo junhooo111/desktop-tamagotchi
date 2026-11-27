@@ -1,6 +1,17 @@
 {
   "items": [
     {
+      "id": "v0.13.0-friends-animals-roulette",
+      "date": "2026-11-28",
+      "title": "친구, 새 동물 11종, 뽑기 룰렛",
+      "body": "GitHub 친구를 맺고 친밀도를 쌓으면 둘 다 뽑기권을 받아요. 동물이 31종·6등급이 되고, 뽑기는 룰렛으로 돌아요. 꾸미기는 옷장 화면으로 바뀌었어요.",
+      "en": {
+        "title": "Friends, 11 new animals, gacha roulette",
+        "body": "Add friends on GitHub and both of you earn tickets as friendship grows. There are now 31 animals in 6 grades, gacha spins like a roulette, and Customize is a closet."
+      },
+      "url": "https://github.com/junhooo111/desktop-tamagotchi/releases/tag/v0.13.0"
+    },
+    {
       "id": "v0.12.5-pixel-menu",
       "date": "2026-11-28",
       "title": "우클릭 메뉴가 도트로 바뀌었어요",
