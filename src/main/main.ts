@@ -1898,7 +1898,7 @@ function buildMenuModel(): MenuModel {
       },
       {
         id: 'play',
-        label: L('함께', 'Together'),
+        label: L('온라인', 'Online'),
         icon: 'shop',
         items: [
           { id: on('market', () => openMarket()), label: L('경매장…', 'Auction house…'), icon: 'shop', enabled: logged, ...(logged ? {} : { hint: needLogin }) },

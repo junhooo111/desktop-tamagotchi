@@ -167,7 +167,7 @@ Right-click the pet to open a **pixel-style menu**. You can use the mouse or the
 | **Header** | Pet name, level rank, and bars for XP, fullness, mood, and cleanliness (the old `Show status`) |
 | **5 care buttons** | Pet · Feed · Play · Wash · Walk |
 | Tab **My pet** | Customize… · 🎟 Gacha & Collection… (ticket count) · Codex & records… · Let it play alone (here only) / Let it roam freely · Export profile card… |
-| Tab **Together** | 🏪 Auction house… · 🏆 Rankings… (logged-in players) · ☁ Log in with GitHub / your account (sync, contribution check, copy card URL, log out) |
+| Tab **Online** | 🏪 Auction house… · 🏆 Rankings… (logged-in players) · ☁ Log in with GitHub / your account (sync, contribution check, copy card URL, log out) |
 | Tab **Dev** | Inspect now · Inspection results… · FE tip of the day · Inspection tools (inspection browser, demo page, Chrome extension folder) |
 | **Bottom row** | ⚙ Settings · 🔔 News · ⋯ More (check for updates, launch at login, preview moves (test), version) · ⏻ Quit |
 | When a new version is ready | An **Install version … and restart** line appears under the header |
