@@ -125,6 +125,7 @@ footer button:hover {
 
 #pet-name {
   flex: 1;
+  min-width: 0;
   padding: 4px 8px;
   border: 2px solid #3b2f2f;
   border-radius: 8px;
@@ -134,6 +135,8 @@ footer button:hover {
 }
 
 .name-row button {
+  flex: none;
+  white-space: nowrap;
   padding: 4px 12px;
   background: #fffdf5;
   color: #3b2f2f;
