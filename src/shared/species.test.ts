@@ -25,8 +25,8 @@ const cases: [string, SpeciesId, SpriteStage][] = IDS.flatMap((id) =>
 const all: [string, SpeciesId, SpriteStage][] = [...cases, ['egg', 'cat', 'egg']];
 
 describe('종 목록', () => {
-  it('동물 28종이 등급별로 나뉘어 있다(일반 7·고급 3·희귀 6·특별 6·전설 1·히든 5)', () => {
-    expect(SPECIES.map((s) => s.name)).toEqual(['토끼', '고양이', '강아지', '거북이', '병아리', '오리', '여우', '햄스터', '곰', '돼지', '부엉이', '양', '수달', '알파카', '앵무새', '너구리', '판다', '펭귄', '레서판다', '북극여우', '공작', '사자', '용', '청룡', '백호', '현무', '주작', '기린']);
+  it('동물 31종이 등급별로 나뉘어 있다(일반 7·고급 3·희귀 6·특별 6·전설 4·히든 5)', () => {
+    expect(SPECIES.map((s) => s.name)).toEqual(['토끼', '고양이', '강아지', '거북이', '병아리', '오리', '여우', '햄스터', '곰', '돼지', '부엉이', '양', '수달', '알파카', '앵무새', '너구리', '판다', '펭귄', '레서판다', '북극여우', '공작', '사자', '용', '유니콘', '구미호', '그리핀', '청룡', '백호', '현무', '주작', '기린']);
     expect(COMMON_SPECIES).toHaveLength(7);
     expect(HIDDEN_SPECIES.map((s) => s.id)).toEqual(['azure', 'whitetiger', 'tortoise', 'phoenix', 'qilin']);
     expect(isHiddenSpecies('azure')).toBe(true);
@@ -190,10 +190,10 @@ describe('frameToRgba', () => {
 describe('getSpecies / isSpeciesId', () => {
   it('id로 종을 찾고, 모르는 id는 거부한다', () => {
     expect(getSpecies('cat').name).toBe('고양이');
-    expect(() => getSpecies('unicorn' as never)).toThrow();
+    expect(() => getSpecies('chimera' as never)).toThrow();
     expect(isSpeciesId('cat')).toBe(true);
     expect(isSpeciesId('dragon')).toBe(true);
-    expect(isSpeciesId('unicorn')).toBe(false);
+    expect(isSpeciesId('chimera')).toBe(false);
     expect(isSpeciesId(3)).toBe(false);
   });
 });

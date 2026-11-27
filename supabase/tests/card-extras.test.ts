@@ -27,7 +27,7 @@ describe('카드 꾸미기 값 (set_card_extras)', () => {
   it('허용하지 않는 값은 기본값으로, 숫자는 범위 안으로, 이름은 다듬는다', async () => {
     const u = await signUp(db, 'bea');
     await givePet(db, u, 'dog', 1);
-    await set(u, { variant: 'neon', accessory: 'laser', name: '  <b>아주긴이름을가진펫이에요요요</b>\n', stage: 'egg', species: 'unicorn', streak: -4, fixes: 'x', quiz: 99999999, rules: 500, tips: 1.9, badges: 3.7, day: '2001-01-01' });
+    await set(u, { variant: 'neon', accessory: 'laser', name: '  <b>아주긴이름을가진펫이에요요요</b>\n', stage: 'egg', species: 'chimera', streak: -4, fixes: 'x', quiz: 99999999, rules: 500, tips: 1.9, badges: 3.7, day: '2001-01-01' });
     const e = (await card('bea'))['extras'] as Record<string, unknown>;
     expect(e).toMatchObject({ variant: 'default', accessory: 'none', streak: 0, fixes: 0, quiz: 100000, rules: 50, tips: 1, badges: 3, day: await today() });
     expect(e['stage']).toBeUndefined();

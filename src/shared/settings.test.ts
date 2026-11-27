@@ -35,7 +35,7 @@ describe('sanitizeSettings', () => {
 
   it('프로필 카드 동물은 아는 동물이나 current 만 받는다', () => {
     expect(sanitizeSettings({ cardSpecies: 'penguin' }).cardSpecies).toBe('penguin');
-    expect(sanitizeSettings({ cardSpecies: 'unicorn' }).cardSpecies).toBe('current');
+    expect(sanitizeSettings({ cardSpecies: 'chimera' }).cardSpecies).toBe('current');
     expect(sanitizeSettings({}).cardSpecies).toBe('current');
   });
 

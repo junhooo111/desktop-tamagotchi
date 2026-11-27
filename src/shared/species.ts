@@ -13,12 +13,12 @@ import { chunky } from './art/chunky.js';
 import { accessoryPalette, DEFAULT_STYLE, tintLook, type PetStyle } from './art/style.js';
 import { birdFrames } from './art/bird-plan.js';
 import { type BirdSpec } from './art/bird.js';
-import { CHICK, DUCK, OWL, PARROT, PEACOCK, PENGUIN, PHOENIX } from './art/bird-species.js';
+import { CHICK, DUCK, GRIFFIN, OWL, PARROT, PEACOCK, PENGUIN, PHOENIX } from './art/bird-species.js';
 import { EGG_LOOK, eggFrames } from './art/egg.js';
 import { type Frames } from './art/frames.js';
 import { quadFrames, type Gait } from './art/quad-plan.js';
 import { type QuadSpec } from './art/quadruped.js';
-import { ALPACA, ARCTICFOX, AZURE, BEAR, CAT, DOG, DRAGON, FOX, HAMSTER, LION, OTTER, PANDA, PIG, QILIN, RABBIT, RACCOON, REDPANDA, SHEEP, TORTOISE, TURTLE, WHITETIGER } from './art/quad-species.js';
+import { ALPACA, ARCTICFOX, AZURE, BEAR, CAT, DOG, DRAGON, FOX, HAMSTER, KUMIHO, LION, OTTER, PANDA, PIG, QILIN, RABBIT, RACCOON, REDPANDA, SHEEP, TORTOISE, TURTLE, UNICORN, WHITETIGER } from './art/quad-species.js';
 import { paletteOf, type Look } from './art/types.js';
 import { SIZE } from './pixel.js';
 import { hasLegendFormRarity, type Rarity } from './rarity.js';
@@ -57,7 +57,10 @@ export type SpeciesId =
   | 'redpanda'
   | 'arcticfox'
   | 'peacock'
-  | 'lion';
+  | 'lion'
+  | 'unicorn'
+  | 'kumiho'
+  | 'griffin';
 /** 전설(legend)은 히든 동물만 가는 성체 다음 단계다. 히든이 아닌 동물에게 요청하면 성체 그림을 쓴다. */
 export type SpriteStage = 'egg' | 'baby' | 'adult' | 'legend';
 
@@ -109,6 +112,9 @@ const DESIGNS: Record<SpeciesId, Design> = {
   arcticfox: { kind: 'quad', spec: ARCTICFOX, gait: 'trot', skin: 'f' },
   peacock: { kind: 'bird', spec: PEACOCK, skin: 'f' },
   lion: { kind: 'quad', spec: LION, gait: 'trot', skin: 'f' },
+  unicorn: { kind: 'quad', spec: UNICORN, gait: 'trot', skin: 'f' },
+  kumiho: { kind: 'quad', spec: KUMIHO, gait: 'trot', skin: 'f' },
+  griffin: { kind: 'bird', spec: GRIFFIN, skin: 'f' },
 };
 
 const R = (id: SpeciesId, name: string, rarity: Rarity): Species => ({ id, name, rarity });
@@ -137,6 +143,9 @@ export const SPECIES: readonly Species[] = [
   R('peacock', '공작', 'special'),
   R('lion', '사자', 'special'),
   R('dragon', '용', 'legend'),
+  R('unicorn', '유니콘', 'legend'),
+  R('kumiho', '구미호', 'legend'),
+  R('griffin', '그리핀', 'legend'),
   R('azure', '청룡', 'hidden'),
   R('whitetiger', '백호', 'hidden'),
   R('tortoise', '현무', 'hidden'),

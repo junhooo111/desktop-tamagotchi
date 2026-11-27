@@ -543,3 +543,62 @@ export const ARCTICFOX: QuadSpec = {
   ringTail: 'tip',
   tailScale: 1.1,
 };
+
+// ---- 전설 등급 ----
+
+/** 유니콘: 하얀 몸, 금빛 외뿔, 보랏빛 불꽃 갈기, 발굽 */
+export const UNICORN: QuadSpec = {
+  look: makeLook({
+    fur: '#f8f4ff',
+    outline: '#4a3a66',
+    belly: tone('#ffffff'),
+    accent: tone('#c9a8f0'),
+    inner: tone('#b07cf0'),
+    beak: tone('#ffd34a'),
+    nose: '#c07aa8',
+    eye: '#3a2a55',
+  }),
+  ears: 'cat',
+  tail: 'cat',
+  snout: true,
+  whiskers: false,
+  stripes: false,
+  patch: false,
+  shell: false,
+  haunch: false,
+  socks: false,
+  head: { cx: 21, cy: 12.6, rx: 6.2, ry: 6 },
+  bodyScale: { rx: 1, ry: 0.96 },
+  legScale: 1.12,
+  horns: 'single',
+  mane: 'flame',
+  hooves: true,
+  tailScale: 1.15,
+};
+
+/** 구미호: 크림빛 여우에 꼬리가 여러 갈래로 펼쳐지고, 끝은 불꽃빛 */
+export const KUMIHO: QuadSpec = {
+  look: makeLook({
+    fur: '#f6e3c6',
+    outline: '#5a3420',
+    belly: tone('#fffaf0'),
+    accent: tone('#ee7a35'),
+    inner: tone('#f2a5a0'),
+    nose: '#3a2418',
+    eye: '#3a2418',
+  }),
+  ears: 'cat',
+  tail: 'cat',
+  snout: true,
+  whiskers: false,
+  stripes: false,
+  patch: false,
+  shell: false,
+  haunch: false,
+  socks: false,
+  head: { cx: 20.6, cy: 13.6, rx: 6.8, ry: 6 },
+  bodyScale: { rx: 0.92, ry: 0.92 },
+  ringTail: 'tip',
+  tails: 3,
+  tailScale: 1.3,
+};

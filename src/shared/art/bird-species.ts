@@ -102,3 +102,19 @@ export const PEACOCK: BirdSpec = {
     eye: '#10202b',
   }),
 };
+
+/** 그리핀: 하얀 독수리 머리, 금빛 갈색 몸(전설 단계에서 금빛 날개가 돋는다) */
+export const GRIFFIN: BirdSpec = {
+  kind: 'chick',
+  tuft: true,
+  coloredHead: true,
+  look: makeLook({
+    fur: '#c98a38',
+    outline: '#3f2a14',
+    belly: tone('#f0c27a'),
+    accent: tone('#8f5a22'),
+    beak: tone('#f2b632'),
+    head: tone('#f4f0e6'),
+    eye: '#2a1a0a',
+  }),
+};

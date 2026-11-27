@@ -45,12 +45,12 @@ describe('확률', () => {
     expect(speciesOf('uncommon').map((s) => s.id)).toEqual(['hamster', 'bear', 'pig']);
     expect(speciesOf('rare').map((s) => s.id)).toEqual(['owl', 'sheep', 'otter', 'alpaca', 'parrot', 'raccoon']);
     expect(speciesOf('special').map((s) => s.id)).toEqual(['panda', 'penguin', 'redpanda', 'arcticfox', 'peacock', 'lion']);
-    expect(speciesOf('legend').map((s) => s.id)).toEqual(['dragon']);
+    expect(speciesOf('legend').map((s) => s.id)).toEqual(['dragon', 'unicorn', 'kumiho', 'griffin']);
     expect(HIDDEN_SPECIES.map((s) => s.id)).toEqual(['azure', 'whitetiger', 'tortoise', 'phoenix', 'qilin']);
     expect(percentEach('common')).toBeCloseTo(50 / 7);
     expect(percentEach('uncommon')).toBeCloseTo(8);
     expect(percentEach('rare')).toBeCloseTo(2.5);
-    expect(percentEach('legend')).toBeCloseTo(3);
+    expect(percentEach('legend')).toBeCloseTo(0.75);
     expect(percentEach('hidden')).toBeCloseTo(0.2);
     expect(SPECIES.reduce((n, s) => n + percentEach(s.rarity), 0)).toBeCloseTo(100);
   });
@@ -70,7 +70,10 @@ describe('확률', () => {
     expect(rollSpecies(() => 0.8901, 0)).toEqual({ id: 'panda', rarity: 'special', hidden: false });
     expect(rollSpecies(() => 0.9599, 0).id).toBe('lion'); // 특별의 마지막
     expect(rollSpecies(() => 0.9601, 0)).toEqual({ id: 'dragon', rarity: 'legend', hidden: false });
-    expect(rollSpecies(() => 0.9899, 0).id).toBe('dragon');
+    expect(rollSpecies(() => 0.9669, 0).id).toBe('dragon');
+    expect(rollSpecies(() => 0.9701, 0).id).toBe('unicorn');
+    expect(rollSpecies(() => 0.9801, 0).id).toBe('kumiho');
+    expect(rollSpecies(() => 0.9899, 0).id).toBe('griffin'); // 전설의 마지막
     expect(rollSpecies(() => 0.9901, 0)).toEqual({ id: 'azure', rarity: 'hidden', hidden: true });
     expect(rollSpecies(() => 0.9999, 0)).toEqual({ id: 'qilin', rarity: 'hidden', hidden: true });
   });
@@ -87,7 +90,8 @@ describe('확률', () => {
 
   it('천장: 전설이 안 나온 채 쌓이면 다음 뽑기는 반드시 전설이고, 히든은 천장으로 나오지 않는다', () => {
     expect(rollSpecies(() => 0.5, LEGEND_PITY - 2).rarity).toBe('common');
-    expect(rollSpecies(() => 0.5, LEGEND_PITY - 1)).toEqual({ id: 'dragon', rarity: 'legend', hidden: false });
+    expect(rollSpecies(() => 0.5, LEGEND_PITY - 1)).toEqual({ id: 'kumiho', rarity: 'legend', hidden: false }); // 전설 4종 중 고른다
+    expect(rollSpecies(() => 0, LEGEND_PITY - 1).id).toBe('dragon');
     expect(rollSpecies(() => 0.9999, LEGEND_PITY - 1).rarity).toBe('legend'); // 난수가 히든 구간이어도 천장이면 전설
     expect(rollSpecies(() => 0.9999, LEGEND_PITY - 2).rarity).toBe('hidden'); // 천장이 아니면 히든도 그냥 나온다
   });
@@ -124,7 +128,7 @@ describe('동물 뽑기', () => {
 
   it('전설이나 히든이 나오면 천장 카운터가 0 으로 돌아가고, 아니면 늘어난다', () => {
     const c = { ...withTickets(start(), 20), sinceHidden: 7 };
-    const legend = pullSpecies(c, NOW, () => 0.97).collection;
+    const legend = pullSpecies(c, NOW, () => 0.9601).collection;
     expect(legend.sinceHidden).toBe(0);
     expect(legend.owned.dragon).toBeDefined();
     const hidden = pullSpecies({ ...legend, sinceHidden: 9 }, NOW, () => 0.995).collection;
@@ -297,9 +301,9 @@ describe('화면에 보여 줄 값', () => {
   it('모든 동물을 보여 주고 가진 것·꺼낸 것을 표시하며, 천장까지 남은 수를 센다', () => {
     const c = pullSpecies(withTickets(start(), 3), NOW, () => 0.75).collection;
     const v = buildCollectionView(c, 5);
-    expect(v.entries).toHaveLength(28);
+    expect(v.entries).toHaveLength(31);
     expect(v.ownedCount).toBe(2);
-    expect(v.total).toBe(28);
+    expect(v.total).toBe(31);
     expect(v.entries.find((e) => e.id === 'cat')).toMatchObject({ owned: true, active: true, level: 6, stage: 'adult' });
     expect(v.entries.find((e) => e.id === 'owl')).toMatchObject({ owned: true, active: false, stage: 'baby', count: 1 });
     expect(v.entries.find((e) => e.id === 'azure')).toMatchObject({ owned: false, hidden: true, rarity: 'hidden' });
@@ -307,7 +311,7 @@ describe('화면에 보여 줄 값', () => {
     expect(v.entries.find((e) => e.id === 'owl')!.rarity).toBe('rare');
     expect(v.untilPity).toBe(LEGEND_PITY - 1);
     expect(v.cosmeticLeft).toBe(5);
-    expect(v.chances.map((c) => [c.rarity, c.count, c.total])).toEqual([['common', 7, 50], ['uncommon', 3, 24], ['rare', 6, 15], ['special', 6, 7], ['legend', 1, 3], ['hidden', 5, 1]]);
+    expect(v.chances.map((c) => [c.rarity, c.count, c.total])).toEqual([['common', 7, 50], ['uncommon', 3, 24], ['rare', 6, 15], ['special', 6, 7], ['legend', 4, 3], ['hidden', 5, 1]]);
     expect(v.chances.find((c) => c.rarity === 'hidden')!.each).toBeCloseTo(0.2);
   });
 
@@ -334,11 +338,11 @@ describe('저장 파일 검증', () => {
   it('이상한 항목만 버리고 나머지는 살린다(모르는 동물·음수·범위 밖 값·없는 장식)', () => {
     const raw = {
       ...ok,
-      owned: { ...ok.owned, unicorn: ok.owned.cat, dog: { pet: { xp: 5, hunger: 500, happiness: -3, lastTickAt: 1 }, name: '<b>멍멍</b>', count: -4 } },
+      owned: { ...ok.owned, chimera: ok.owned.cat, dog: { pet: { xp: 5, hunger: 500, happiness: -3, lastTickAt: 1 }, name: '<b>멍멍</b>', count: -4 } },
       tickets: -7,
       accessories: ['ribbon', 'laser', 3],
       variants: ['mono', 'neon'],
-      active: 'unicorn',
+      active: 'chimera',
       lastDaily: 'yesterday',
     };
     const c = clean(raw)!;

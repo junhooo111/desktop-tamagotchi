@@ -70,6 +70,8 @@ export interface QuadSpec {
   ringTail?: boolean | 'tip';
   /** 꼬리 길이·굵기 배율(기본 1). 풍성한 꼬리는 크게 */
   tailScale?: number;
+  /** 꼬리 개수(구미호). 부채꼴로 펼쳐 그린다. 기본 1 */
+  tails?: number;
 }
 
 const GROUND = 30;
@@ -141,7 +143,19 @@ function drawLeg(
 }
 
 /** 꼬리: 뿌리에서 시작해 세 마디로 휜다. */
+/** 꼬리가 여러 개면(구미호) 부채꼴로 펼쳐 바깥쪽부터 그리고, 가운데 꼬리를 맨 위에 그린다. */
 function drawTail(g: Grid, r: Rig, pose: Pose, root: { x: number; y: number }): void {
+  const n = r.spec.tails ?? 1;
+  if (n <= 1) {
+    drawTailOne(g, r, pose, root);
+    return;
+  }
+  const step = 24;
+  const order = Array.from({ length: n }, (_, i) => i - (n - 1) / 2).sort((a, b) => Math.abs(b) - Math.abs(a));
+  for (const k of order) drawTailOne(g, r, { ...pose, tailAngle: pose.tailAngle + 22 + k * step, tailCurl: pose.tailCurl + 10 + k * 6 }, root);
+}
+
+function drawTailOne(g: Grid, r: Rig, pose: Pose, root: { x: number; y: number }): void {
   const { tail } = r.spec;
   if (tail === 'none') return;
   const rx = r.X(root.x);

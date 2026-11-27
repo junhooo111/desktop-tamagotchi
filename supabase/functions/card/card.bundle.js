@@ -2160,6 +2160,20 @@ var PEACOCK = {
     eye: "#10202b"
   })
 };
+var GRIFFIN = {
+  kind: "chick",
+  tuft: true,
+  coloredHead: true,
+  look: makeLook({
+    fur: "#c98a38",
+    outline: "#3f2a14",
+    belly: tone("#f0c27a"),
+    accent: tone("#8f5a22"),
+    beak: tone("#f2b632"),
+    head: tone("#f4f0e6"),
+    eye: "#2a1a0a"
+  })
+};
 
 // dist/shared/art/egg.js
 var EGG_LOOK = makeLook({
@@ -2352,6 +2366,17 @@ function drawLeg(g, r, x, topY, w, l, far, crouch) {
   }, { outline: "k", shade: far ? void 0 : SHADE });
 }
 function drawTail2(g, r, pose, root) {
+  const n = r.spec.tails ?? 1;
+  if (n <= 1) {
+    drawTailOne(g, r, pose, root);
+    return;
+  }
+  const step = 24;
+  const order = Array.from({ length: n }, (_, i) => i - (n - 1) / 2).sort((a, b) => Math.abs(b) - Math.abs(a));
+  for (const k of order)
+    drawTailOne(g, r, { ...pose, tailAngle: pose.tailAngle + 22 + k * step, tailCurl: pose.tailCurl + 10 + k * 6 }, root);
+}
+function drawTailOne(g, r, pose, root) {
   const { tail } = r.spec;
   if (tail === "none")
     return;
@@ -3338,6 +3363,59 @@ var ARCTICFOX = {
   ringTail: "tip",
   tailScale: 1.1
 };
+var UNICORN = {
+  look: makeLook({
+    fur: "#f8f4ff",
+    outline: "#4a3a66",
+    belly: tone("#ffffff"),
+    accent: tone("#c9a8f0"),
+    inner: tone("#b07cf0"),
+    beak: tone("#ffd34a"),
+    nose: "#c07aa8",
+    eye: "#3a2a55"
+  }),
+  ears: "cat",
+  tail: "cat",
+  snout: true,
+  whiskers: false,
+  stripes: false,
+  patch: false,
+  shell: false,
+  haunch: false,
+  socks: false,
+  head: { cx: 21, cy: 12.6, rx: 6.2, ry: 6 },
+  bodyScale: { rx: 1, ry: 0.96 },
+  legScale: 1.12,
+  horns: "single",
+  mane: "flame",
+  hooves: true,
+  tailScale: 1.15
+};
+var KUMIHO = {
+  look: makeLook({
+    fur: "#f6e3c6",
+    outline: "#5a3420",
+    belly: tone("#fffaf0"),
+    accent: tone("#ee7a35"),
+    inner: tone("#f2a5a0"),
+    nose: "#3a2418",
+    eye: "#3a2418"
+  }),
+  ears: "cat",
+  tail: "cat",
+  snout: true,
+  whiskers: false,
+  stripes: false,
+  patch: false,
+  shell: false,
+  haunch: false,
+  socks: false,
+  head: { cx: 20.6, cy: 13.6, rx: 6.8, ry: 6 },
+  bodyScale: { rx: 0.92, ry: 0.92 },
+  ringTail: "tip",
+  tails: 3,
+  tailScale: 1.3
+};
 
 // dist/shared/rarity.js
 var hasLegendFormRarity = (r) => r === "legend" || r === "hidden";
@@ -3371,7 +3449,10 @@ var DESIGNS = {
   redpanda: { kind: "quad", spec: REDPANDA, gait: "trot", skin: "f" },
   arcticfox: { kind: "quad", spec: ARCTICFOX, gait: "trot", skin: "f" },
   peacock: { kind: "bird", spec: PEACOCK, skin: "f" },
-  lion: { kind: "quad", spec: LION, gait: "trot", skin: "f" }
+  lion: { kind: "quad", spec: LION, gait: "trot", skin: "f" },
+  unicorn: { kind: "quad", spec: UNICORN, gait: "trot", skin: "f" },
+  kumiho: { kind: "quad", spec: KUMIHO, gait: "trot", skin: "f" },
+  griffin: { kind: "bird", spec: GRIFFIN, skin: "f" }
 };
 var R = (id, name, rarity) => ({ id, name, rarity });
 var SPECIES = [
@@ -3398,6 +3479,9 @@ var SPECIES = [
   R("peacock", "\uACF5\uC791", "special"),
   R("lion", "\uC0AC\uC790", "special"),
   R("dragon", "\uC6A9", "legend"),
+  R("unicorn", "\uC720\uB2C8\uCF58", "legend"),
+  R("kumiho", "\uAD6C\uBBF8\uD638", "legend"),
+  R("griffin", "\uADF8\uB9AC\uD540", "legend"),
   R("azure", "\uCCAD\uB8E1", "hidden"),
   R("whitetiger", "\uBC31\uD638", "hidden"),
   R("tortoise", "\uD604\uBB34", "hidden"),
