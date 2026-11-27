@@ -44,7 +44,7 @@ describe('확률', () => {
     expect(speciesOf('common')).toHaveLength(7);
     expect(speciesOf('uncommon').map((s) => s.id)).toEqual(['hamster', 'bear', 'pig']);
     expect(speciesOf('rare').map((s) => s.id)).toEqual(['owl', 'sheep', 'otter', 'alpaca', 'parrot', 'raccoon']);
-    expect(speciesOf('special').map((s) => s.id)).toEqual(['panda', 'penguin']);
+    expect(speciesOf('special').map((s) => s.id)).toEqual(['panda', 'penguin', 'redpanda', 'arcticfox', 'peacock', 'lion']);
     expect(speciesOf('legend').map((s) => s.id)).toEqual(['dragon']);
     expect(HIDDEN_SPECIES.map((s) => s.id)).toEqual(['azure', 'whitetiger', 'tortoise', 'phoenix', 'qilin']);
     expect(percentEach('common')).toBeCloseTo(50 / 7);
@@ -68,7 +68,7 @@ describe('확률', () => {
     expect(rollSpecies(() => 0.8649, 0).id).toBe('parrot');
     expect(rollSpecies(() => 0.8899, 0).id).toBe('raccoon');
     expect(rollSpecies(() => 0.8901, 0)).toEqual({ id: 'panda', rarity: 'special', hidden: false });
-    expect(rollSpecies(() => 0.9599, 0).id).toBe('penguin');
+    expect(rollSpecies(() => 0.9599, 0).id).toBe('lion'); // 특별의 마지막
     expect(rollSpecies(() => 0.9601, 0)).toEqual({ id: 'dragon', rarity: 'legend', hidden: false });
     expect(rollSpecies(() => 0.9899, 0).id).toBe('dragon');
     expect(rollSpecies(() => 0.9901, 0)).toEqual({ id: 'azure', rarity: 'hidden', hidden: true });
@@ -297,9 +297,9 @@ describe('화면에 보여 줄 값', () => {
   it('모든 동물을 보여 주고 가진 것·꺼낸 것을 표시하며, 천장까지 남은 수를 센다', () => {
     const c = pullSpecies(withTickets(start(), 3), NOW, () => 0.75).collection;
     const v = buildCollectionView(c, 5);
-    expect(v.entries).toHaveLength(24);
+    expect(v.entries).toHaveLength(28);
     expect(v.ownedCount).toBe(2);
-    expect(v.total).toBe(24);
+    expect(v.total).toBe(28);
     expect(v.entries.find((e) => e.id === 'cat')).toMatchObject({ owned: true, active: true, level: 6, stage: 'adult' });
     expect(v.entries.find((e) => e.id === 'owl')).toMatchObject({ owned: true, active: false, stage: 'baby', count: 1 });
     expect(v.entries.find((e) => e.id === 'azure')).toMatchObject({ owned: false, hidden: true, rarity: 'hidden' });
@@ -307,7 +307,7 @@ describe('화면에 보여 줄 값', () => {
     expect(v.entries.find((e) => e.id === 'owl')!.rarity).toBe('rare');
     expect(v.untilPity).toBe(LEGEND_PITY - 1);
     expect(v.cosmeticLeft).toBe(5);
-    expect(v.chances.map((c) => [c.rarity, c.count, c.total])).toEqual([['common', 7, 50], ['uncommon', 3, 24], ['rare', 6, 15], ['special', 2, 7], ['legend', 1, 3], ['hidden', 5, 1]]);
+    expect(v.chances.map((c) => [c.rarity, c.count, c.total])).toEqual([['common', 7, 50], ['uncommon', 3, 24], ['rare', 6, 15], ['special', 6, 7], ['legend', 1, 3], ['hidden', 5, 1]]);
     expect(v.chances.find((c) => c.rarity === 'hidden')!.each).toBeCloseTo(0.2);
   });
 

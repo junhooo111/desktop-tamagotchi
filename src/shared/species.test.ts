@@ -25,8 +25,8 @@ const cases: [string, SpeciesId, SpriteStage][] = IDS.flatMap((id) =>
 const all: [string, SpeciesId, SpriteStage][] = [...cases, ['egg', 'cat', 'egg']];
 
 describe('종 목록', () => {
-  it('동물 24종이 등급별로 나뉘어 있다(일반 7·고급 3·희귀 6·특별 2·전설 1·히든 5)', () => {
-    expect(SPECIES.map((s) => s.name)).toEqual(['토끼', '고양이', '강아지', '거북이', '병아리', '오리', '여우', '햄스터', '곰', '돼지', '부엉이', '양', '수달', '알파카', '앵무새', '너구리', '판다', '펭귄', '용', '청룡', '백호', '현무', '주작', '기린']);
+  it('동물 28종이 등급별로 나뉘어 있다(일반 7·고급 3·희귀 6·특별 6·전설 1·히든 5)', () => {
+    expect(SPECIES.map((s) => s.name)).toEqual(['토끼', '고양이', '강아지', '거북이', '병아리', '오리', '여우', '햄스터', '곰', '돼지', '부엉이', '양', '수달', '알파카', '앵무새', '너구리', '판다', '펭귄', '레서판다', '북극여우', '공작', '사자', '용', '청룡', '백호', '현무', '주작', '기린']);
     expect(COMMON_SPECIES).toHaveLength(7);
     expect(HIDDEN_SPECIES.map((s) => s.id)).toEqual(['azure', 'whitetiger', 'tortoise', 'phoenix', 'qilin']);
     expect(isHiddenSpecies('azure')).toBe(true);
@@ -115,7 +115,7 @@ describe('스프라이트 데이터', () => {
   });
 
   it.each(cases)('%s: 세세한 장식(눈 반짝임·볼터치)을 쓰지 않는 단순한 그림이다', (_n, id, stage) => {
-    // "대충 생겨야 귀엽다"는 의견에 따라 단색 덩어리 + 윤곽선 + 점 눈으로 그린다.
+    // "대충 생겨야 귀엽다"는 의견에 따라 단색 덩어리 + 윤곽선 + 점 눈으로 그린다. 모든 동물이 같은 해상도(2x2 뭉침)다.
     const f = spriteSet(id, stage).frames;
     for (const name of ['idleA', 'walk1', 'sitA', 'happyA'] as const) {
       const all = f[name].join('');

@@ -85,3 +85,20 @@ export const PARROT: BirdSpec = {
     eye: '#1f2a1f',
   }),
 };
+
+/** 공작: 푸른 몸과 머리, 머리깃, 눈 무늬가 박힌 초록빛 꼬리 부채 */
+export const PEACOCK: BirdSpec = {
+  kind: 'chick',
+  tuft: true,
+  coloredHead: true,
+  fan: true,
+  look: makeLook({
+    fur: '#1f86c7',
+    outline: '#10283a',
+    belly: tone('#58c96e'),
+    accent: tone('#1d58a8'),
+    beak: tone('#f0c24a'),
+    head: tone('#1a62b3'),
+    eye: '#10202b',
+  }),
+};

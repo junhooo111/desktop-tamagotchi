@@ -54,7 +54,7 @@ describe('가입', () => {
 describe('읽기 권한(RLS)', () => {
   it('방문자(anon)는 펫 종류만 볼 수 있고 프로필·원장·학습 기록은 못 본다', async () => {
     await as(db, null, async () => {
-      expect((await rows('select id from public.species')).length).toBe(24);
+      expect((await rows('select id from public.species')).length).toBe(28);
       for (const table of ['profiles', 'ledger', 'learning_events']) {
         expect(await errorOf(() => db.query(`select * from public.${table}`)), table).toMatch(/permission denied/);
       }

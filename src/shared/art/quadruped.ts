@@ -67,7 +67,9 @@ export interface QuadSpec {
   /** 다리를 무늬색으로(판다·양) */
   darkLegs?: boolean;
   /** 꼬리에 어두운 고리 무늬(너구리) */
-  ringTail?: boolean;
+  ringTail?: boolean | 'tip';
+  /** 꼬리 길이·굵기 배율(기본 1). 풍성한 꼬리는 크게 */
+  tailScale?: number;
 }
 
 const GROUND = 30;
@@ -152,8 +154,9 @@ function drawTail(g: Grid, r: Rig, pose: Pose, root: { x: number; y: number }): 
     part(g, (t) => triangle(t, rx, ry - 1, rx, ry + 2.5, rx - 4.5 * r.size - 1, ry + 2.5, 'f'), { outline: 'k', shade: SHADE });
     return;
   }
-  const len = (tail === 'cat' ? 4 : 3.2) * r.size;
-  const thick = (tail === 'cat' ? 4.3 : 3.4) * Math.max(r.size, 0.85); // 고양이 꼬리는 철사처럼 보이지 않게 통통하게
+  const ts = r.spec.tailScale ?? 1;
+  const len = (tail === 'cat' ? 4 : 3.2) * r.size * (1 + (ts - 1) * 0.6);
+  const thick = (tail === 'cat' ? 4.3 : 3.4) * Math.max(r.size, 0.85) * ts; // 고양이 꼬리는 철사처럼 보이지 않게 통통하게
   const pts: [number, number][] = [[rx, ry]];
   let ang = 180 - pose.tailAngle; // 0도 = 오른쪽, 180도 = 왼쪽(뒤)
   for (let i = 0; i < 3; i++) {
@@ -175,7 +178,12 @@ function drawTail(g: Grid, r: Rig, pose: Pose, root: { x: number; y: number }): 
   // 백호의 꼬리 줄무늬
   if (r.spec.markings === 'tiger') for (let i = 1; i < pts.length; i++) paintFur(g, (pts[i] as [number, number])[0] - 1, (pts[i] as [number, number])[1] - 2, 2, 4, 'a');
   // 너구리의 꼬리 고리: 마디의 가운데와 끝에 어두운 띠를 번갈아 두른다
-  if (r.spec.ringTail) {
+  if (r.spec.ringTail === 'tip') {
+    // 사자·북극여우: 꼬리 끝만 무늬색 술
+    const end = pts[pts.length - 1] as [number, number];
+    const prev = pts[pts.length - 2] as [number, number];
+    paintFur(g, (end[0] + prev[0]) / 2 - 1.5, (end[1] + prev[1]) / 2 - 2, 4, 4, 'a');
+  } else if (r.spec.ringTail) {
     for (let i = 1; i < pts.length; i++) {
       const a = pts[i - 1] as [number, number];
       const b = pts[i] as [number, number];

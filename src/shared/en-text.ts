@@ -9,7 +9,7 @@ export const NAMES_EN: Record<string, string> = {
   // 동물
   토끼: 'Rabbit', 고양이: 'Cat', 강아지: 'Puppy', 거북이: 'Turtle', 병아리: 'Chick', 오리: 'Duck', 여우: 'Fox', 햄스터: 'Hamster',
   펭귄: 'Penguin', 판다: 'Panda', 곰: 'Bear', 돼지: 'Pig', 양: 'Sheep', 부엉이: 'Owl',
-  용: 'Dragon', 청룡: 'Azure Dragon', 백호: 'White Tiger', 현무: 'Black Tortoise', 주작: 'Vermilion Bird', 기린: 'Qilin', 수달: 'Otter', 알파카: 'Alpaca', 앵무새: 'Parrot', 너구리: 'Raccoon',
+  용: 'Dragon', 청룡: 'Azure Dragon', 백호: 'White Tiger', 현무: 'Black Tortoise', 주작: 'Vermilion Bird', 기린: 'Qilin', 수달: 'Otter', 레서판다: 'Red panda', 북극여우: 'Arctic fox', 공작: 'Peacock', 사자: 'Lion', 알파카: 'Alpaca', 앵무새: 'Parrot', 너구리: 'Raccoon',
   // 장식
   리본: 'Ribbon', 선글라스: 'Sunglasses', 왕관: 'Crown', 날개: 'Wings', 새싹: 'Sprout', 꽃: 'Flower', '파티 모자': 'Party hat',
   '천사 고리': 'Halo', 야구모자: 'Cap', '마법사 모자': 'Witch hat', '요리사 모자': 'Chef hat', '산타 모자': 'Santa hat',

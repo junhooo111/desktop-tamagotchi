@@ -461,3 +461,85 @@ export const RACCOON: QuadSpec = {
   markings: 'mask',
   ringTail: true,
 };
+
+// ---- 특별 등급: 고해상도(32x32 그대로 + 음영, art/fine.ts) ----
+
+/** 사자: 황금빛 털, 얼굴을 빙 두른 큼직한 갈기, 끝이 술 같은 꼬리 */
+export const LION: QuadSpec = {
+  look: makeLook({
+    fur: '#e2a847',
+    outline: '#3a2616',
+    belly: tone('#f7deaa'),
+    accent: tone('#7a4a1f'),
+    inner: tone('#93501f'),
+    nose: '#6b3a2a',
+    eye: '#2b1a10',
+  }),
+  ears: 'round',
+  tail: 'dog',
+  snout: true,
+  whiskers: false,
+  stripes: false,
+  patch: false,
+  shell: false,
+  haunch: false,
+  socks: false,
+  head: { cx: 21, cy: 13.8, rx: 6.2, ry: 5.8 },
+  bodyScale: { rx: 1, ry: 0.98 },
+  mane: 'lion',
+  ringTail: 'tip',
+};
+
+/** 레서판다: 붉은 털, 하얀 볼과 눈썹, 검은 다리와 배, 고리무늬 꼬리 */
+export const REDPANDA: QuadSpec = {
+  look: makeLook({
+    fur: '#c9532b',
+    outline: '#3b1c14',
+    belly: tone('#4d2a22'),
+    accent: tone('#3a1f19'),
+    inner: tone('#f6efe4'),
+    nose: '#1f1411',
+    eye: '#1f1411',
+  }),
+  ears: 'round',
+  tail: 'cat',
+  snout: false,
+  whiskers: false,
+  stripes: false,
+  patch: false,
+  shell: false,
+  haunch: false,
+  socks: false,
+  head: { cx: 20.8, cy: 14, rx: 7.1, ry: 6.2 },
+  bodyScale: { rx: 1, ry: 0.94 },
+  markings: 'cheeks',
+  ringTail: true,
+  tailScale: 1.4,
+  darkLegs: true,
+};
+
+/** 북극여우: 눈처럼 흰 털에 푸른 그늘, 짧고 둥근 귀, 풍성한 꼬리 */
+export const ARCTICFOX: QuadSpec = {
+  look: makeLook({
+    fur: '#f1f6fb',
+    outline: '#33445a',
+    belly: tone('#ffffff'),
+    accent: tone('#9db8d6'),
+    inner: tone('#efc3cd'),
+    nose: '#26303d',
+    eye: '#26303d',
+  }),
+  ears: 'round',
+  tail: 'cat',
+  snout: true,
+  whiskers: false,
+  stripes: false,
+  patch: false,
+  shell: false,
+  haunch: false,
+  socks: false,
+  head: { cx: 20.6, cy: 13.8, rx: 6.8, ry: 6 },
+  bodyScale: { rx: 0.96, ry: 0.94 },
+  ringTail: 'tip',
+  tailScale: 1.1,
+};

@@ -104,7 +104,7 @@ describe('학습 이벤트 보고 (report_learning)', () => {
 describe('동물 뽑기 (gacha_pull) — 앱 규칙(src/shared/collection.ts)과 같은 값', () => {
   /** 0015 의 원래 가중치로 되돌린다 */
   const restoreWeights = () =>
-    admin(db, "update public.species set gacha_weight = case rarity when 'common' then 1500 when 'uncommon' then 1680 when 'rare' then 525 when 'special' then 735 when 'legend' then 630 else 42 end");
+    admin(db, "update public.species set gacha_weight = case rarity when 'common' then 1500 when 'uncommon' then 1680 when 'rare' then 525 when 'special' then 245 when 'legend' then 630 else 42 end");
 
   const pull = async (user: string) =>
     as(db, user, async () => (await db.query<{ r: { pet_id: string; species_id: string; rarity: string; tickets: number } }>(

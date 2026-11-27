@@ -18,6 +18,8 @@ export interface BirdSpec {
   bodyWings?: boolean;
   /** 머리(와 머리깃)를 털과 다른 색(look.head)으로 칠한다(앵무새의 붉은 머리). 오리는 늘 그렇다. */
   coloredHead?: boolean;
+  /** 공작의 펼친 꼬리 부채(눈 무늬가 있다) */
+  fan?: boolean;
 }
 
 const hasTuft = (spec: BirdSpec): boolean => spec.tuft ?? spec.kind === 'chick';
@@ -193,9 +195,38 @@ function drawBody(g: Grid, r: Rig, cx: number, cy: number, rx: number, ry: numbe
   void r;
 }
 
-function drawTail(g: Grid, r: Rig, cx: number, cy: number, up: number): void {
+/** 공작의 꼬리 부채: 몸 뒤에서 위로 활짝 펼쳐진 큰 부채에 눈 무늬(금빛 점 + 어두운 점)가 둥글게 박힌다. scale 이 작으면 접어 둔 모습. */
+function drawFan(g: Grid, r: Rig, cx: number, cy: number, scale: number): void {
+  const k = r.size * scale;
+  const fx = cx + 4 * k;
+  const fy = cy - 5.8 * k;
+  const frx = 8.4 * k;
+  const fry = 9.6 * k;
+  part(g, (t) => ellipse(t, fx, fy, frx, fry, 'b'), { outline: 'k' });
+  const ring = (rr: number, from: number, to: number, n: number): void => {
+    for (let i = 0; i < n; i++) {
+      const a = ((from + ((to - from) * i) / Math.max(1, n - 1)) * Math.PI) / 180;
+      const x = fx + Math.cos(a) * frx * rr;
+      const y = fy - Math.sin(a) * fry * rr;
+      rect(g, x - 1, y - 1, 3, 3, 'p');
+      px(g, x, y, 'A');
+    }
+  };
+  if (scale >= 0.8) {
+    ring(0.78, 60, 200, 5);
+    ring(0.42, 100, 190, 3);
+  } else {
+    ring(0.6, 100, 190, 3);
+  }
+}
+
+function drawTail(g: Grid, r: Rig, cx: number, cy: number, up: number, fan = 1): void {
   const k = r.size;
   const duck = r.spec.kind === 'duck';
+  if (r.spec.fan) {
+    drawFan(g, r, cx, cy, fan);
+    return;
+  }
   part(
     g,
     (t) => {
@@ -241,7 +272,7 @@ function lying(r: Rig, pose: Pose): Grid {
   const g = blank();
   const duck = r.spec.kind === 'duck';
   const breath = pose.stretch;
-  drawTail(g, r, r.X(5), r.Y(26), 0);
+  drawTail(g, r, r.X(5), r.Y(26), 0, 0.5);
   drawBody(g, r, r.X(14.8), r.Y(25.4 - breath * 0.4), (10.2 + breath * 0.4) * r.size, (5.8 + breath * 0.5) * r.size);
   drawWing(g, r, { ...pose, wing: 0 }, r.X(12.6), r.Y(25.2));
   drawBackWings(g, wingKind(r.spec), r.X(11), r.Y(25.4) - 5.5 * r.size, r.size);
@@ -257,7 +288,7 @@ function lying(r: Rig, pose: Pose): Grid {
 function curled(r: Rig, pose: Pose): Grid {
   const g = blank();
   const duck = r.spec.kind === 'duck';
-  drawTail(g, r, r.X(6), r.Y(24), 1);
+  drawTail(g, r, r.X(6), r.Y(24), 1, 0.5);
   part(
     g,
     (t) => {

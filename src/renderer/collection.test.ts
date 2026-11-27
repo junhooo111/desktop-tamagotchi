@@ -68,7 +68,7 @@ describe('뽑기·컬렉션 창', () => {
   it('뽑기권, 가진 동물 수, 비용, 확률, 천장을 보여 준다', async () => {
     await open(view(base(5)));
     expect(el('tickets').textContent).toContain('5장');
-    expect(el('owned-count').textContent).toContain('1/24');
+    expect(el('owned-count').textContent).toContain('1/28');
     expect(el('pull-species').textContent).toContain('3장');
     expect(el('pull-cosmetic').textContent).toContain('2장');
     expect(el('chances').textContent).toContain('일반 7종 각 7.1%');
@@ -136,14 +136,14 @@ describe('뽑기·컬렉션 창', () => {
     expect(el('pity').textContent).toContain('50번 안에');
     expect(el('pity').textContent).toContain('지금까지 0번');
     expect(el('tickets').textContent).toContain('7장');
-    expect(el('owned-count').textContent).toContain('1/24');
+    expect(el('owned-count').textContent).toContain('1/28');
     api.pullSpecies.mockResolvedValue({ ok: true, message: '부엉이(이)가 새로 왔어요!', id: 'owl', isNew: true, hidden: false, count: 1, view: view(after) });
     el('pull-species').click();
     await settle();
     expect(el('pity').textContent).toContain('49번 안에');
     expect(el('pity').textContent).toContain('지금까지 1번');
     expect(el('tickets').textContent).toContain('4장');
-    expect(el('owned-count').textContent).toContain('2/24');
+    expect(el('owned-count').textContent).toContain('2/28');
   });
 
   it('뽑는 중에 새로고침 신호가 와도 연출이 끝난 뒤 최신 값으로 다시 맞춘다', async () => {

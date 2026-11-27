@@ -1832,9 +1832,36 @@ function drawBody(g, r, cx, cy, rx, ry) {
   }, { outline: "k", shade: SHADE });
   void r;
 }
-function drawTail(g, r, cx, cy, up) {
+function drawFan(g, r, cx, cy, scale) {
+  const k = r.size * scale;
+  const fx = cx + 4 * k;
+  const fy = cy - 5.8 * k;
+  const frx = 8.4 * k;
+  const fry = 9.6 * k;
+  part(g, (t) => ellipse(t, fx, fy, frx, fry, "b"), { outline: "k" });
+  const ring = (rr, from, to, n) => {
+    for (let i = 0; i < n; i++) {
+      const a = (from + (to - from) * i / Math.max(1, n - 1)) * Math.PI / 180;
+      const x = fx + Math.cos(a) * frx * rr;
+      const y = fy - Math.sin(a) * fry * rr;
+      rect(g, x - 1, y - 1, 3, 3, "p");
+      px(g, x, y, "A");
+    }
+  };
+  if (scale >= 0.8) {
+    ring(0.78, 60, 200, 5);
+    ring(0.42, 100, 190, 3);
+  } else {
+    ring(0.6, 100, 190, 3);
+  }
+}
+function drawTail(g, r, cx, cy, up, fan = 1) {
   const k = r.size;
   const duck = r.spec.kind === "duck";
+  if (r.spec.fan) {
+    drawFan(g, r, cx, cy, fan);
+    return;
+  }
   part(g, (t) => {
     if (duck)
       triangle(t, cx + 2 * k, cy - 1.8 * k, cx + 2 * k, cy + 4.6 * k, cx - 3.6 * k, cy - (2.6 + up) * k, "f");
@@ -1870,7 +1897,7 @@ function lying(r, pose) {
   const g = blank();
   const duck = r.spec.kind === "duck";
   const breath = pose.stretch;
-  drawTail(g, r, r.X(5), r.Y(26), 0);
+  drawTail(g, r, r.X(5), r.Y(26), 0, 0.5);
   drawBody(g, r, r.X(14.8), r.Y(25.4 - breath * 0.4), (10.2 + breath * 0.4) * r.size, (5.8 + breath * 0.5) * r.size);
   drawWing(g, r, { ...pose, wing: 0 }, r.X(12.6), r.Y(25.2));
   drawBackWings(g, wingKind(r.spec), r.X(11), r.Y(25.4) - 5.5 * r.size, r.size);
@@ -1885,7 +1912,7 @@ function lying(r, pose) {
 function curled(r, pose) {
   const g = blank();
   const duck = r.spec.kind === "duck";
-  drawTail(g, r, r.X(6), r.Y(24), 1);
+  drawTail(g, r, r.X(6), r.Y(24), 1, 0.5);
   part(g, (t) => {
     ellipse(t, r.X(15.4), r.Y(21.6), 9.6 * r.size, 8.6 * r.size, "f");
     markEllipse(t, r.X(15), r.Y(26), 6 * r.size, 3.4 * r.size, "b");
@@ -2118,6 +2145,21 @@ var PARROT = {
     eye: "#1f2a1f"
   })
 };
+var PEACOCK = {
+  kind: "chick",
+  tuft: true,
+  coloredHead: true,
+  fan: true,
+  look: makeLook({
+    fur: "#1f86c7",
+    outline: "#10283a",
+    belly: tone("#58c96e"),
+    accent: tone("#1d58a8"),
+    beak: tone("#f0c24a"),
+    head: tone("#1a62b3"),
+    eye: "#10202b"
+  })
+};
 
 // dist/shared/art/egg.js
 var EGG_LOOK = makeLook({
@@ -2208,6 +2250,13 @@ function drawBackCrest(g, crest, x, y, size) {
 function drawMane(g, mane, head) {
   if (!mane)
     return;
+  if (mane === "lion") {
+    part(g, (t) => {
+      ellipse(t, head.cx - head.rx * 0.18, head.cy + head.ry * 0.08, head.rx * 1.42, head.ry * 1.36, "i");
+      triangle(t, head.cx - head.rx * 1.1, head.cy + head.ry * 0.5, head.cx - head.rx * 0.2, head.cy + head.ry * 1.2, head.cx - head.rx * 0.7, head.cy + head.ry * 1.75, "i");
+    }, { outline: "k" });
+    return;
+  }
   const color = mane === "ruff" ? "h" : "i";
   const tips = mane === "ruff" ? [
     [-1.15, 0.35, 3.2],
@@ -2235,6 +2284,12 @@ function drawMane(g, mane, head) {
 function drawMarkings(g, markings, head, eyeX, eyeY) {
   if (markings === "panda") {
     paintFur(g, eyeX - 2, eyeY - 1, 6, 5, "a");
+    return;
+  }
+  if (markings === "cheeks") {
+    paintFur(g, eyeX - 1, eyeY - 3, 3, 1, "i");
+    paintFur(g, head.cx - head.rx * 0.1, head.cy + head.ry * 0.2, head.rx * 1.1, head.ry * 0.8, "i");
+    paintFur(g, eyeX - 1, eyeY + 2, 1, 3, "a");
     return;
   }
   if (markings === "mask") {
@@ -2310,8 +2365,9 @@ function drawTail2(g, r, pose, root) {
     part(g, (t) => triangle(t, rx, ry - 1, rx, ry + 2.5, rx - 4.5 * r.size - 1, ry + 2.5, "f"), { outline: "k", shade: SHADE });
     return;
   }
-  const len = (tail === "cat" ? 4 : 3.2) * r.size;
-  const thick = (tail === "cat" ? 4.3 : 3.4) * Math.max(r.size, 0.85);
+  const ts = r.spec.tailScale ?? 1;
+  const len = (tail === "cat" ? 4 : 3.2) * r.size * (1 + (ts - 1) * 0.6);
+  const thick = (tail === "cat" ? 4.3 : 3.4) * Math.max(r.size, 0.85) * ts;
   const pts = [[rx, ry]];
   let ang = 180 - pose.tailAngle;
   for (let i = 0; i < 3; i++) {
@@ -2329,7 +2385,11 @@ function drawTail2(g, r, pose, root) {
   if (r.spec.markings === "tiger")
     for (let i = 1; i < pts.length; i++)
       paintFur(g, pts[i][0] - 1, pts[i][1] - 2, 2, 4, "a");
-  if (r.spec.ringTail) {
+  if (r.spec.ringTail === "tip") {
+    const end = pts[pts.length - 1];
+    const prev = pts[pts.length - 2];
+    paintFur(g, (end[0] + prev[0]) / 2 - 1.5, (end[1] + prev[1]) / 2 - 2, 4, 4, "a");
+  } else if (r.spec.ringTail) {
     for (let i = 1; i < pts.length; i++) {
       const a = pts[i - 1];
       const b = pts[i];
@@ -3204,6 +3264,80 @@ var RACCOON = {
   markings: "mask",
   ringTail: true
 };
+var LION = {
+  look: makeLook({
+    fur: "#e2a847",
+    outline: "#3a2616",
+    belly: tone("#f7deaa"),
+    accent: tone("#7a4a1f"),
+    inner: tone("#93501f"),
+    nose: "#6b3a2a",
+    eye: "#2b1a10"
+  }),
+  ears: "round",
+  tail: "dog",
+  snout: true,
+  whiskers: false,
+  stripes: false,
+  patch: false,
+  shell: false,
+  haunch: false,
+  socks: false,
+  head: { cx: 21, cy: 13.8, rx: 6.2, ry: 5.8 },
+  bodyScale: { rx: 1, ry: 0.98 },
+  mane: "lion",
+  ringTail: "tip"
+};
+var REDPANDA = {
+  look: makeLook({
+    fur: "#c9532b",
+    outline: "#3b1c14",
+    belly: tone("#4d2a22"),
+    accent: tone("#3a1f19"),
+    inner: tone("#f6efe4"),
+    nose: "#1f1411",
+    eye: "#1f1411"
+  }),
+  ears: "round",
+  tail: "cat",
+  snout: false,
+  whiskers: false,
+  stripes: false,
+  patch: false,
+  shell: false,
+  haunch: false,
+  socks: false,
+  head: { cx: 20.8, cy: 14, rx: 7.1, ry: 6.2 },
+  bodyScale: { rx: 1, ry: 0.94 },
+  markings: "cheeks",
+  ringTail: true,
+  tailScale: 1.4,
+  darkLegs: true
+};
+var ARCTICFOX = {
+  look: makeLook({
+    fur: "#f1f6fb",
+    outline: "#33445a",
+    belly: tone("#ffffff"),
+    accent: tone("#9db8d6"),
+    inner: tone("#efc3cd"),
+    nose: "#26303d",
+    eye: "#26303d"
+  }),
+  ears: "round",
+  tail: "cat",
+  snout: true,
+  whiskers: false,
+  stripes: false,
+  patch: false,
+  shell: false,
+  haunch: false,
+  socks: false,
+  head: { cx: 20.6, cy: 13.8, rx: 6.8, ry: 6 },
+  bodyScale: { rx: 0.96, ry: 0.94 },
+  ringTail: "tip",
+  tailScale: 1.1
+};
 
 // dist/shared/rarity.js
 var hasLegendFormRarity = (r) => r === "legend" || r === "hidden";
@@ -3233,7 +3367,11 @@ var DESIGNS = {
   otter: { kind: "quad", spec: OTTER, gait: "trot", skin: "f" },
   alpaca: { kind: "quad", spec: ALPACA, gait: "trot", skin: "f" },
   parrot: { kind: "bird", spec: PARROT, skin: "f" },
-  raccoon: { kind: "quad", spec: RACCOON, gait: "trot", skin: "f" }
+  raccoon: { kind: "quad", spec: RACCOON, gait: "trot", skin: "f" },
+  redpanda: { kind: "quad", spec: REDPANDA, gait: "trot", skin: "f" },
+  arcticfox: { kind: "quad", spec: ARCTICFOX, gait: "trot", skin: "f" },
+  peacock: { kind: "bird", spec: PEACOCK, skin: "f" },
+  lion: { kind: "quad", spec: LION, gait: "trot", skin: "f" }
 };
 var R = (id, name, rarity) => ({ id, name, rarity });
 var SPECIES = [
@@ -3255,6 +3393,10 @@ var SPECIES = [
   R("raccoon", "\uB108\uAD6C\uB9AC", "rare"),
   R("panda", "\uD310\uB2E4", "special"),
   R("penguin", "\uD3AD\uADC4", "special"),
+  R("redpanda", "\uB808\uC11C\uD310\uB2E4", "special"),
+  R("arcticfox", "\uBD81\uADF9\uC5EC\uC6B0", "special"),
+  R("peacock", "\uACF5\uC791", "special"),
+  R("lion", "\uC0AC\uC790", "special"),
   R("dragon", "\uC6A9", "legend"),
   R("azure", "\uCCAD\uB8E1", "hidden"),
   R("whitetiger", "\uBC31\uD638", "hidden"),

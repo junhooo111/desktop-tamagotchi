@@ -13,12 +13,12 @@ import { chunky } from './art/chunky.js';
 import { accessoryPalette, DEFAULT_STYLE, tintLook, type PetStyle } from './art/style.js';
 import { birdFrames } from './art/bird-plan.js';
 import { type BirdSpec } from './art/bird.js';
-import { CHICK, DUCK, OWL, PARROT, PENGUIN, PHOENIX } from './art/bird-species.js';
+import { CHICK, DUCK, OWL, PARROT, PEACOCK, PENGUIN, PHOENIX } from './art/bird-species.js';
 import { EGG_LOOK, eggFrames } from './art/egg.js';
 import { type Frames } from './art/frames.js';
 import { quadFrames, type Gait } from './art/quad-plan.js';
 import { type QuadSpec } from './art/quadruped.js';
-import { ALPACA, AZURE, BEAR, CAT, DOG, DRAGON, FOX, HAMSTER, OTTER, PANDA, PIG, QILIN, RABBIT, RACCOON, SHEEP, TORTOISE, TURTLE, WHITETIGER } from './art/quad-species.js';
+import { ALPACA, ARCTICFOX, AZURE, BEAR, CAT, DOG, DRAGON, FOX, HAMSTER, LION, OTTER, PANDA, PIG, QILIN, RABBIT, RACCOON, REDPANDA, SHEEP, TORTOISE, TURTLE, WHITETIGER } from './art/quad-species.js';
 import { paletteOf, type Look } from './art/types.js';
 import { SIZE } from './pixel.js';
 import { hasLegendFormRarity, type Rarity } from './rarity.js';
@@ -53,7 +53,11 @@ export type SpeciesId =
   | 'otter'
   | 'alpaca'
   | 'parrot'
-  | 'raccoon';
+  | 'raccoon'
+  | 'redpanda'
+  | 'arcticfox'
+  | 'peacock'
+  | 'lion';
 /** 전설(legend)은 히든 동물만 가는 성체 다음 단계다. 히든이 아닌 동물에게 요청하면 성체 그림을 쓴다. */
 export type SpriteStage = 'egg' | 'baby' | 'adult' | 'legend';
 
@@ -101,6 +105,10 @@ const DESIGNS: Record<SpeciesId, Design> = {
   alpaca: { kind: 'quad', spec: ALPACA, gait: 'trot', skin: 'f' },
   parrot: { kind: 'bird', spec: PARROT, skin: 'f' },
   raccoon: { kind: 'quad', spec: RACCOON, gait: 'trot', skin: 'f' },
+  redpanda: { kind: 'quad', spec: REDPANDA, gait: 'trot', skin: 'f' },
+  arcticfox: { kind: 'quad', spec: ARCTICFOX, gait: 'trot', skin: 'f' },
+  peacock: { kind: 'bird', spec: PEACOCK, skin: 'f' },
+  lion: { kind: 'quad', spec: LION, gait: 'trot', skin: 'f' },
 };
 
 const R = (id: SpeciesId, name: string, rarity: Rarity): Species => ({ id, name, rarity });
@@ -124,6 +132,10 @@ export const SPECIES: readonly Species[] = [
   R('raccoon', '너구리', 'rare'),
   R('panda', '판다', 'special'),
   R('penguin', '펭귄', 'special'),
+  R('redpanda', '레서판다', 'special'),
+  R('arcticfox', '북극여우', 'special'),
+  R('peacock', '공작', 'special'),
+  R('lion', '사자', 'special'),
   R('dragon', '용', 'legend'),
   R('azure', '청룡', 'hidden'),
   R('whitetiger', '백호', 'hidden'),

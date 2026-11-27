@@ -4,14 +4,14 @@
  * 기존 네발 뼈대 위에 얹는 장식이다. 장식 문자: p 뿔·날개(종마다 다른 금빛), a 무늬, i 갈기·지느러미 색, h 밝은 털.
  * 작은 그림에서 읽히도록 덩어리를 크게(2칸 단위) 그린다.
  */
-import { line, part, triangle, SIZE, type Grid } from '../pixel.js';
+import { ellipse, line, part, triangle, SIZE, type Grid } from '../pixel.js';
 
 /** 등을 따라 난 장식: spikes 는 뾰족한 가시(용), fin 은 물결 지느러미(청룡) */
 export type Crest = 'spikes' | 'fin';
 /** 얼굴 뒤·아래로 뻗는 갈기: ruff 는 풍성한 볼 털(호랑이), flame 은 불꽃(기린·전설 용) */
-export type Mane = 'ruff' | 'flame';
+export type Mane = 'ruff' | 'flame' | 'lion';
 /** 머리 장식 무늬: tiger 는 이마의 임금 왕(王)자 줄무늬와 볼 줄무늬 */
-export type Markings = 'tiger' | 'panda' | 'mask';
+export type Markings = 'tiger' | 'panda' | 'mask' | 'cheeks';
 
 interface Head {
   cx: number;
@@ -55,6 +55,18 @@ export function drawBackCrest(g: Grid, crest: Crest | undefined, x: number, y: n
 /** 머리 뒤·아래로 뻗은 갈기. 머리보다 먼저 그려서 머리가 밑동을 덮게 한다. */
 export function drawMane(g: Grid, mane: Mane | undefined, head: Head): void {
   if (!mane) return;
+  if (mane === 'lion') {
+    // 사자: 얼굴을 빙 둘러싸는 큼직한 갈기(머리 뒤쪽이 더 두툼하다)와, 아래로 처지는 갈기 끝
+    part(
+      g,
+      (t) => {
+        ellipse(t, head.cx - head.rx * 0.18, head.cy + head.ry * 0.08, head.rx * 1.42, head.ry * 1.36, 'i');
+        triangle(t, head.cx - head.rx * 1.1, head.cy + head.ry * 0.5, head.cx - head.rx * 0.2, head.cy + head.ry * 1.2, head.cx - head.rx * 0.7, head.cy + head.ry * 1.75, 'i');
+      },
+      { outline: 'k' },
+    );
+    return;
+  }
   const color = mane === 'ruff' ? 'h' : 'i';
   const tips: [number, number, number][] =
     mane === 'ruff'
@@ -90,6 +102,13 @@ export function drawMarkings(g: Grid, markings: Markings | undefined, head: Head
   if (markings === 'panda') {
     // 판다: 눈 둘레의 까만 눈 무늬(눈동자는 그대로 남는다)
     paintFur(g, eyeX - 2, eyeY - 1, 6, 5, 'a');
+    return;
+  }
+  if (markings === 'cheeks') {
+    // 레서판다: 눈 위의 하얀 눈썹 점과, 주둥이에서 볼로 퍼지는 하얀 무늬, 눈 아래로 흐르는 눈물 자국
+    paintFur(g, eyeX - 1, eyeY - 3, 3, 1, 'i');
+    paintFur(g, head.cx - head.rx * 0.1, head.cy + head.ry * 0.2, head.rx * 1.1, head.ry * 0.8, 'i');
+    paintFur(g, eyeX - 1, eyeY + 2, 1, 3, 'a');
     return;
   }
   if (markings === 'mask') {
