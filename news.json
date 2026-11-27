@@ -1,6 +1,13 @@
 {
   "items": [
     {
+      "id": "v0.11.0-market",
+      "date": "2026-11-27",
+      "title": "경매장과 게임머니가 생겼어요",
+      "body": "로그인하면 펫을 사고팔 수 있어요. 게임머니는 돌봄·업적·GitHub 기여로 얻고, 수수료는 없어요. 펫 우클릭 → 경매장.",
+      "url": "https://github.com/junhooo111/desktop-tamagotchi#경매장과-게임머니-로그인한-사람끼리"
+    },
+    {
       "id": "v0.10.0-account",
       "date": "2026-11-27",
       "title": "GitHub 계정 연동·랭킹·프로필 카드",

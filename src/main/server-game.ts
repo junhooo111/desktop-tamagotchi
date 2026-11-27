@@ -209,6 +209,7 @@ export class ServerGame {
   async syncCommits(): Promise<{ granted: number; coins: number } | null> {
     if (!this.rpc.invoke) return null;
     const r = await this.rpc.invoke<{ granted: number; coins: number }>('commits');
+    if (r.error) console.error('GitHub 기여 동기화 실패', r.error.message);
     if (r.error || !r.data || typeof r.data.granted !== 'number') return null;
     if (this.state) this.state = { ...this.state, coins: r.data.coins };
     return r.data;

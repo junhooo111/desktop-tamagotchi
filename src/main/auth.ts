@@ -269,7 +269,25 @@ export class AuthService {
     return {
       call: <T,>(fn: string, args?: Record<string, unknown>) => guard<T>(() => client.rpc(fn, args)),
       select: <T,>(table: string, columns: string) => guard<T[]>(() => client.from(table).select(columns)),
-      invoke: <T,>(name: string) => guard<T>(() => client.functions.invoke(name, { method: 'POST' })),
+      invoke: async <T,>(name: string) => {
+        try {
+          const r = await client.functions.invoke(name, { method: 'POST' });
+          if (r.error) {
+            // 함수가 돌려준 오류 내용({error: '...'})을 꺼내 준다(기본 메시지는 '2xx 아님' 뿐이라 원인을 알 수 없다).
+            const ctx = (r.error as { context?: { json?: () => Promise<{ error?: string }>; status?: number } }).context;
+            let detail = r.error.message;
+            try {
+              const body = await ctx?.json?.();
+              if (body?.error) detail = `${body.error} (${ctx?.status ?? '?'})`;
+            } catch { /* 본문이 JSON 이 아님 */ }
+            console.error('함수 호출 실패', name, detail);
+            return { data: null, error: { message: detail } };
+          }
+          return { data: r.data as T | null, error: null };
+        } catch (e) {
+          return { data: null, error: { message: e instanceof Error ? e.message : String(e) } };
+        }
+      },
     };
   }
 

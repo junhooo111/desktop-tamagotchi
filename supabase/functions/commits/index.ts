@@ -22,8 +22,9 @@ Deno.serve(async (req) => {
   const uid = (await who.json()).id;
 
   const prof = await fetch(`${SB_URL}/rest/v1/profiles?user_id=eq.${encodeURIComponent(uid)}&select=github_login`, {
-    headers: { Authorization: `Bearer ${SERVICE}`, apikey: SERVICE },
+    headers: { Authorization: auth, apikey: req.headers.get('apikey') ?? SERVICE },
   });
+  if (!prof.ok) return json({ error: 'profile_read_' + prof.status }, 500);
   const login = (await prof.json())?.[0]?.github_login;
   if (!login || !/^[A-Za-z0-9-]{1,39}$/.test(login)) return json({ error: 'no_profile' }, 400);
 
@@ -45,6 +46,6 @@ Deno.serve(async (req) => {
     headers: { Authorization: `Bearer ${SERVICE}`, apikey: SERVICE, 'Content-Type': 'application/json' },
     body: JSON.stringify({ p_user: uid, p_days: days }),
   });
-  if (!r.ok) return json({ error: 'grant_failed' }, 500);
+  if (!r.ok) return json({ error: 'grant_failed_' + r.status + '_' + (await r.text()).slice(0, 120) }, 500);
   return json(await r.json());
 });

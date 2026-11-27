@@ -1544,11 +1544,12 @@ async function activateServer(): Promise<void> {
 }
 
 /** GitHub 기여를 게임머니로 바꾼다(서버가 읽는다). 로그인 직후와 1시간마다. */
-async function syncGithubCommits(announce: boolean): Promise<void> {
+async function syncGithubCommits(announce: boolean, report = false): Promise<void> {
   if (!serverOn() || !serverGame) return;
   const r = await serverGame.syncCommits();
   if (r && r.granted > 0) say(`GitHub 기여 덕분에 게임머니 +${r.granted}!`);
   else if (announce && !r) say('GitHub 기여는 아직 읽지 못했어요. 나중에 다시 시도해요');
+  else if (report && r) say('GitHub 기여를 확인했어요. 새로 받을 게임머니가 없어요(1건당 2, 하루 40까지)');
 }
 
 /** 연결이 없어서 대기 중이던 뽑기권 획득을 다시 보낸다. */
@@ -1594,6 +1595,7 @@ function accountMenuItem(): Electron.MenuItemConstructorOptions {
       label: `☁ ${user.login}`,
       submenu: [
         { label: '지금 계정과 맞추기', click: () => void accountSync?.reconcile(user.id) },
+        { label: 'GitHub 기여 지금 확인', enabled: serverOn(), click: () => void syncGithubCommits(true, true) },
         {
           label: 'GitHub 프로필용 카드 주소 복사',
           click: () => {
