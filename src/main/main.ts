@@ -14,6 +14,7 @@ import { SnapshotFeed, mergeScans } from '../inspect/feed.js';
 import { scanLocalPages, type Finding } from '../inspect/scan.js';
 import { renderProfileCard } from '../shared/card.js';
 import { BACKEND } from '../shared/backend.js';
+import { AccountSync, type Choice, type ConflictInfo } from './account-sync.js';
 import { AUTH_SCHEME, AuthService, EncryptedFileStorage } from './auth.js';
 import { applyEvent, buildCodex, emptyGrowth, localDay, type Growth, type GrowthEvent } from '../shared/growth.js';
 import { LESSONS, RULE_IDS, type RuleId } from '../shared/lessons.js';
@@ -184,6 +185,8 @@ let feedServer: FeedServer | null = null;
 let settings: Settings = { ...DEFAULT_SETTINGS };
 /** GitHub 로그인(Supabase). 서버 주소가 비어 있으면 꺼진 채로 둔다. */
 let auth: AuthService | null = null;
+/** 로그인한 계정과 이 PC의 저장 파일을 맞춘다(첫 로그인 때 기존 진행을 올리고, 다른 PC에서는 받아 온다). */
+let accountSync: AccountSync | null = null;
 let settingsPath = '';
 let settingsWin: BrowserWindow | null = null;
 let scanTimer: ReturnType<typeof setInterval> | undefined;
@@ -1296,6 +1299,23 @@ async function handleAuthUrl(url: string): Promise<void> {
   announceAuth(await auth.handleCallback(url));
 }
 
+/** 이 PC와 계정에 서로 다른 진행이 있을 때 어느 쪽을 쓸지 묻는다. 어느 쪽을 골라도 덮어쓰이는 쪽은 백업된다. */
+async function askSyncChoice(info: ConflictInfo): Promise<Choice> {
+  const line = (label: string, s: ConflictInfo['local']) => `${label}: 동물 ${s.pets}마리 · 뽑기권 ${s.tickets}장 · 뽑기 ${s.pulls}회`;
+  const when = info.accountUpdatedAt ? new Date(info.accountUpdatedAt).toLocaleString() : '';
+  const r = await dialog.showMessageBox({
+    type: 'question',
+    title: 'Desktop Tamagotchi — 계정과 맞추기',
+    message: '이 PC와 계정에 서로 다른 진행이 있어요. 어느 쪽을 쓸까요?',
+    detail: [line('이 PC', info.local), line(`계정(${info.accountDevice ?? '다른 PC'}${when ? ', ' + when : ''})`, info.account), '', '덮어쓰이는 쪽의 진행은 백업돼서 나중에 되돌릴 수 있어요.'].join('\n'),
+    buttons: ['계정의 진행을 이 PC에 받기 (다시 시작)', '이 PC의 진행을 계정에 올리기', '나중에'],
+    defaultId: 0,
+    cancelId: 2,
+    noLink: true,
+  });
+  return r.response === 0 ? 'account' : r.response === 1 ? 'local' : 'later';
+}
+
 function announceAuth(r: { handled: boolean; ok: boolean; message?: string }): void {
   if (!r.handled) return;
   if (r.ok) say(`GitHub 로그인 완료! ${auth?.user?.login ?? ''} 님, 어느 PC에서든 같은 계정이에요`);
@@ -1308,8 +1328,11 @@ function accountMenuItem(): Electron.MenuItemConstructorOptions {
   const user = auth.user;
   if (user) {
     return {
-      label: `☁ ${user.login} · 로그아웃`,
-      click: () => void auth?.signOut().then(() => say('로그아웃했어요. 펫은 이 PC에 그대로 있어요')),
+      label: `☁ ${user.login}`,
+      submenu: [
+        { label: '지금 계정과 맞추기', click: () => void accountSync?.reconcile(user.id) },
+        { label: '로그아웃', click: () => void auth?.signOut().then(() => say('로그아웃했어요. 펫은 이 PC에 그대로 있어요')) },
+      ],
     };
   }
   return {
@@ -1746,8 +1769,34 @@ if (!app.requestSingleInstanceLock()) {
       }),
       openExternal: (u) => shell.openExternal(u),
     });
-    auth.onChange(() => tray?.setContextMenu(buildMenu()));
+    auth.onChange((user) => {
+      tray?.setContextMenu(buildMenu());
+      if (user) void accountSync?.reconcile(user.id);
+    });
     auth.onCallbackResult(announceAuth);
+    const rpc = auth.syncRpc;
+    if (rpc) {
+      accountSync = new AccountSync({
+        rpc,
+        dir: app.getPath('userData'),
+        appVersion: app.getVersion(),
+        device: os.hostname().slice(0, 60),
+        flush: () => {
+          persist();
+          persistProgress();
+        },
+        ask: askSyncChoice,
+        // 받아 온 저장분을 파일에 쓴 직후 바로 끝낸다(종료 처리가 낡은 메모리 상태를 다시 쓰지 않게 app.exit 를 쓴다).
+        restartWithNewSave: () => {
+          app.relaunch();
+          app.exit(0);
+        },
+        say: (t) => say(t),
+      });
+      setInterval(() => {
+        if (auth?.user) void accountSync?.tick(auth.user.id);
+      }, 10 * 60_000);
+    }
     void auth.restore();
     const startUrl = process.argv.find((a) => a.startsWith(AUTH_SCHEME + '://'));
     if (startUrl) setTimeout(() => void handleAuthUrl(startUrl), 2_000);

@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
 import { createClient, type Session, type SupabaseClient } from '@supabase/supabase-js';
+import type { SyncRpc } from './account-sync.js';
 
 export const AUTH_SCHEME = 'desktop-tamagotchi';
 export const AUTH_REDIRECT = `${AUTH_SCHEME}://auth`;
@@ -237,6 +238,18 @@ export class AuthService {
     const { error } = await this.client.auth.exchangeCodeForSession(parsed.code);
     if (error) return { handled: true, ok: false, message: error.message };
     return { handled: true, ok: true };
+  }
+
+  /** 계정 저장분(save_get / save_put)을 부르는 통로. 서버가 설정되지 않았으면 null. */
+  get syncRpc(): SyncRpc | null {
+    const client = this.client;
+    if (!client) return null;
+    const fix = <T,>(r: { data: unknown; error: { message: string; hint?: string } | null }) => ({ data: r.data as T | null, error: r.error ? { message: r.error.message, hint: r.error.hint } : null });
+    return {
+      saveGet: async () => fix(await client.rpc('save_get')),
+      savePut: async (data, schemaVersion, expectedVersion, device) =>
+        fix(await client.rpc('save_put', { p_data: data, p_schema_version: schemaVersion, p_expected_version: expectedVersion, p_device: device })),
+    };
   }
 
   async signOut(): Promise<void> {
