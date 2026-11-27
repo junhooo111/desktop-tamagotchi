@@ -851,8 +851,8 @@ function openWardrobe(): void {
     return;
   }
   const area = screen.getDisplayNearestPoint({ x: Math.round(behavior.x), y: Math.round(behavior.y) }).workArea;
-  const width = 420;
-  const height = Math.min(640, area.height - 40);
+  const width = 460;
+  const height = Math.min(700, area.height - 40);
   const w = new BrowserWindow({
     x: area.x + Math.round((area.width - width) / 2),
     y: area.y + Math.round((area.height - height) / 2),

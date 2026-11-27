@@ -69,6 +69,12 @@ describe('꾸미기 창', () => {
     expect(pressed('accessories')).toEqual(['none']);
   });
 
+  it('색·장식 칸마다 입은 모습의 작은 그림이 있고, 미리보기는 고정 영역에 있다', async () => {
+    await open(data(emptyGrowth()));
+    for (const b of [...buttons('variants'), ...buttons('accessories')]) expect(b.querySelector('canvas'), b.dataset['id']).not.toBeNull();
+    expect(document.querySelector('.stage #preview')).not.toBeNull();
+  });
+
   it('미리보기에 지금 모습을 그린다', async () => {
     await open(data(emptyGrowth()));
     expect(fillRect).toHaveBeenCalled();

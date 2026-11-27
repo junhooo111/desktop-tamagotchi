@@ -30,33 +30,51 @@ declare global {
 
 const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) as T;
 
-const SCALE = 6;
 let data: WardrobeData;
 
-function drawPreview(): void {
-  const canvas = $<HTMLCanvasElement>('preview');
+/** 캔버스에 펫을 그린다. 칸 크기에 맞게 배율을 정한다. */
+function paint(canvas: HTMLCanvasElement, variant: Variant, accessory: Accessory): void {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  const { speciesId, variant, accessory } = data.current;
-  const set = spriteSet(speciesId, data.stage, { variant, accessory });
+  const scale = canvas.width / 32;
+  const set = spriteSet(data.current.speciesId, data.stage, { variant, accessory });
   set.frames.idleA.forEach((row, y) => {
     [...row].forEach((ch, x) => {
       const color = ch === '.' ? undefined : set.palette[ch];
       if (!color) return;
       ctx.fillStyle = color;
-      ctx.fillRect(x * SCALE, y * SCALE, SCALE, SCALE);
+      ctx.fillRect(x * scale, y * scale, scale, scale);
     });
   });
 }
 
-function group<T extends string>(boxId: string, entries: readonly WardrobeEntry<T>[], selected: T, patchOf: (id: T) => WardrobePatch): void {
+function drawPreview(): void {
+  paint($<HTMLCanvasElement>('preview'), data.current.variant, data.current.accessory);
+}
+
+/** thumb 이 있으면 그 칸을 입었을 때의 모습을 작은 그림으로 함께 보여 준다(옷장처럼). */
+function group<T extends string>(boxId: string, entries: readonly WardrobeEntry<T>[], selected: T, patchOf: (id: T) => WardrobePatch, thumb?: (id: T) => { variant: Variant; accessory: Accessory }): void {
   const box = $(boxId);
   box.textContent = '';
   for (const e of entries) {
     const b = document.createElement('button');
     b.type = 'button';
-    b.textContent = e.unlocked ? e.name : `🔒 ${e.name}`;
+    const label = e.unlocked ? e.name : `🔒 ${e.name}`;
+    if (thumb) {
+      const c = document.createElement('canvas');
+      c.width = 64;
+      c.height = 64;
+      c.setAttribute('aria-hidden', 'true');
+      const t = thumb(e.id);
+      paint(c, t.variant, t.accessory);
+      const span = document.createElement('span');
+      span.className = 'label';
+      span.textContent = label;
+      b.append(c, span);
+    } else {
+      b.textContent = label;
+    }
     b.dataset['id'] = e.id;
     b.setAttribute('aria-pressed', String(e.unlocked && e.id === selected));
     if (e.unlocked) {
@@ -73,8 +91,8 @@ function group<T extends string>(boxId: string, entries: readonly WardrobeEntry<
 
 function render(): void {
   group<DisplayStage>('stages', data.stages, data.current.displayStage, (id) => ({ displayStage: id }));
-  group<Variant>('variants', data.variants, data.current.variant, (id) => ({ variant: id }));
-  group<Accessory>('accessories', data.accessories, data.current.accessory, (id) => ({ accessory: id }));
+  group<Variant>('variants', data.variants, data.current.variant, (id) => ({ variant: id }), (id) => ({ variant: id, accessory: data.current.accessory }));
+  group<Accessory>('accessories', data.accessories, data.current.accessory, (id) => ({ accessory: id }), (id) => ({ variant: data.current.variant, accessory: id }));
   const cardEntries: WardrobeEntry<SpeciesId | 'current'>[] = [{ id: 'current', name: '지금 키우는 펫', unlocked: true, hint: '' }, ...data.species];
   group<SpeciesId | 'current'>('card-species', cardEntries, data.current.cardSpecies, (id) => ({ cardSpecies: id }));
   // 입력 중인 글자를 새로고침이 덮어쓰지 않게, 입력칸에 포커스가 없을 때만 값을 맞춘다.

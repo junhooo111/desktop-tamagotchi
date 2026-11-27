@@ -6,8 +6,43 @@ body {
   font: 13px/1.5 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif;
 }
 
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+}
+
+/* 위쪽(미리보기·이름)은 고정하고, 아래 목록만 스크롤한다 */
+.stage {
+  flex: none;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 18px;
+  background: #fff6dc;
+  border-bottom: 2px solid #3b2f2f;
+}
+
+.stage .side {
+  flex: 1;
+  min-width: 0;
+}
+
+.small {
+  display: block;
+  font-size: 11.5px;
+  color: #7a6a5a;
+}
+
 main {
-  padding: 14px 18px 16px;
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px 18px 16px;
 }
 
 h1 {
@@ -28,19 +63,19 @@ h2 {
 }
 
 .lock-hint {
-  min-height: 1.5em;
-  margin-top: 10px;
+  min-height: 3em;
+  margin: 6px 0 0;
   color: #b3541e;
 }
 
 .preview {
-  margin: 8px 0 2px;
-  text-align: center;
+  flex: none;
 }
 
 #preview {
-  width: 192px;
-  height: 192px;
+  display: block;
+  width: 150px;
+  height: 150px;
   background: #e4e8f4;
   border: 3px solid #3b2f2f;
   border-radius: 12px;
@@ -110,6 +145,39 @@ footer button:hover {
 
 .name-row button:hover {
   background: #fff3c4;
+}
+
+/* 옷장 칸: 그 꾸미기를 입은 모습을 작게 미리 보여 준다 */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(84px, 1fr));
+  gap: 8px;
+}
+
+.tiles button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 2px 5px;
+}
+
+.tiles canvas {
+  width: 56px;
+  height: 56px;
+  background: #e4e8f4;
+  border-radius: 6px;
+  image-rendering: pixelated;
+}
+
+.tiles button[aria-disabled='true'] canvas {
+  opacity: 0.45;
+  filter: grayscale(1);
+}
+
+.tiles .label {
+  font-size: 11px;
+  line-height: 1.2;
 }
 
 footer {
