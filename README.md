@@ -183,48 +183,48 @@ xattr -cr "/Applications/Desktop Tamagotchi.app"
 
 동물은 **등급**이 있고, 등급마다 확률이 달라요. 같은 등급 안에서는 똑같은 확률입니다. 히든 동물은 뽑기 전에는 모습도 이름도 비밀이에요(??? 로 보여요).
 
-**일반** (흰색)
+<img src="docs/images/grades/common.svg" height="22" alt="일반">
 
 | | | | | | | |
 |---|---|---|---|---|---|---|
 | <img src="docs/images/animals/rabbit.svg" width="56" alt="토끼"><br>토끼 | <img src="docs/images/animals/cat.svg" width="56" alt="고양이"><br>고양이 | <img src="docs/images/animals/dog.svg" width="56" alt="강아지"><br>강아지 | <img src="docs/images/animals/turtle.svg" width="56" alt="거북이"><br>거북이 | <img src="docs/images/animals/chick.svg" width="56" alt="병아리"><br>병아리 | <img src="docs/images/animals/duck.svg" width="56" alt="오리"><br>오리 | <img src="docs/images/animals/fox.svg" width="56" alt="여우"><br>여우 |
 
-**고급** (초록)
+<img src="docs/images/grades/uncommon.svg" height="22" alt="고급">
 
 | | | |
 |---|---|---|
 | <img src="docs/images/animals/hamster.svg" width="56" alt="햄스터"><br>햄스터 | <img src="docs/images/animals/bear.svg" width="56" alt="곰"><br>곰 | <img src="docs/images/animals/pig.svg" width="56" alt="돼지"><br>돼지 |
 
-**희귀** (파랑)
+<img src="docs/images/grades/rare.svg" height="22" alt="희귀">
 
 | | | | | | |
 |---|---|---|---|---|---|
 | <img src="docs/images/animals/owl.svg" width="56" alt="부엉이"><br>부엉이 | <img src="docs/images/animals/sheep.svg" width="56" alt="양"><br>양 | <img src="docs/images/animals/otter.svg" width="56" alt="수달"><br>수달 | <img src="docs/images/animals/alpaca.svg" width="56" alt="알파카"><br>알파카 | <img src="docs/images/animals/parrot.svg" width="56" alt="앵무새"><br>앵무새 | <img src="docs/images/animals/raccoon.svg" width="56" alt="너구리"><br>너구리 |
 
-**특별** (보라)
+<img src="docs/images/grades/special.svg" height="22" alt="특별">
 
 | | | | | | |
 |---|---|---|---|---|---|
 | <img src="docs/images/animals/panda.svg" width="56" alt="판다"><br>판다 | <img src="docs/images/animals/penguin.svg" width="56" alt="펭귄"><br>펭귄 | <img src="docs/images/animals/redpanda.svg" width="56" alt="레서판다"><br>레서판다 | <img src="docs/images/animals/arcticfox.svg" width="56" alt="북극여우"><br>북극여우 | <img src="docs/images/animals/peacock.svg" width="56" alt="공작"><br>공작 | <img src="docs/images/animals/lion.svg" width="56" alt="사자"><br>사자 |
 
-**전설** (주황)
+<img src="docs/images/grades/legend.svg" height="22" alt="전설">
 
 | | | | |
 |---|---|---|---|
 | <img src="docs/images/animals/dragon.svg" width="56" alt="용"><br>용 | <img src="docs/images/animals/unicorn.svg" width="56" alt="유니콘"><br>유니콘 | <img src="docs/images/animals/kumiho.svg" width="56" alt="구미호"><br>구미호 | <img src="docs/images/animals/griffin.svg" width="56" alt="그리핀"><br>그리핀 |
 
-**히든** (무지개): 이름과 모습이 비밀인 동물 5종 <img src="docs/images/animals/hidden-1.svg" width="40" alt=""> <img src="docs/images/animals/hidden-2.svg" width="40" alt=""> <img src="docs/images/animals/hidden-3.svg" width="40" alt=""> <img src="docs/images/animals/hidden-4.svg" width="40" alt=""> <img src="docs/images/animals/hidden-5.svg" width="40" alt="">
+<img src="docs/images/grades/hidden.svg" height="22" alt="히든">: 이름과 모습이 비밀인 동물 5종 <img src="docs/images/animals/hidden-1.svg" width="40" alt=""> <img src="docs/images/animals/hidden-2.svg" width="40" alt=""> <img src="docs/images/animals/hidden-3.svg" width="40" alt=""> <img src="docs/images/animals/hidden-4.svg" width="40" alt=""> <img src="docs/images/animals/hidden-5.svg" width="40" alt="">
 
 ### 등장 확률
 
 | 등급 (색) | 동물 수 | 종당 확률 | 등급 합계 |
 |---|---|---|---|
-| 일반 (흰색) | 7종 | 약 7.1% | 50% |
-| 고급 (초록) | 3종 | 8% | 24% |
-| 희귀 (파랑) | 6종 | 약 2.5% | 15% |
-| 특별 (보라) | 6종 | 약 1.17% | 7% |
-| 전설 (주황) | 4종 | 0.75% | 3% |
-| 히든 (무지개) | 5종 | 0.2% | 1% |
+| <img src="docs/images/grades/common.svg" height="22" alt="일반"> | 7종 | 약 7.1% | 50% |
+| <img src="docs/images/grades/uncommon.svg" height="22" alt="고급"> | 3종 | 8% | 24% |
+| <img src="docs/images/grades/rare.svg" height="22" alt="희귀"> | 6종 | 약 2.5% | 15% |
+| <img src="docs/images/grades/special.svg" height="22" alt="특별"> | 6종 | 약 1.17% | 7% |
+| <img src="docs/images/grades/legend.svg" height="22" alt="전설"> | 4종 | 0.75% | 3% |
+| <img src="docs/images/grades/hidden.svg" height="22" alt="히든"> | 5종 | 0.2% | 1% |
 
 - **천장**: 전설이 계속 안 나오면 50번째 뽑기에서 반드시 **전설**이 나와요(히든은 천장 없이 낮은 확률로만 나와요). 전설이나 히든이 나오면 다시 0부터 세요. 뽑기 창에 남은 횟수가 보여요.
 - 동물을 새로 추가해도 등급 합계는 그대로고, 그 등급의 종당 확률만 나뉘어요.

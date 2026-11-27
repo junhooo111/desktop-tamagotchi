@@ -123,12 +123,12 @@ When you pull an animal or a cosmetic, a strip of cells **spins sideways.** It s
 
 | Grade (color) | Animals | Odds each | Grade total |
 |---|---|---|---|
-| Common (white) | Rabbit · Cat · Dog · Turtle · Chick · Duck · Fox | about 7.1% | 50% |
-| Uncommon (green) | Hamster · Bear · Pig | 8% | 24% |
-| Rare (blue) | Owl · Sheep · Otter · Alpaca · Parrot · Raccoon | about 2.5% | 15% |
-| Special (purple) | Panda · Penguin · Red panda · Arctic fox · Peacock · Lion | about 1.17% | 7% |
-| Legendary (orange) | Dragon · Unicorn · Kumiho (nine-tailed fox) · Griffin | 0.75% | 3% |
-| Hidden (rainbow) | 5 secret animals shown as `???` | 0.2% | 1% |
+| <img src="docs/images/grades/common-en.svg" height="22" alt="Common"> | Rabbit · Cat · Dog · Turtle · Chick · Duck · Fox | about 7.1% | 50% |
+| <img src="docs/images/grades/uncommon-en.svg" height="22" alt="Uncommon"> | Hamster · Bear · Pig | 8% | 24% |
+| <img src="docs/images/grades/rare-en.svg" height="22" alt="Rare"> | Owl · Sheep · Otter · Alpaca · Parrot · Raccoon | about 2.5% | 15% |
+| <img src="docs/images/grades/special-en.svg" height="22" alt="Special"> | Panda · Penguin · Red panda · Arctic fox · Peacock · Lion | about 1.17% | 7% |
+| <img src="docs/images/grades/legend-en.svg" height="22" alt="Legendary"> | Dragon · Unicorn · Kumiho (nine-tailed fox) · Griffin | 0.75% | 3% |
+| <img src="docs/images/grades/hidden-en.svg" height="22" alt="Hidden"> | 5 secret animals shown as `???` | 0.2% | 1% |
 
 - **Pity**: if no Legendary appears, the 50th pull always gives one (Hidden has no pity and only comes at its low odds). The counter resets when a Legendary or Hidden appears. The gacha window shows how many pulls are left.
 - Adding animals never changes a grade's total, only the per-animal odds inside that grade.

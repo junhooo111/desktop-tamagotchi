@@ -18,7 +18,7 @@ const { ACCESSORY_NAMES } = await load('shared/wardrobe.js');
 
 const out = path.join(root, 'docs', 'images');
 fs.rmSync(out, { recursive: true, force: true });
-for (const d of ['animals', 'accessories']) fs.mkdirSync(path.join(out, d), { recursive: true });
+for (const d of ['animals', 'accessories', 'grades']) fs.mkdirSync(path.join(out, d), { recursive: true });
 const write = (name, svg) => fs.writeFileSync(path.join(out, name), svg + '\n', 'utf8');
 
 /** 도트 그림(문자 격자)을 같은 색 가로 줄 단위의 rect 로 바꾼다. */
@@ -118,6 +118,39 @@ write('poop.svg', scaleSvg(poopSvg(), 5));
   growth.days = ['2026-11-25', '2026-11-26', '2026-11-27'];
   const codex = buildCodex(growth, { tipsSeen: 14, collected: 6, pulls: 8, hiddenOwned: 0 }, new Date(2026, 10, 27, 12).getTime());
   write('profile-card.svg', renderProfileCard({ pet, name: '콩이', style: { variant: 'default', accessory: 'ribbon' }, codex }));
+}
+
+// ---- 등급 이름표: 어두운 알약 위에 등급 색 글자. 전설은 주황빛이 일렁이고 히든은 무지개가 흐른다(SVG 애니메이션). ----
+// GitHub README 는 글자 색·애니메이션을 못 쓰지만, <img> 로 넣은 SVG 의 애니메이션은 그대로 움직인다.
+{
+  const GRADES = [
+    ['common', '일반', 'Common', '#ffffff'],
+    ['uncommon', '고급', 'Uncommon', '#5fd16a'],
+    ['rare', '희귀', 'Rare', '#4a9bff'],
+    ['special', '특별', 'Special', '#b36bff'],
+    ['legend', '전설', 'Legendary', '#ff9b2e'],
+    ['hidden', '히든', 'Hidden', 'rainbow'],
+  ];
+  const pill = (label, color, id, w) => {
+    const h = 26;
+    const text = (fill, extra = '') => `<text x="${w / 2}" y="18" text-anchor="middle" font-family="'Malgun Gothic','Apple SD Gothic Neo','Segoe UI',sans-serif" font-size="14" font-weight="700" fill="${fill}"${extra}>${label}</text>`;
+    let defs = '';
+    let t;
+    if (color === 'rainbow') {
+      defs = `<defs><linearGradient id="rb-${id}" gradientUnits="userSpaceOnUse" x1="0" y1="0" x2="${w}" y2="0" spreadMethod="repeat"><stop offset="0" stop-color="#ff5f5f"/><stop offset="0.17" stop-color="#ffb84a"/><stop offset="0.34" stop-color="#fff24a"/><stop offset="0.5" stop-color="#5fe06a"/><stop offset="0.67" stop-color="#4ab8ff"/><stop offset="0.84" stop-color="#a06bff"/><stop offset="1" stop-color="#ff5f5f"/><animateTransform attributeName="gradientTransform" type="translate" from="0 0" to="${w} 0" dur="2.4s" repeatCount="indefinite"/></linearGradient></defs>`;
+      t = text(`url(#rb-${id})`);
+    } else if (id === 'legend') {
+      t = `<text x="${w / 2}" y="18" text-anchor="middle" font-family="'Malgun Gothic','Apple SD Gothic Neo','Segoe UI',sans-serif" font-size="14" font-weight="700" fill="${color}">${label}<animate attributeName="fill" values="#ff9b2e;#ffd34a;#ff7a1a;#ff9b2e" dur="1.8s" repeatCount="indefinite"/></text>`;
+    } else {
+      t = text(color);
+    }
+    // 글자는 매끈하게(crispEdges 는 도트용이라 글자가 깨져 보인다)
+    return svgWrap(w, h, `${defs}<rect width="${w}" height="${h}" rx="13" fill="#2b2f4d"/>${t}`).replace(' shape-rendering="crispEdges"', '');
+  };
+  for (const [id, ko, en, color] of GRADES) {
+    write(`grades/${id}.svg`, pill(ko, color, id, ko.length * 15 + 26));
+    write(`grades/${id}-en.svg`, pill(en, color, id + 'en', en.length * 9 + 26));
+  }
 }
 
 console.log(`그림을 만들었습니다: ${out} (동물 ${COMMON_SPECIES.length}+${HIDDEN_SPECIES.length}, 꾸미기 ${ACCESSORIES.length - 1}종, 전체 종 ${SPECIES.length}, ${ACCESSORY_NAMES.none})`);
