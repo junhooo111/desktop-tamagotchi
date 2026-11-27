@@ -120,7 +120,10 @@ async function change(patch: Partial<Settings>): Promise<void> {
 
 /** 메인이 정한 지금 언어를 다시 받아 적용한다(설정이 auto 면 PC 언어·지역을 따른 결과). */
 async function refreshLang(): Promise<void> {
-  await initUiLang(window.settingsApi.lang?.bind(window.settingsApi));
+  // 메인이 언어를 알려 주지 못하면(예: 아직 새 버전으로 다시 켜지 않았을 때) 사용자가 직접 고른 값을 그대로 따른다.
+  const asked = window.settingsApi.lang?.bind(window.settingsApi);
+  const fallback = async (): Promise<Lang> => (current.language === 'en' ? 'en' : 'ko');
+  await initUiLang(asked ? () => asked().catch(fallback) : fallback);
 }
 
 function setStatus(text: string): void {
