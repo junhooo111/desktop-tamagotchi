@@ -255,8 +255,78 @@ footer button {
   animation: glow-common 1.1s ease-in-out infinite;
 }
 
+/* 히든: 빛내지 않고 아주 어둡게(윤곽만 살짝) 두고 ??? 를 덮는다. 멈춘 결과 칸은 아래 reveal 규칙으로 밝아진다. */
+.cell {
+  position: relative;
+}
+
 .cell.hidden canvas {
-  animation: glow-hidden 0.55s ease-in-out infinite;
+  filter: brightness(0.2) saturate(0);
+  animation: none;
+}
+
+/* 히든의 무지개 오라: 어두운 실루엣 뒤에서 무지개빛이 빙글 돌며 번쩍여서, 한눈에 띄고 갖고 싶게 만든다 */
+.cell.hidden::before {
+  content: '';
+  position: absolute;
+  inset: 4px 6px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, #ff4f4f, #ffb02e, #fff04a, #4be06a, #3ec6ff, #7a5cff, #ff5fd2, #ff4f4f);
+  filter: blur(9px);
+  opacity: 0.95;
+  animation: aura-spin 1.6s linear infinite, aura-pulse 0.8s ease-in-out infinite;
+}
+
+.cell.hidden canvas,
+.cell.hidden .mystery {
+  position: relative;
+  z-index: 1;
+}
+
+.cell.hidden .mystery {
+  position: absolute;
+  z-index: 2;
+}
+
+@keyframes aura-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes aura-pulse {
+  0%,
+  100% {
+    opacity: 0.7;
+    scale: 0.92;
+  }
+  50% {
+    opacity: 1;
+    scale: 1.12;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cell.hidden::before {
+    animation: none;
+  }
+}
+
+.cell .mystery {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font: 800 15px/1 'Malgun Gothic', sans-serif;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.78);
+  text-shadow: 0 0 4px #000, 0 0 8px #6a4bd8;
+  pointer-events: none;
+}
+
+.cell.final.reveal .mystery {
+  display: none;
 }
 
 @keyframes glow-common {

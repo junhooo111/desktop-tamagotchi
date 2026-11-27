@@ -150,6 +150,14 @@ async function spinReel(result: PullResult & { ok: true }): Promise<void> {
     canvas.height = 64;
     drawSprite(canvas, it.rows, it.palette, 2);
     cell.append(canvas);
+    if (it.rarity === 'hidden') {
+      // 히든은 어두운 실루엣에 "???" 를 덮어서 지나간다(멈춘 결과 칸에서만 걷힌다)
+      const mystery = document.createElement('span');
+      mystery.className = 'mystery';
+      mystery.textContent = '???';
+      mystery.setAttribute('data-no-translate', '');
+      cell.append(mystery);
+    }
     strip.append(cell);
   });
   $('result-canvas').hidden = true;
