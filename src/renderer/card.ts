@@ -2,7 +2,9 @@
  * 배움 카드 화면(찾은 문제를 설명하고 확인 퀴즈를 푼다).
  * 내용은 textContent 로만 넣는다(페이지에서 가져온 글자가 섞여 있으므로 HTML 로 해석하지 않는다).
  */
+import type { Lang } from '../shared/i18n.js';
 import type { Lesson } from '../shared/lessons.js';
+import { localize, setUiLang } from './dom-i18n.js';
 import type { Quiz } from '../shared/quizzes.js';
 
 interface LessonCard {
@@ -12,6 +14,8 @@ interface LessonCard {
   detail: string;
   xp: number;
   bonus: number;
+  /** 메인이 정한 언어. 학습 내용은 이미 그 언어로 들어 있다. */
+  lang?: Lang;
 }
 
 interface CardApi {
@@ -59,6 +63,7 @@ function render(card: LessonCard): void {
       });
       const right = index === card.quiz.answer;
       setText('explain', `${right ? `정답이에요! (+${card.bonus} 보너스) ` : '아쉬워요. '}${card.quiz.explain}`);
+      localizeTail();
       $('explain').hidden = false;
       ($('confirm') as HTMLButtonElement).disabled = false;
       $('confirm').focus();
@@ -67,11 +72,19 @@ function render(card: LessonCard): void {
   });
   $('options').replaceChildren(...buttons);
   ($('confirm') as HTMLButtonElement).disabled = true;
+  localizeTail();
+}
+
+/** 영어일 때 카드 틀(제목·버튼)과 "정답이에요!" 같은 말을 바꿔 끼운다. 내용은 이미 영어다. */
+function localizeTail(): void {
+  localize();
 }
 
 void window.cardApi.getCard().then((card) => {
+  if (card?.lang) setUiLang(card.lang);
   if (!card) {
     $('empty').hidden = false;
+    localize();
     return;
   }
   render(card);

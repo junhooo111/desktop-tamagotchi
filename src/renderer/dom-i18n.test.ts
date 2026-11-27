@@ -16,6 +16,10 @@ describe('창 화면 영어 전환', () => {
     expect(translateUi('3위')).toBe('#3');
     expect(translateUi('내 기록: 12종 · 4위')).toBe('My record: 12 species · #4');
     expect(translateUi('20분')).toBe('20 min');
+    expect(translateUi('확인했어요 (+5)')).toBe('Got it (+5)');
+    expect(translateUi('정답이에요! (+3 보너스) Good.')).toBe('Correct! (+3 bonus) Good.');
+    expect(translateUi('아쉬워요. Because.')).toBe('Not quite. Because.');
+    expect(translateUi('무엇이 문제인가요?')).toBe('What is the problem?');
     expect(translateUi('알 수 없는 문장')).toBe('알 수 없는 문장');
   });
 

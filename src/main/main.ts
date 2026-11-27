@@ -27,6 +27,7 @@ import { DEFAULT_SETTINGS, sanitizeSettings, tipIntervalMs, type Settings } from
 import { TIP_PENDING_MS, pickTip, shouldOfferTip, tipText, type Tip } from '../shared/tips.js';
 import { resolveLang, type Lang } from '../shared/i18n.js';
 import { nameEn, toEnglish } from '../shared/en-text.js';
+import { lessonFor, quizFor } from '../shared/lessons-en.js';
 import { BUBBLE_GAP, TIP_BUBBLE, WINDOW, bubbleShift, petPixelSize } from '../shared/layout.js';
 import {
   LEARN_XP,
@@ -331,7 +332,7 @@ function sendView(force = false): void {
 function setNotice(finding: Finding | null, show: boolean): void {
   notice = finding;
   if (!win || win.isDestroyed()) return;
-  const message: NoticeMessage = { notice: finding ? noticeOf(finding) : null, show };
+  const message: NoticeMessage = { notice: finding ? noticeOf(finding, currentLang()) : null, show };
   win.webContents.send('pet:notice', message);
 }
 
@@ -1957,8 +1958,9 @@ function setupIpc(): void {
   ipcMain.handle('card:get', () => {
     if (!active) return null;
     return {
-      lesson: LESSONS[active.ruleId],
-      quiz: QUIZZES[active.ruleId],
+      lesson: lessonFor(active.ruleId, currentLang()),
+      quiz: quizFor(active.ruleId, currentLang()),
+      lang: currentLang(),
       selector: active.selector,
       detail: active.detail,
       xp: LEARN_XP.confirm,

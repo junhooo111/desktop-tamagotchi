@@ -4,7 +4,8 @@
  */
 import { CATEGORY_LABELS, LESSONS, RULE_IDS, type RuleCategory } from '../shared/lessons.js';
 import { LANG_SETTINGS, type Lang, type LangSetting } from '../shared/i18n.js';
-import { initUiLang, localize, setUiLang } from './dom-i18n.js';
+import { LESSONS_EN } from '../shared/lessons-en.js';
+import { currentUiLang, initUiLang, localize } from './dom-i18n.js';
 import { SETTING_CHOICES, type Settings } from '../shared/settings.js';
 
 interface SettingsApi {
@@ -93,7 +94,7 @@ function renderRules(): void {
       input.dataset['rule'] = id;
       input.checked = !current.disabledRules.includes(id);
       input.addEventListener('change', () => void change({ disabledRules: RULE_IDS.filter((r) => (r === id ? !input.checked : current.disabledRules.includes(r))) }));
-      label.append(input, ' ' + LESSONS[id].title);
+      label.append(input, ' ' + (currentUiLang() === 'en' ? LESSONS_EN[id].title : LESSONS[id].title));
       box.append(label);
     }
   }

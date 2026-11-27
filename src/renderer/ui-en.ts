@@ -35,6 +35,18 @@ export const UI_EN: Record<string, string> = {
   '검색·공유(SEO)': 'Search & sharing (SEO)',
   '반응형·모바일': 'Responsive & mobile',
   성능: 'Performance',
+  // 배움 카드
+  '배움 카드': 'Learning card',
+  '무엇이 문제인가요?': 'What is the problem?',
+  '왜 문제인가요?': 'Why is it a problem?',
+  '어떻게 고치나요?': 'How do I fix it?',
+  '확인 퀴즈': 'Check quiz',
+  보기: 'Options',
+  '이 문제 무시': 'Ignore this',
+  '이 문제는 더 알리지 않아요. 검사 결과 창에서 되돌릴 수 있어요': 'I will not mention this again. You can undo it in the inspection results',
+  나중에: 'Later',
+  확인했어요: 'Got it',
+  '지금 확인할 내용이 없어요.': 'Nothing to check right now.',
   // 경매장
   경매장: 'Auction house',
   사기: 'Buy',
@@ -71,6 +83,9 @@ const RARITY_EN: Record<string, string> = { 일반: 'Common', 히든: 'Hidden' }
 
 /** 숫자가 들어 있는 문장 규칙 */
 export const UI_RULES: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
+  [/^확인했어요 \(\+(\d+)\)$/, (m) => `Got it (+${m[1]})`],
+  [/^정답이에요! \(\+(\d+) 보너스\) ([\s\S]*)$/, (m) => `Correct! (+${m[1]} bonus) ${m[2]}`],
+  [/^아쉬워요\. ([\s\S]*)$/, (m) => `Not quite. ${m[1]}`],
   [/^(.+) Lv\.(\d+)$/, (m) =>`${nameEn(m[1] ?? '')} Lv.${m[2]}`],
   [/^(\d+)배$/, (m) => `${m[1]}x`],
   [/^(\d+)초$/, (m) => `${m[1]} s`],
