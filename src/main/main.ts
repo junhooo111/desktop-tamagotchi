@@ -1134,6 +1134,19 @@ function setupUpdates(): void {
       remindUpdate();
       updateTray();
     },
+    // 실패 원인을 userData/updater.log 에 남긴다("왜 업데이트가 안 되지"를 나중에 볼 수 있게).
+    onError: (message, manual) => {
+      console.error('업데이트 확인 실패', message);
+      try {
+        const file = path.join(app.getPath('userData'), 'updater.log');
+        const line = `${new Date().toISOString()} v${app.getVersion()} ${manual ? 'manual' : 'auto'} ${message.replace(/\s+/g, ' ').slice(0, 300)}
+`;
+        const old = fs.existsSync(file) && fs.statSync(file).size < 100_000 ? fs.readFileSync(file, 'utf8') : '';
+        fs.writeFileSync(file, old + line);
+      } catch {
+        /* 로그를 못 남겨도 앱은 계속 동작한다 */
+      }
+    },
   });
   setTimeout(() => void updates?.check(false), UPDATE_FIRST_CHECK_MS);
   setInterval(() => void updates?.check(false), UPDATE_EVERY_MS);

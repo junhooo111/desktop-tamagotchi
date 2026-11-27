@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { TOAST_EVERY, UPDATE_EVERY_MS, UPDATE_REMIND_MS, UpdateController, type AutoUpdaterLike, type UpdateInfoLike } from './updater.js';
+import { TOAST_EVERY, UPDATE_EVERY_MS, UPDATE_REMIND_MS, UPDATE_RETRY_MS, UpdateController, describeUpdateError, type AutoUpdaterLike, type UpdateInfoLike } from './updater.js';
 
 function fakeUpdater() {
   const handlers: Record<string, ((arg: never) => void)[]> = {};
@@ -128,5 +128,57 @@ describe('UpdateController', () => {
     updater.emit('update-downloaded', { version: '0.4.0' });
     expect(ctl.installNow()).toBe(true);
     expect(updater.quitAndInstall).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('업데이트 실패 안내·기록·재시도', () => {
+  it('원인별로 다르게 안내한다(네트워크·요청 한도·정보 없음·파일 오류·그 밖)', () => {
+    expect(describeUpdateError('getaddrinfo ENOTFOUND github.com')).toContain('인터넷');
+    expect(describeUpdateError('net::ERR_INTERNET_DISCONNECTED')).toContain('인터넷');
+    expect(describeUpdateError('HTTP 403 rate limit exceeded')).toContain('요청을 막았어요');
+    expect(describeUpdateError('Cannot find latest.yml in the latest release artifacts')).toContain('업데이트 정보를 찾지 못했어요');
+    expect(describeUpdateError('HTTP 404 Not Found')).toContain('업데이트 정보를 찾지 못했어요');
+    expect(describeUpdateError('sha512 checksum mismatch')).toContain('받은 파일을 확인하지 못했어요');
+    const other = describeUpdateError('something odd happened');
+    expect(other).toContain('원인: something odd happened');
+    expect(describeUpdateError('x'.repeat(500)).length).toBeLessThan(140);
+  });
+
+  it('직접 누른 확인이 실패하면 원인에 맞는 문구를 보여 주고 원인을 기록한다(오류가 이벤트와 거절로 두 번 와도 한 번만)', async () => {
+    const updater = fakeUpdater();
+    const errors: Array<[string, boolean]> = [];
+    const ctl = new UpdateController(updater as unknown as AutoUpdaterLike, { enabled: () => true, onStatus: () => undefined, onDownloaded: () => undefined, onError: (m, manual) => errors.push([m, manual]) });
+    updater.checkForUpdates.mockImplementation(async () => {
+      const e = new Error('HTTP 404 Not Found');
+      updater.emit('error', e);
+      throw e;
+    });
+    expect(await ctl.check(true)).toContain('업데이트 정보를 찾지 못했어요');
+    expect(errors).toEqual([['HTTP 404 Not Found', true]]);
+  });
+
+  it('자동 확인이 실패하면 조용히 두고 2분 뒤, 10분 뒤에 다시 시도하며, 성공하면 처음부터 다시 센다', async () => {
+    vi.useFakeTimers();
+    try {
+      const { updater, ctl, status } = setup();
+      let fails = 3;
+      updater.checkForUpdates.mockImplementation(async () => {
+        if (fails-- > 0) throw new Error('ETIMEDOUT');
+        updater.emit('update-not-available', { version: '0.3.0' });
+      });
+      await ctl.check(false);
+      expect(status.at(-1)).toBe(''); // 사용자에게 오류 문구를 띄우지 않는다
+      expect(updater.checkForUpdates).toHaveBeenCalledTimes(1);
+      await vi.advanceTimersByTimeAsync(UPDATE_RETRY_MS[0]);
+      expect(updater.checkForUpdates).toHaveBeenCalledTimes(2);
+      await vi.advanceTimersByTimeAsync(UPDATE_RETRY_MS[1]);
+      expect(updater.checkForUpdates).toHaveBeenCalledTimes(3);
+      await vi.advanceTimersByTimeAsync(60 * 60_000); // 두 번 재시도 뒤에는 더 하지 않는다(30분 주기 점검이 이어받는다)
+      expect(updater.checkForUpdates).toHaveBeenCalledTimes(3);
+      await ctl.check(false); // 네 번째는 성공
+      expect(status.at(-1)).toBe('최신 버전이에요');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

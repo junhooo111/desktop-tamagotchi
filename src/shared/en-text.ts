@@ -154,6 +154,10 @@ const RULES: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^최신 버전이에요/, () => 'You are up to date'],
   [/^업데이트를 확인하지 못했어요\. 인터넷 연결을 확인해 주세요/, () => 'Could not check for updates. Please check your internet connection'],
   [/^확인하는 중…/, () => 'Checking…'],
+  [/^GitHub 에서 잠시 요청을 막았어요\. 몇 분 뒤에 다시 눌러 주세요/, () => 'GitHub is limiting requests for a moment. Please try again in a few minutes'],
+  [/^업데이트 정보를 찾지 못했어요\. 새 버전을 올리는 중일 수 있으니 잠시 뒤에 다시 해 주세요/, () => 'Could not find the update information. A new version may be being uploaded; please try again shortly'],
+  [/^받은 파일을 확인하지 못했어요\. 잠시 뒤에 다시 해 주세요/, () => 'Could not verify the downloaded file. Please try again shortly'],
+  [/^업데이트를 확인하지 못했어요\. 잠시 뒤에 다시 해 주세요 \(원인: /, () => 'Could not check for updates. Please try again shortly (cause: '],
   [/^🎟 새 기능! 뽑기권 (\d+)장을 드렸어요\.\n메뉴의 '뽑기·컬렉션…'에서 새 동물을 뽑아 보세요/, (m) => `🎟 New feature! You got ${m[1]} ticket(s).\nPull new animals in the menu's 'Gacha & Collection…'`],
   // 서버 오류(friendlyError)
   [/^뽑기권이 모자라요/, () => 'Not enough tickets'],
