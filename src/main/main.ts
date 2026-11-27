@@ -8,12 +8,12 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { BrowserWindow, Menu, Notification, Tray, app, dialog, ipcMain, nativeImage, safeStorage, screen, shell } from 'electron';
+import { BrowserWindow, Menu, Notification, Tray, app, clipboard, dialog, ipcMain, nativeImage, safeStorage, screen, shell } from 'electron';
 import electronUpdater from 'electron-updater';
 import { SnapshotFeed, mergeScans } from '../inspect/feed.js';
 import { scanLocalPages, type Finding } from '../inspect/scan.js';
 import { renderProfileCard } from '../shared/card.js';
-import { BACKEND } from '../shared/backend.js';
+import { BACKEND, cardMarkdown } from '../shared/backend.js';
 import { AccountSync, type Choice, type ConflictInfo } from './account-sync.js';
 import { ServerGame, applyServerPull, friendlyError, mirrorCollection, type Grant } from './server-game.js';
 import { AUTH_SCHEME, AuthService, EncryptedFileStorage } from './auth.js';
@@ -1505,6 +1505,15 @@ function accountMenuItem(): Electron.MenuItemConstructorOptions {
       label: `☁ ${user.login}`,
       submenu: [
         { label: '지금 계정과 맞추기', click: () => void accountSync?.reconcile(user.id) },
+        {
+          label: 'GitHub 프로필용 카드 주소 복사',
+          click: () => {
+            const md = cardMarkdown(user.login);
+            if (!md) return say('이 이름으로는 카드 주소를 만들 수 없어요');
+            clipboard.writeText(md);
+            say('카드 주소를 복사했어요! 프로필 저장소(내이름/내이름)의 README.md 에 붙여 넣으면 돼요');
+          },
+        },
         { label: '로그아웃', click: () => void auth?.signOut().then(() => say('로그아웃했어요. 펫은 이 PC에 그대로 있어요')) },
       ],
     };

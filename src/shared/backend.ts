@@ -7,3 +7,15 @@ export const BACKEND = {
   url: 'https://bqsidhjdxoxtrmmymwej.supabase.co',
   anonKey: 'sb_publishable_LD-V4dcDAyGyJZoUq6-t8g_aDHJg4ch',
 };
+
+/** GitHub 프로필 README 에 붙이는 펫 카드(움직이는 SVG) 주소. 이름은 GitHub 이름 형식만 허용한다. */
+export function cardUrl(login: string, base: string = BACKEND.url): string | null {
+  if (!/^[A-Za-z0-9-]{1,39}$/.test(login) || !base) return null;
+  return `${base}/functions/v1/card?user=${login}`;
+}
+
+/** README 에 그대로 붙여 넣는 마크다운. */
+export function cardMarkdown(login: string, base: string = BACKEND.url): string | null {
+  const url = cardUrl(login, base);
+  return url ? `![Desktop Tamagotchi](${url})` : null;
+}

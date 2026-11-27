@@ -39,3 +39,5 @@
 - **서버 기준 모드(C2)**: 로그인하면(`serverOn()`) 뽑기·꾸미기 뽑기·뽑기권 획득은 서버가 한다. 로컬 상수를 바꾸면 서버 함수(0005·0007)도 같이 바꾸고, SQL 시험이 앱 상수와 같은 값인지 비교한다. 뽑기권을 로컬에서 올리는 곳을 새로 만들면 `serverAward` 를 거치게 한다(안 그러면 로그인 사용자의 뽑기권이 서버와 어긋난다). 서버에 닿지 않을 때 로컬로 대신 뽑지 않는다(서버 기준이 갈라진다).
 - **서버에 정말 저장됐는지 확인하기**: Docker 가 없어도 `npx supabase inspect db table-stats --remote` 로 표별 행 수(추정)를 읽을 수 있다. 사용자 데이터의 내용을 읽는 도구는 쓰지 않는다. 내용 확인이 필요하면 앱의 `my_summary()` 결과(랭킹 창)를 사용자에게 보여 달라고 한다.
 - **다른 사람이 쓴 문자열(GitHub 이름 등)은 `textContent` 로만 그리고, 이미지 주소는 허용 목록(avatars.githubusercontent.com)만 쓴다.** 랭킹 창 CSP 도 같은 주소만 연다.
+- **Edge Function 배포**: `npm run build:function`(tsc + esbuild 번들) 후 `npx supabase functions deploy card --no-verify-jwt --use-api --remote=bqsidhjdxoxtrmmymwej --yes`. `--yes` 없이는 에이전트 실행이 막힌다. 함수는 비밀키 없이 공개 키로 `public_card_data` 만 부른다(공개 함수는 권한이 좁은 SQL 함수로 설계한다). 카드 코드(`card.ts`·`card-endpoint.ts`)를 바꾸면 번들을 다시 만들어 다시 배포해야 반영된다.
+- **서버 카드가 안 보이면**: 먼저 `curl <주소>/functions/v1/card?user=<이름>` 로 200·`image/svg+xml` 인지 본다. GitHub 이 그림을 잠시 기억하므로 몇 분 늦을 수 있다.

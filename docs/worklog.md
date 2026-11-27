@@ -266,3 +266,11 @@
 - 앱: `🏆 랭킹…` 메뉴(로그인했을 때만)와 창(`static/ranking.*`, `src/renderer/ranking.ts`). 이름은 textContent 로만 그리고 GitHub 아바타 주소만 허용. 시험 8건 추가(전체 1306건).
 - 서버 상태 확인법: `npx supabase inspect db table-stats --remote` 로 표별 행 수 추정치를 읽을 수 있다(Docker 불필요). 사용자 데이터 내용은 읽지 않는다.
 - 한계: 랭킹 창을 실제로 눌러 본 확인은 사용자가 한다. 도감은 앱 안의 기존 도감·컬렉션 화면을 그대로 쓴다(서버 집계는 종 수만).
+
+## 2026-11-27 — 프로필 카드(0009, 로드맵 E 단계)와 v0.10.0
+
+- `0009_public_card.sql`: `public_card_data(login)` — 비로그인(anon)도 부를 수 있는 공개 조회. GitHub 이름, 장착(없으면 경험치 최고) 펫의 종·경험치, 도감 수만 돌려주고 랭킹에서 숨긴 사용자는 "없음"으로 답한다. SQL 시험 8건(전체 134건).
+- Edge Function `card`(`supabase/functions/card`): 비밀키 없이 공개 키로 위 함수만 부르고, `src/shared/card-endpoint.ts`(번들: `npm run build:function`)로 움직이는 SVG 를 그린다. 배포: `npx supabase functions deploy card --no-verify-jwt --use-api --remote=<ref> --yes`. 주소: `<프로젝트 주소>/functions/v1/card?user=<GitHub 이름>`. 실제 사용자 카드와 없는 사용자 카드 모두 200 으로 응답하고 SVG 임을 확인.
+- 앱: 로그인 메뉴에 `GitHub 프로필용 카드 주소 복사`(클립보드에 마크다운). README 상단에 프로필 붙이기 가이드, 계정·개인정보 설명 갱신.
+- 한계: 서버 카드는 장착 펫과 레벨만 그린다(꾸미기·연속일·도감·업적 칸은 비어 있다). 꾸미기는 서버가 어떤 장식을 착용했는지 모르기 때문이다.
+- 릴리스 v0.10.0: 계정 연동(로그인·동기화·서버 뽑기), 랭킹, 프로필 카드.

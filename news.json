@@ -1,6 +1,13 @@
 {
   "items": [
     {
+      "id": "2026-11-27-account",
+      "date": "2026-11-27",
+      "title": "GitHub 계정 연동·랭킹·프로필 카드",
+      "body": "GitHub 로그인(선택)으로 어느 PC에서든 같은 컬렉션을 이어 가고, 랭킹과 프로필 카드를 쓸 수 있어요. 로그인하지 않아도 그대로 쓸 수 있어요.",
+      "url": "https://github.com/junhooo111/desktop-tamagotchi#내-펫을-github-프로필에-붙이기-1분"
+    },
+    {
       "id": "2026-11-26-news",
       "date": "2026-11-26",
       "title": "공지 기능이 생겼어요",
