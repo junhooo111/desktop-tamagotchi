@@ -31,3 +31,8 @@
 Supabase 무료 프로젝트는 **한 주 동안 DB 활동이 거의 없으면 일시정지**됩니다. 이틀에 한 번 공개 테이블을 읽는 GitHub Actions(`.github/workflows/supabase-keepalive.yml`)가 이를 막습니다.
 - 레포 Settings → Secrets and variables → Actions → **Variables** 에 `SUPABASE_URL`, `SUPABASE_ANON_KEY` 를 추가합니다(공개 값이라 Variables 로 충분).
 - 실패하면 워크플로가 실패로 표시되고 GitHub 가 알려 줍니다. 공식 보장은 아니고 "활동이 있으면 정지되지 않는다"는 규칙에 기대는 방법이라, 사용자가 늘면 유료 플랜(일시정지 없음)으로 올립니다.
+
+## 7. DB 변경 적용 (Claude Code 가 한다)
+`npx supabase login` 을 이 PC에서 한 번 해 두었고 프로젝트가 연결돼 있다(`supabase link --project-ref bqsidhjdxoxtrmmymwej`). 이후 DB 변경은 마이그레이션 파일을 추가하고 SQL 시험을 통과시킨 뒤 `npx supabase db push --linked --yes` 로 올린다.
+- 0001~0003 은 처음에 SQL Editor 로 직접 올려서 `supabase migration repair --status applied 0001 0002 0003` 으로 기록해 두었다.
+- 새 PC 에서는 `npx supabase login` → `npx supabase link --project-ref bqsidhjdxoxtrmmymwej` 를 먼저 한다.
