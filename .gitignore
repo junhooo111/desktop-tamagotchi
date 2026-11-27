@@ -12,3 +12,6 @@ Thumbs.db
 
 .mac-build/
 release-mac/
+
+# Supabase CLI 연결 캐시(PC마다 다름)
+supabase/.temp/
