@@ -1,6 +1,13 @@
 {
   "items": [
     {
+      "id": "v0.12.1-learning-coins",
+      "date": "2026-11-27",
+      "title": "배움으로 게임머니를 받아요",
+      "body": "로그인하면 배움 카드 확인(10)·퀴즈 보너스(5)·문제 고침(20)·FE 지식 읽기(2)로 게임머니를 받아요(하루 150까지).",
+      "url": "https://github.com/junhooo111/desktop-tamagotchi/releases/tag/v0.12.1"
+    },
+    {
       "id": "v0.12.0-english-and-tools",
       "date": "2026-11-27",
       "title": "영어 지원, 검사 규칙 50종, FE 지식 69개",
