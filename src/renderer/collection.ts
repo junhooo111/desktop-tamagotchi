@@ -42,7 +42,7 @@ const STAGE_NAME = { egg: '알', baby: '새끼', adult: '성체', legend: '전�
 const SPIN_MS = 2800;
 const REVEAL_MS = 700;
 const CELL = 76;
-const CELLS = 38;
+const CELLS = 44;
 const motionScale = (): number => (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0.1 : 1);
 
 let data: CollectionView;
@@ -85,7 +85,7 @@ function speciesItem(e: { id: SpeciesId; hidden: boolean }): ReelItem {
  * 가끔 결과 바로 옆에 히든을 놓아 "아깝다" 느낌을 준다(결과에는 영향 없음).
  */
 export function buildReel(result: PullResult & { ok: true }, entries: readonly CollectionEntry[], activeStyle?: { id: SpeciesId; stage: 'baby' | 'adult' | 'legend' }): { items: ReelItem[]; final: number } {
-  const final = CELLS - 4;
+  const final = CELLS - 8;
   const items: ReelItem[] = [];
   if ('id' in result) {
     const commons = entries.filter((e) => !e.hidden);
