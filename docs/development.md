@@ -87,7 +87,7 @@ npm run dist           # 설치 파일(release/Desktop-Tamagotchi-Setup-<버전>
 | `src/shared/motion.ts` · `animation.ts` | 동작 종류, 벽에서 그림을 돌리는 규칙, 시각에 맞는 프레임 결정 |
 | `src/shared/pet.ts` | 성장·배고픔·기분 규칙 |
 | `src/shared/layout.ts` | 창과 펫의 크기 |
-| `src/shared/lessons.ts` · `quizzes.ts` | 검사 규칙 19종, 배움 카드 문구, 확인 퀴즈 |
+| `src/shared/lessons.ts` · `quizzes.ts` | 검사 규칙 28종, 배움 카드 문구, 확인 퀴즈 |
 | `src/shared/notice.ts` | 찾은 문제를 말풍선 내용(문제·위치·고치는 법)으로 바꿈 |
 | `src/shared/tips.ts` | FE 지식 모음과 알림 시점 규칙 |
 | `src/inspect/collector.ts` | 페이지 안에서 실행되는 검사 수집기(앱과 확장이 같은 코드를 씀) |

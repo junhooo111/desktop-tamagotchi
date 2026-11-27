@@ -25,6 +25,15 @@ const seq = (...values: number[]) => {
   return () => values[Math.min(i++, values.length - 1)] ?? 0;
 };
 
+import { giftSpot } from './gift.js';
+
+describe('선물을 들고 기다릴 자리', () => {
+  it('작업 영역의 한가운데에 펫이 오도록 정한다', () => {
+    expect(giftSpot({ x: 0, y: 0, width: 1920, height: 1040 }, 64)).toEqual({ x: 928, y: 488 });
+    expect(giftSpot({ x: 1920, y: 40, width: 1000, height: 800 }, 100)).toEqual({ x: 2370, y: 390 });
+  });
+});
+
 describe('선물 결과 뽑기', () => {
   it('뽑기권 15% · 경험치 50% · 응가(꽝) 35% 구간으로 나뉜다', () => {
     expect(rollGift(() => 0)).toEqual({ kind: 'ticket', tickets: 1 });

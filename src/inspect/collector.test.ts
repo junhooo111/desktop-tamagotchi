@@ -5,7 +5,7 @@ import { collectPage, collectorExpression, type RawFinding } from './collector.j
 const run = (html: string, head = '<title>테스트</title><meta name="viewport" content="width=device-width"><meta name="description" content="설명">'): RawFinding[] => {
   document.documentElement.lang = 'ko';
   document.head.innerHTML = head;
-  document.body.innerHTML = html;
+  document.body.innerHTML = html + '<main hidden></main>'; // main 이 없다는 규칙에 걸리지 않게 한다
   return collectPage({ requireLayout: false }).findings;
 };
 const rules = (found: RawFinding[]): string[] => found.map((f) => f.ruleId);
@@ -70,7 +70,7 @@ describe('collectPage 규칙', () => {
   it('html-lang · page-title · viewport-meta · meta-description: 문서 설정이 빠졌으면 페이지 전체 문제로 알린다', () => {
     document.documentElement.removeAttribute('lang');
     document.head.innerHTML = '';
-    document.body.innerHTML = '<p>내용</p>';
+    document.body.innerHTML = '<main><p>내용</p></main>';
     const found = collectPage({ requireLayout: false }).findings;
     expect(rules(found).sort()).toEqual(['html-lang', 'meta-description', 'page-title', 'viewport-meta']);
     expect(found.every((f) => f.rect === null && f.selector === 'document')).toBe(true);
@@ -260,6 +260,62 @@ describe('collectPage 규칙: 검색·성능·링크 3종', () => {
        <p>자세한 내용은 <a href="/y">배송 정책 문서</a>를 보세요.</p>`,
     );
     expect(found).toEqual([]);
+  });
+
+  it('frame-title: 이름 없는 iframe 만 찾는다(title·aria-label 이 있거나 숨긴 것은 통과)', () => {
+    const found = run('<iframe id="f" src="/map"></iframe><iframe title="지도" src="/a"></iframe><iframe aria-label="결제" src="/b"></iframe><iframe aria-hidden="true" tabindex="-1" src="/c"></iframe>');
+    expect(found.map((f) => [f.ruleId, f.selector])).toEqual([['frame-title', 'iframe#f']]);
+  });
+
+  it('aria-hidden-focus: 숨긴 요소 안에 포커스가 갈 수 있으면 찾고, tabindex=-1 이나 inert 면 통과한다', () => {
+    const found = run('<div id="a" aria-hidden="true"><button>닫기</button></div><div aria-hidden="true"><button tabindex="-1">x</button></div><div inert aria-hidden="true"><a href="/">y</a></div><div aria-hidden="true"><svg></svg></div>');
+    expect(found.map((f) => [f.ruleId, f.selector])).toEqual([['aria-hidden-focus', 'div#a']]);
+  });
+
+  it('empty-heading: 글자도 이미지 alt 도 없는 제목만 찾는다', () => {
+    const found = run('<h1>제목</h1><h2 id="e"></h2><h3>  </h3><h4><img src="/a.png" alt="로고"></h4>');
+    expect(found.map((f) => f.ruleId)).toEqual(['empty-heading', 'empty-heading']);
+    expect(found[0]?.selector).toBe('h2#e');
+  });
+
+  it('landmark-main: 내용이 있는데 main 이 없으면 페이지 전체 문제로 찾고, main·role=main 이 있으면 통과한다', () => {
+    document.documentElement.lang = 'ko';
+    document.head.innerHTML = '<title>t</title><meta name="viewport" content="width=device-width"><meta name="description" content="d">';
+    document.body.innerHTML = '<p>내용</p>';
+    expect(collectPage({ requireLayout: false }).findings.map((f) => [f.ruleId, f.selector])).toEqual([['landmark-main', 'document']]);
+    document.body.innerHTML = '<div role="main">내용</div>';
+    expect(collectPage({ requireLayout: false }).findings).toEqual([]);
+    document.body.innerHTML = '';
+    expect(collectPage({ requireLayout: false }).findings).toEqual([]);
+  });
+
+  it('autoplay-media: muted 없이 autoplay 인 영상·오디오만 찾는다', () => {
+    const found = run('<video autoplay src="/a.mp4"></video><video autoplay muted src="/b.mp4"></video><audio autoplay src="/c.mp3"></audio><video src="/d.mp4"></video>');
+    expect(found.map((f) => f.ruleId)).toEqual(['autoplay-media', 'autoplay-media']);
+  });
+
+  it('aria-broken-ref: 없는 id 를 가리키는 aria-labelledby·describedby·label for 를 찾는다', () => {
+    const found = run('<span id="ok">이름</span><input aria-labelledby="ok"><input id="a" aria-labelledby="nope" aria-label="가"><input id="b" aria-describedby="ok gone" aria-label="나"><label for="missing">라벨</label><label for="a">좋은 라벨</label>');
+    expect(found.map((f) => f.ruleId)).toEqual(['aria-broken-ref', 'aria-broken-ref', 'aria-broken-ref']);
+    expect(found[2]?.detail).toContain('missing');
+  });
+
+  it('nested-interactive: 링크·버튼 안에 또 링크·버튼·입력칸이 있으면 바깥 요소를 찾는다', () => {
+    const found = run('<a id="a" href="/p"><button>담기</button></a><button id="b"><a href="/x">x</a></button><a href="/y"><img src="/i.png" alt="회사 로고"> 글</a><button>그냥</button>');
+    expect(found.map((f) => f.selector)).toEqual(['a#a', 'button#b']);
+  });
+
+  it('autocomplete-missing: 이메일·전화·이름 같은 입력칸에 autocomplete 가 없으면 찾고, 있거나 다른 입력칸은 통과한다', () => {
+    const found = run('<input aria-label="a" type="email" id="e"><input aria-label="b" type="tel" autocomplete="tel"><input aria-label="c" type="text" name="first-name"><input aria-label="d" type="text" name="title"><input aria-label="e" type="password"><input aria-label="f" type="search" name="name"><input aria-label="g" type="text" name="name" autocomplete="off">');
+    expect(found.map((f) => f.ruleId)).toEqual(['autocomplete-missing', 'autocomplete-missing']);
+    expect(found[0]?.detail).toContain('email');
+    expect(found[1]?.detail).toContain('first-name');
+  });
+
+  it('meta-refresh: 몇 초 뒤 새로고침·이동하는 meta 를 찾고, 0초(즉시 이동)는 통과한다', () => {
+    const head = '<title>t</title><meta name="viewport" content="width=device-width"><meta name="description" content="d">';
+    expect(run('<p>글</p>', head + '<meta http-equiv="refresh" content="5; url=/home">').map((f) => [f.ruleId, f.detail])).toEqual([['meta-refresh', '5초 뒤 이동']]);
+    expect(run('<p>글</p>', head + '<meta http-equiv="refresh" content="0; url=/home">')).toEqual([]);
   });
 
   it('img-oversized: 레이아웃이 없는 환경에서는 건너뛰고 오류도 내지 않는다', () => {

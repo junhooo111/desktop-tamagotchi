@@ -114,7 +114,7 @@ import { loadGrowth, saveGrowth } from './growth-store.js';
 import { loadSettings, saveSettings } from './settings-store.js';
 import { newsText, pickNews, type NewsItem } from '../shared/news.js';
 import { buildStatus } from '../shared/status.js';
-import { GIFT_LIFE_MS, GIFT_WINDOW, giftHtml, giftText, nextGiftDelayMs, offerGift, rollGift } from '../shared/gift.js';
+import { GIFT_LIFE_MS, GIFT_WINDOW, giftHtml, giftSpot, giftText, nextGiftDelayMs, offerGift, rollGift } from '../shared/gift.js';
 import { POOP_LIFE_MS, POOP_SIZE, poopHtml } from '../shared/poop.js';
 import { fetchNews, loadSeen, saveSeen } from './news.js';
 import { createMacUpdater } from './mac-updater-node.js';
@@ -394,6 +394,7 @@ let nextGiftAt = 0;
 
 function closeGift(): void {
   clearTimeout(giftTimer);
+  if (!active && behavior.mode === 'alert') behavior = endAlert(behavior, Date.now());
   if (giftWin && !giftWin.isDestroyed()) giftWin.destroy();
   giftWin = null;
 }
@@ -428,6 +429,13 @@ function openGiftBox(): void {
   void w.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(giftHtml()));
   giftWin = w;
   positionGift();
+  // 화면 한가운데로 뛰어와서 선물을 들고 기다린다(사용자가 알아채도록). 다른 일로 바쁘면 있던 자리에서 알린다.
+  const now = Date.now();
+  if (canInspect(behavior, stageOf(pet)) && !drag && !cardWin && !active) {
+    const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
+    const spot = giftSpot(area, petSize);
+    behavior = goInspect(behavior, stepContext(now, TICK_MS), spot.x, spot.y);
+  }
   say('선물을 가져왔어요! 🎁 눌러 보세요');
   // 누르지 않으면 잠시 뒤 사라진다.
   giftTimer = setTimeout(() => {
@@ -1809,6 +1817,9 @@ function updateInspection(now: number, dtMs: number): void {
     offerTip(now);
   }
 
+  // 선물을 들고 기다리는 동안은 알림 자세를 유지한다(누르거나 상자가 사라지면 풀린다).
+  if (giftWin && !giftWin.isDestroyed() && !active && behavior.mode === 'alert') behavior = { ...behavior, until: now + 5_000 };
+
   if (active) {
     const traveling = behavior.mode === 'run' && behavior.then === 'alert';
     if (behavior.mode === 'alert') {
@@ -1825,7 +1836,7 @@ function updateInspection(now: number, dtMs: number): void {
     return;
   }
   const next = queue[0];
-  if (!next || drag || cardWin || now - lastInspectAt < INSPECT_GAP_MS) return;
+  if (!next || drag || cardWin || (giftWin && !giftWin.isDestroyed()) || now - lastInspectAt < INSPECT_GAP_MS) return;
   if (!canInspect(behavior, stageOf(pet))) return;
 
   queue = queue.slice(1);
@@ -2134,7 +2145,8 @@ if (!app.requestSingleInstanceLock()) {
     }
     lastUptimeAt = Date.now();
     setInterval(() => accrueUptime(), 60_000);
-    nextGiftAt = Date.now() + nextGiftDelayMs(Math.random, true);
+    // 개발 확인용: TAMA_GIFT_SOON=1 이면 켠 지 10초 뒤에 첫 선물이 온다(하루 한도는 그대로 적용).
+    nextGiftAt = Date.now() + (process.env['TAMA_GIFT_SOON'] === '1' ? 10_000 : nextGiftDelayMs(Math.random, true));
     setInterval(() => maybeOfferGift(Date.now()), 60_000);
     setTimeout(() => checkDaily(), 9_000);
     setTimeout(() => recordGrowth({ kind: 'sync' }), 12_000); // 이미 조건을 채운 업적(예전 사용자) 확인

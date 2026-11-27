@@ -10,8 +10,8 @@ export const GIFTS_PER_DAY = 3;
 export const GIFT_GAP_MS = { min: 2 * 3_600_000, max: 4 * 3_600_000 } as const;
 /** 켠 뒤 첫 선물까지(ms) */
 export const FIRST_GIFT_MS = { min: 20 * 60_000, max: 60 * 60_000 } as const;
-/** 선물 상자를 누르지 않으면 사라지는 시간 */
-export const GIFT_LIFE_MS = 3 * 60_000;
+/** 선물 상자를 누르지 않으면 사라지는 시간(화면 한가운데에서 기다려 주는 시간) */
+export const GIFT_LIFE_MS = 5 * 60_000;
 /** 경험치 선물의 양 */
 export const GIFT_XP = { min: 5, max: 15 } as const;
 
@@ -38,6 +38,11 @@ export function offerGift(c: Collection, today: string): { collection: Collectio
   const day = c.giftDay === today ? c : { ...c, giftDay: today, giftsToday: 0 };
   if (day.giftsToday >= GIFTS_PER_DAY) return { collection: day, ok: false };
   return { collection: { ...day, giftsToday: day.giftsToday + 1 }, ok: true };
+}
+
+/** 선물을 들고 기다릴 자리: 작업 영역의 한가운데(펫 왼쪽 위 좌표). 사용자가 알아채기 쉽도록 화면 중앙으로 온다. */
+export function giftSpot(area: { x: number; y: number; width: number; height: number }, petSize: number): { x: number; y: number } {
+  return { x: Math.round(area.x + (area.width - petSize) / 2), y: Math.round(area.y + (area.height - petSize) / 2) };
 }
 
 /** 선물 결과를 펫이 하는 말로 만든다. */

@@ -289,3 +289,9 @@
 - Edge Function `commits`(`supabase/functions/commits`): 사용자 JWT 로 누구인지 정하고, 시크릿 `GITHUB_READ_TOKEN` 으로 GitHub GraphQL 의 일별 기여를 읽어 위 함수에 넘긴다. 토큰이 없으면 503 not_configured. 배포 완료.
 - 앱: 로그인 8초 뒤와 1시간마다 `syncGithubCommits`. 받으면 말풍선.
 - 남은 일(사용자): GitHub 읽기 토큰을 만들어 Supabase 시크릿 `GITHUB_READ_TOKEN` 으로 등록해야 실제로 동작한다(채팅에 붙여 넣지 말 것). 기여 수에는 커밋 외에 PR·이슈 등도 포함된다(GitHub 기여 달력 기준), 비공개 저장소 기여는 토큰 권한에 따라 다르다.
+
+## 2026-11-27 — 선물 상자는 화면 중앙에서 기다리고, 유니버설 디자인 검사 9종 추가
+
+- 선물: 하루 두세 번 오는 선물은 이제 펫이 **작업 영역 한가운데로 뛰어와** 상자를 들고 기다린다(알림 자세 유지, 최대 5분). 누르면 열리고, 안 누르면 사라진다. 기다리는 동안 다른 검사 알림은 끼어들지 않는다. 다른 일로 바쁘면(끌려가는 중·카드 열림) 있던 자리에서 알린다. 자리 계산은 순수 함수 `giftSpot`.
+- 검사 규칙 19 → 28종. axe-core 규칙 목록·WCAG 2.2를 참고해 코드로 안전하게 판정할 수 있는 것만 추가했다: iframe 제목(frame-title), aria-hidden 안 포커스(aria-hidden-focus), 빈 제목(empty-heading), main 없음(landmark-main), 소리 나는 자동 재생(autoplay-media), 없는 id 참조(aria-broken-ref), 버튼·링크 중첩(nested-interactive), 자동 완성 없음(autocomplete-missing, WCAG 1.3.5), meta refresh(meta-refresh). 모두 학습 카드·퀴즈 포함.
+- 일부러 뺀 것: 영상 자막 유무·포커스 표시(outline) 제거·색에만 의존하는 정보·글자 간격 같은 항목은 코드로 정확히 판정하기 어렵거나 오탐이 많아 넣지 않았다. 앞의 규칙들과 달리 axe 가 하는 "incomplete(사람이 확인)" 개념이 없어서이다.

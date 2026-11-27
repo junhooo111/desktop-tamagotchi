@@ -328,6 +328,84 @@ export function collectPage(opts: { requireLayout: boolean }): PageSnapshot {
     if (plain !== '' && vagueLinks.includes(plain)) add('vague-link', a, `"${name.slice(0, 30)}"`);
   });
 
+  // 20. iframe 에 제목(title)이 없음
+  doc.querySelectorAll('iframe').forEach((frame) => {
+    if (!isShown(frame) || frame.getAttribute('aria-hidden') === 'true' || frame.getAttribute('tabindex') === '-1') return;
+    if (nameOf(frame) === '') add('frame-title', frame, (frame.getAttribute('src') ?? 'iframe').slice(0, 60));
+  });
+
+  // 21. aria-hidden 요소 안에 키보드로 갈 수 있는 것이 있음
+  const focusableSelector = 'a[href], button:not([disabled]), input:not([type="hidden"]):not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]';
+  doc.querySelectorAll('[aria-hidden="true"]').forEach((hidden) => {
+    if (full('aria-hidden-focus') || !isShown(hidden) || hidden.closest('[inert]') !== null) return;
+    const candidates = [hidden, ...Array.from(hidden.querySelectorAll(focusableSelector))].filter((c) => c.matches(focusableSelector));
+    const reachable = candidates.find((c) => c.getAttribute('tabindex') !== '-1');
+    if (reachable) add('aria-hidden-focus', hidden, `<${reachable.tagName.toLowerCase()}> 에 포커스가 갈 수 있어요`);
+  });
+
+  // 22. 내용이 없는 제목
+  doc.querySelectorAll('h1, h2, h3, h4, h5, h6, [role="heading"]').forEach((h) => {
+    if (full('empty-heading') || !isShown(h)) return;
+    if (nameOf(h) === '') add('empty-heading', h, h.tagName.toLowerCase());
+  });
+
+  // 23. 본문 영역(main) 없음 (내용이 있는 페이지만)
+  if (doc.body && (doc.body.textContent ?? '').trim() !== '' && doc.querySelector('main, [role="main"]') === null) {
+    add('landmark-main', null, '<main> 없음');
+  }
+
+  // 24. 소리 나는 자동 재생
+  doc.querySelectorAll('video[autoplay], audio[autoplay]').forEach((media) => {
+    const m = media as HTMLMediaElement;
+    if (full('autoplay-media') || m.muted || media.hasAttribute('muted')) return;
+    if (media.tagName === 'VIDEO' && !isShown(media)) return;
+    add('autoplay-media', media, `<${media.tagName.toLowerCase()} autoplay> 에 muted 없음`);
+  });
+
+  // 25. 이름·설명이 없는 id 를 가리킴 (aria-labelledby·aria-describedby·label for)
+  const hasId = (id: string): boolean => doc.getElementById(id) !== null;
+  doc.querySelectorAll('[aria-labelledby], [aria-describedby]').forEach((el) => {
+    if (full('aria-broken-ref') || !isShown(el)) return;
+    for (const attr of ['aria-labelledby', 'aria-describedby']) {
+      const ids = (el.getAttribute(attr) ?? '').split(/\s+/).filter((t) => t !== '');
+      const missing = ids.find((t) => !hasId(t));
+      if (missing) {
+        add('aria-broken-ref', el, `${attr}="${missing.slice(0, 30)}" 인 요소 없음`);
+        return;
+      }
+    }
+  });
+  doc.querySelectorAll('label[for]').forEach((label) => {
+    const id = (label.getAttribute('for') ?? '').trim();
+    if (id !== '' && !full('aria-broken-ref') && isShown(label) && !hasId(id)) add('aria-broken-ref', label, `for="${id.slice(0, 30)}" 인 요소 없음`);
+  });
+
+  // 26. 링크·버튼 안에 또 링크·버튼·입력칸
+  const innerInteractive = 'a[href], button, input:not([type="hidden"]), select, textarea, [role="button"], [role="link"]';
+  doc.querySelectorAll('a[href], button').forEach((outer) => {
+    if (full('nested-interactive') || !isShown(outer)) return;
+    const inner = outer.querySelector(innerInteractive);
+    if (inner) add('nested-interactive', outer, `<${outer.tagName.toLowerCase()}> 안에 <${inner.tagName.toLowerCase()}>`);
+  });
+
+  // 27. 개인 정보 입력칸에 autocomplete 없음 (이메일·전화·이름·주소·우편번호)
+  const personalName = /^(e-?mail|tel|phone|mobile|name|full-?name|first-?name|last-?name|given-?name|family-?name|address|street|zip|postal|post-?code)$/i;
+  doc.querySelectorAll('input').forEach((input) => {
+    if (full('autocomplete-missing') || !isShown(input)) return;
+    const type = (input.getAttribute('type') ?? 'text').toLowerCase();
+    if (!['text', 'email', 'tel', 'search'].includes(type) || type === 'search') return;
+    if ((input.getAttribute('autocomplete') ?? '').trim() !== '') return;
+    const key = (input.getAttribute('name') ?? input.id ?? '').trim();
+    if (type === 'email' || type === 'tel' || personalName.test(key)) {
+      add('autocomplete-missing', input, `<input type="${type}"${key ? ' name="' + key.slice(0, 24) + '"' : ''}>`);
+    }
+  });
+
+  // 28. 시간이 지나면 저절로 새로고침·이동 (0초는 즉시 이동이라 제외)
+  const refresh = doc.querySelector('meta[http-equiv="refresh" i]');
+  const refreshSeconds = Number(/^\s*(\d+)/.exec(refresh?.getAttribute('content') ?? '')?.[1] ?? 0);
+  if (refresh && refreshSeconds > 0) add('meta-refresh', null, `${refreshSeconds}초 뒤 이동`);
+
   return {
     url: location.href,
     title: doc.title,

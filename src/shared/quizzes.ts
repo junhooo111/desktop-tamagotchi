@@ -128,4 +128,58 @@ export const QUIZZES: Record<RuleId, Quiz> = {
     answer: 1,
     explain: '링크 글자만 읽어도 어디로 가는지 알 수 있어야 해요. "여기"는 스크린 리더 링크 목록에서 아무 정보가 없습니다.',
   },
+  'frame-title': {
+    question: '지도를 보여 주는 <iframe> 을 스크린 리더 사용자가 이해하게 하려면?',
+    options: ['width 와 height 를 정확히 쓴다', 'border 를 없앤다', 'title="매장 위치 지도" 를 붙인다'],
+    answer: 2,
+    explain: '스크린 리더는 iframe 의 title 을 이름으로 읽어요. 없으면 "프레임"이라고만 들려서 안에 무엇이 있는지 알 수 없습니다.',
+  },
+  'aria-hidden-focus': {
+    question: '화면 밖으로 숨긴 메뉴를 보조 기술과 키보드 모두에게서 완전히 숨기려면?',
+    options: ['aria-hidden="true" 만 붙인다', 'inert 나 hidden 으로 숨긴다', 'opacity: 0 으로 투명하게 한다'],
+    answer: 1,
+    explain: 'aria-hidden 은 읽기만 숨길 뿐 Tab 포커스는 그대로 가요. inert·hidden(display:none)은 포커스까지 막아 줍니다.',
+  },
+  'empty-heading': {
+    question: '글자 크기만 키우고 싶어서 빈 <h2></h2> 를 쓰면 어떻게 될까요?',
+    options: ['제목 목록에 빈 제목이 끼어 구조를 헷갈리게 한다', '아무 문제 없다', '검색엔진 순위가 올라간다'],
+    answer: 0,
+    explain: '스크린 리더 사용자는 제목 목록으로 페이지를 훑어요. 빈 제목은 이름 없는 칸이 되어 방해만 됩니다. 모양은 CSS 로 만드세요.',
+  },
+  'landmark-main': {
+    question: '키보드·스크린 리더 사용자가 메뉴를 건너뛰고 본문으로 바로 가게 하는 태그는?',
+    options: ['<div class="content">', '<section>', '<main>'],
+    answer: 2,
+    explain: '<main> 은 페이지의 핵심 내용을 뜻하는 영역이라 "본문으로 이동" 기능이 곧바로 찾아가요. 페이지에 하나만 두세요.',
+  },
+  'autoplay-media': {
+    question: '페이지가 열리자마자 재생되는 배경 영상이 지켜야 할 것은?',
+    options: ['소리 없이(muted) 재생하고 멈출 수 있게 한다', '볼륨을 아주 작게 맞춘다', '재생 시간을 10초 이상으로 늘린다'],
+    answer: 0,
+    explain: '자동 재생 소리는 스크린 리더 안내를 덮어 버려요. 소리 없이 재생하고 controls 로 멈출 수 있게 해야 합니다.',
+  },
+  'aria-broken-ref': {
+    question: '<label for="mail"> 인데 입력칸 id 가 "email" 이라면?',
+    options: ['브라우저가 알아서 연결해 준다', '연결이 끊겨 입력칸이 이름 없이 읽힌다', '입력칸에 자동으로 포커스가 간다'],
+    answer: 1,
+    explain: 'for·aria-labelledby 는 id 가 정확히 같아야 이어져요. 눈으로는 같아 보여도 연결이 없어서 스크린 리더는 이름을 모릅니다.',
+  },
+  'nested-interactive': {
+    question: '카드 전체가 링크인데 안에 "담기" 버튼도 넣고 싶을 때 바른 방법은?',
+    options: ['<a> 안에 <button> 을 넣는다', '버튼에 role="link" 를 준다', '링크와 버튼을 나란히 두고 CSS 로 겹쳐 보이게 한다'],
+    answer: 2,
+    explain: '링크·버튼 안에 또 링크·버튼을 넣으면 보조 기술이 안쪽을 놓치고 브라우저마다 다르게 동작해요. 나란히 두는 것이 안전합니다.',
+  },
+  'autocomplete-missing': {
+    question: '이메일 입력칸에 브라우저가 저장된 주소를 채워 주게 하려면?',
+    options: ['autocomplete="email" 을 쓴다', 'placeholder="이메일" 을 쓴다', 'maxlength 를 늘린다'],
+    answer: 0,
+    explain: 'autocomplete 값은 입력 목적을 알려 줘요. 입력이 어려운 사람이 한 번에 채울 수 있게 하는 접근성 기준(WCAG 1.3.5)입니다.',
+  },
+  'meta-refresh': {
+    question: '5초 뒤 저절로 다른 페이지로 보내는 meta refresh 가 문제인 이유는?',
+    options: ['서버가 느려져서', '천천히 읽는 사람이 끝내기 전에 쫓겨나서', '글자가 흐려져서'],
+    answer: 1,
+    explain: '시간 제한은 읽는 속도가 느리거나 보조 기술을 쓰는 사람에게 큰 장벽이에요. 링크로 직접 이동하게 하세요.',
+  },
 };
