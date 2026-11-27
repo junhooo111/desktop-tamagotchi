@@ -24,7 +24,8 @@ import type { NoticeMessage } from '../shared/view.js';
 import { QUIZZES } from '../shared/quizzes.js';
 import { addIgnored, buildResults, isMuted, visibleFindings } from '../shared/results.js';
 import { DEFAULT_SETTINGS, sanitizeSettings, tipIntervalMs, type Settings } from '../shared/settings.js';
-import { TIP_PENDING_MS, pickTip, shouldOfferTip, type Tip } from '../shared/tips.js';
+import { TIP_PENDING_MS, pickTip, shouldOfferTip, tipText, type Tip } from '../shared/tips.js';
+import { resolveLang, type Lang } from '../shared/i18n.js';
 import { BUBBLE_GAP, TIP_BUBBLE, WINDOW, bubbleShift, petPixelSize } from '../shared/layout.js';
 import {
   LEARN_XP,
@@ -92,6 +93,7 @@ import {
   drop,
   endAlert,
   goInspect,
+  callToSpot,
   clearHome,
   isOccupied,
   isStrolling,
@@ -225,6 +227,11 @@ let cardWin: BrowserWindow | null = null;
 
 // FE 지식: 펫 위 말풍선으로 보여 주고 사용자가 확인하기를 기다리는 지식
 let pendingTip: { tip: Tip; until: number } | null = null;
+
+/** 지금 쓸 언어: 설정이 auto 면 이 PC 의 언어·지역을 따른다. */
+function currentLang(): Lang {
+  return resolveLang(settings.language, app.getLocale(), app.getLocaleCountryCode());
+}
 let lastTipAt = Date.now();
 /** 지식 말풍선이 화면 밖으로 잘리지 않도록 옆으로 미는 거리 */
 let tipShift = 0;
@@ -258,7 +265,8 @@ function currentView(): PetView {
 
 function tipPayload(tip: Tip): TipBubble {
   const seen = progress.tipsSeen.includes(tip.id);
-  return { title: tip.title, body: tip.body, code: tip.code, xp: seen ? 0 : LEARN_XP.tip };
+  const text = tipText(tip, currentLang());
+  return { title: text.title, body: text.body, code: tip.code, xp: seen ? 0 : LEARN_XP.tip };
 }
 
 function sendTip(): void {
@@ -431,10 +439,11 @@ function openGiftBox(): void {
   positionGift();
   // 화면 한가운데로 뛰어와서 선물을 들고 기다린다(사용자가 알아채도록). 다른 일로 바쁘면 있던 자리에서 알린다.
   const now = Date.now();
-  if (canInspect(behavior, stageOf(pet)) && !drag && !cardWin && !active) {
+  if (!drag && !cardWin && !active) {
+    // 지금 보고 있는 모니터(마우스가 있는 모니터)의 한가운데로 온다. 하던 일은 멈춘다.
     const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
     const spot = giftSpot(area, petSize);
-    behavior = goInspect(behavior, stepContext(now, TICK_MS), spot.x, spot.y);
+    behavior = callToSpot(behavior, stepContext(now, TICK_MS), spot.x, spot.y);
   }
   say('선물을 가져왔어요! 🎁 눌러 보세요');
   // 누르지 않으면 잠시 뒤 사라진다.

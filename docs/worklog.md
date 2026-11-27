@@ -302,3 +302,10 @@
 - 새 규칙 10종: focus-outline(:focus 에서 outline 제거·대체 없음, WCAG 2.4.7), role-no-focus(role=button 인데 tabindex 없음), scroll-no-focus(스크롤 영역 키보드 불가), fake-link(href="#"·javascript:), link-color-only(색으로만 구분된 링크, 1.4.1), text-small(12px 미만), reduced-motion(infinite 애니메이션 + prefers-reduced-motion 없음, 2.3.3), role-img-alt, html-lang-valid, video-captions(1.2.2). 이미지 입력 버튼(input type=image)의 alt 도 img-alt 에서 본다.
 - 실제 크롬(브라우저 창)에서 시험 페이지에 수집기를 주입해 새 규칙이 동작하는 것을 확인했다. 시험 페이지의 일부 요소는 폭이 0 이라 "보이지 않는 요소"로 처리돼 잡히지 않는다(오탐 방지 동작).
 - 한계: 포커스 표시는 스타일시트(같은 출처)를 훑어 근사로 판정한다(다른 출처 CSS 는 못 읽음). 키보드 함정·논리적인 포커스 순서·자막 내용의 정확성 같은 것은 코드로 판정할 수 없다.
+
+## 2026-11-27 — FE 지식 69개(한/영)와 언어 설정의 틀
+
+- 선물 상자 확인 중 발견: 펫이 자거나 벽을 타고 있으면 중앙으로 안 뛰어오던 문제를 고쳤다(`callToSpot`: 하던 일을 멈추고 마우스가 있는 모니터 중앙으로 달려간다).
+- FE 지식 20 → 69개. 새 49개(`src/shared/tips-extra.ts`)는 성능·CSS·JS/TS·React·보안·접근성·네트워크·SEO, 모두 한국어·영어 함께. 기존 20개의 영어는 `tips-en.ts`. 출처 링크(`source`)는 그 주제를 다룬 글을 검색으로 실제 확인한 경우에만 붙였다: web.dev Core Web Vitals, 우아한형제들 이미지 최적화 사례, 카카오 WebAssembly 글, if(kakao)dev2022 Lighthouse Userflow 세션, MDN CSP. 우아한형제들·카카오 글은 검색으로 제목·요지만 확인했고 글 내용을 옮기지 않았다(우리 말로 풀어 쓴 일반 원칙).
+- 언어 설정: `language: 'auto' | 'ko' | 'en'`(기본 auto). auto 는 OS 언어가 한국어이거나 지역이 KR 이면 한국어, 아니면 영어(`detectLang`). 설정 창에 선택 추가. 지금은 FE 지식 말풍선만 언어를 따른다 — 나머지 화면의 영어는 단계적으로(메뉴·말풍선 → 설정·경매장 → 검사 카드·퀴즈 → 도감·업적·꾸미기·README).
+- 한계: 지식의 코드 예시 안 한국어 주석·문자열은 영어 모드에서도 한국어로 남아 있다.

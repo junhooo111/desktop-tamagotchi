@@ -9,6 +9,7 @@ import {
   clampToAreas,
   createBehavior,
   drop,
+  callToSpot,
   endAlert,
   goInspect,
   pickSpot,
@@ -312,6 +313,15 @@ describe('검사 알림', () => {
 
     const arrived = step({ ...going, x: 399 }, ctxOf({ dtMs: 1000, now: 50_000 }));
     expect(arrived).toMatchObject({ mode: 'alert', x: 400, then: 'none', since: 50_000, until: 50_000 + ALERT_MS });
+  });
+
+  it('callToSpot: 자고 있든 벽을 타든 하던 일을 멈추고 그 자리로 뛰어간다(들려 있는 중에는 그대로)', () => {
+    for (const mode of ['sleep', 'climb', 'hang', 'doze', 'sit', 'play'] as const) {
+      const called = callToSpot(base({ x: 100, y: 200, mode, surface: 'wallL', strollUntil: 9_999_999 }), ctxOf(), 700, 300);
+      expect(called, mode).toMatchObject({ mode: 'run', then: 'alert', targetX: 700, targetY: 300, surface: 'floor', strollUntil: 0 });
+    }
+    const carried = base({ mode: 'carried' });
+    expect(callToSpot(carried, ctxOf(), 700, 300)).toBe(carried);
   });
 
   it('알림 상태는 제자리에서 기다리다가 시간이 지나면 쉬는 상태로 돌아간다', () => {

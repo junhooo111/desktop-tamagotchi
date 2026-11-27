@@ -372,6 +372,15 @@ export function goInspect(s: BehaviorState, ctx: StepContext, x: number, y: numb
   return startTravel(s, ctx, 'run', x, y, 'alert');
 }
 
+/**
+ * 하던 일이 무엇이든(자고 있든 벽을 타든 매달려 있든) 멈추고 그 자리로 달려가서, 도착하면 알림 자세로 기다린다.
+ * 선물 상자처럼 사용자가 꼭 알아채야 할 때 쓴다. 들려 있는 중(carried)에는 건드리지 않는다.
+ */
+export function callToSpot(s: BehaviorState, ctx: StepContext, x: number, y: number): BehaviorState {
+  if (s.mode === 'carried') return s;
+  return startTravel({ ...s, strollUntil: 0 }, ctx, 'run', x, y, 'alert');
+}
+
 /** 알림을 끝내고 가만히 선다(확인했거나 나중에 보기로 했을 때). */
 export function endAlert(s: BehaviorState, now: number): BehaviorState {
   return { ...s, mode: 'idle', surface: 'floor', since: now, until: now + 2_000, then: 'none' };

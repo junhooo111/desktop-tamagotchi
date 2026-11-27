@@ -10,8 +10,13 @@ describe('sanitizeSettings', () => {
   });
 
   it('유효한 값은 그대로 받는다', () => {
-    const s = { petScale: 2, inspectEnabled: false, scanSeconds: 30, tipMinutes: 0, autoUpdate: false, showNews: false, disabledRules: ['contrast'], ignored: ['http://localhost:3000/|img-alt|img'], variant: 'pastel', accessory: 'crown', petName: '콩이', displayStage: 'baby', cardSpecies: 'fox' };
+    const s = { petScale: 2, inspectEnabled: false, scanSeconds: 30, tipMinutes: 0, autoUpdate: false, showNews: false, disabledRules: ['contrast'], ignored: ['http://localhost:3000/|img-alt|img'], variant: 'pastel', accessory: 'crown', petName: '콩이', displayStage: 'baby', cardSpecies: 'fox', language: 'en' };
     expect(sanitizeSettings(s)).toEqual(s);
+  });
+
+  it('언어는 auto·ko·en 만 받고 나머지는 auto(PC 를 따름)로 돌린다', () => {
+    for (const ok of ['auto', 'ko', 'en']) expect(sanitizeSettings({ language: ok }).language).toBe(ok);
+    for (const bad of ['fr', 3, null, undefined]) expect(sanitizeSettings({ language: bad }).language).toBe('auto');
   });
 
   it('펫 이름은 다듬어서 받는다(제어문자·꺾쇠 제거, 공백 정리, 12자까지)', () => {

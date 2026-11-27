@@ -3,6 +3,7 @@
  * 바꿀 때마다 메인에 보내서 바로 적용·저장한다(메인이 값을 다시 검증하고 저장된 전체 설정을 돌려준다).
  */
 import { CATEGORY_LABELS, LESSONS, RULE_IDS, type RuleCategory } from '../shared/lessons.js';
+import { LANG_SETTINGS, type LangSetting } from '../shared/i18n.js';
 import { SETTING_CHOICES, type Settings } from '../shared/settings.js';
 
 interface SettingsApi {
@@ -31,6 +32,23 @@ const LABELS: Record<ChoiceKey, (n: number) => string> = {
 };
 
 let current: Settings;
+
+const LANGUAGE_LABELS: Record<LangSetting, string> = { auto: '자동 / Auto', ko: '한국어', en: 'English' };
+
+/** 언어 선택: 자동(PC 언어·지역) / 한국어 / English */
+function renderLanguage(): void {
+  const box = $('language');
+  box.textContent = '';
+  for (const value of LANG_SETTINGS) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.textContent = LANGUAGE_LABELS[value];
+    button.dataset['value'] = value;
+    button.setAttribute('aria-pressed', String(current.language === value));
+    button.addEventListener('click', () => void change({ language: value }));
+    box.appendChild(button);
+  }
+}
 
 function renderChoices(key: ChoiceKey): void {
   const box = $(key);
@@ -79,6 +97,7 @@ function renderRules(): void {
 }
 
 function render(): void {
+  renderLanguage();
   renderRules();
   for (const key of Object.keys(SETTING_CHOICES) as ChoiceKey[]) renderChoices(key);
   $<HTMLInputElement>('inspectEnabled').checked = current.inspectEnabled;

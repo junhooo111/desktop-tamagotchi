@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TIPS, TIP_EVERY_MS, pickTip, shouldOfferTip, type TipGate } from './tips.js';
+import { TIPS, TIP_EVERY_MS, pickTip, shouldOfferTip, tipText, type TipGate } from './tips.js';
 
 describe('지식 목록', () => {
   it('id 가 겹치지 않고 모든 항목이 채워져 있다', () => {
@@ -74,5 +74,31 @@ describe('shouldOfferTip 의 알림 주기 설정', () => {
 
   it('Infinity 면(알림 끔) 아무리 지나도 알리지 않는다', () => {
     expect(shouldOfferTip({ ...base, now: 10_000 * 60_000, everyMs: Infinity })).toBe(false);
+  });
+});
+
+describe('FE 지식 한/영', () => {
+  it('지식이 60개 이상이고, 모두 한국어·영어 제목과 본문이 채워져 있다', () => {
+    expect(TIPS.length).toBeGreaterThanOrEqual(60);
+    for (const t of TIPS) {
+      expect(t.en?.title.trim(), t.id).toBeTruthy();
+      expect(t.en?.body.trim(), t.id).toBeTruthy();
+      expect(/[가-힣]/.test(t.en?.title ?? ''), t.id + ' 영어 제목에 한글').toBe(false);
+      expect(/[가-힣]/.test(t.en?.body ?? ''), t.id + ' 영어 본문에 한글').toBe(false);
+    }
+  });
+
+  it('언어에 맞는 제목·본문을 고르고, 참고 링크는 본문 끝에 붙인다', () => {
+    const plain = TIPS.find((t) => !t.source)!;
+    expect(tipText(plain, 'ko')).toEqual({ title: plain.title, body: plain.body });
+    expect(tipText(plain, 'en')).toEqual(plain.en);
+    const sourced = TIPS.find((t) => t.source)!;
+    expect(tipText(sourced, 'ko').body).toContain('참고: ' + sourced.source!.label);
+    expect(tipText(sourced, 'en').body).toContain('Reference: ' + sourced.source!.label);
+    expect(tipText(sourced, 'en').body).toContain(sourced.source!.url);
+  });
+
+  it('참고 링크는 https 주소만 쓴다', () => {
+    for (const t of TIPS) if (t.source) expect(t.source.url, t.id).toMatch(/^https:\/\//);
   });
 });

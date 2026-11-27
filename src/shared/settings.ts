@@ -6,6 +6,7 @@ import type { Accessory } from './art/accessory.js';
 import { isAccessory, isVariant, type Variant } from './art/style.js';
 import { isDisplayStage, type DisplayStage } from './pet.js';
 import { isSpeciesId, type SpeciesId } from './species.js';
+import { isLangSetting, type LangSetting } from './i18n.js';
 import { RULE_IDS, type RuleId } from './lessons.js';
 
 export const MAX_IGNORED_KEYS = 500;
@@ -37,6 +38,8 @@ export interface Settings {
   displayStage: DisplayStage;
   /** 프로필 카드에 보여 줄 동물('current' = 지금 키우는 동물). 열려 있는 동물만 쓴다(검증은 메인에서). */
   cardSpecies: SpeciesId | 'current';
+  /** 앱 언어: auto(기본)는 이 PC 의 언어·지역을 따르고, ko·en 은 직접 고른다. */
+  language: LangSetting;
 }
 
 export const MAX_PET_NAME = 12;
@@ -63,6 +66,7 @@ export const DEFAULT_SETTINGS: Settings = {
   petName: '',
   displayStage: 'auto',
   cardSpecies: 'current',
+  language: 'auto',
 };
 
 /** 설정 창이 보여 주는 선택지(허용하는 값과 같다) */
@@ -108,6 +112,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     petName: sanitizePetName(r['petName']),
     displayStage: isDisplayStage(r['displayStage']) ? r['displayStage'] : DEFAULT_SETTINGS.displayStage,
     cardSpecies: r['cardSpecies'] === 'current' || isSpeciesId(r['cardSpecies']) ? r['cardSpecies'] : DEFAULT_SETTINGS.cardSpecies,
+    language: isLangSetting(r['language']) ? r['language'] : DEFAULT_SETTINGS.language,
   };
 }
 

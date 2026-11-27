@@ -3,17 +3,25 @@
  * 외부 서비스에 의존하지 않도록 앱 안에 내장해 둔다(오프라인·사내망에서도 동작).
  * AI 가 만든 코드에서 자주 놓치는 기본기 위주로 골랐다.
  */
+import { pick, type Lang } from './i18n.js';
 import type { Mode } from './motion.js';
 import type { Stage } from './pet.js';
+import { TIPS_EN } from './tips-en.js';
+import { EXTRA_TIPS } from './tips-extra.js';
 
 export interface Tip {
   id: string;
+  /** 한국어 제목·본문(기본) */
   title: string;
   body: string;
   code: string;
+  /** 영어 제목·본문 */
+  en?: { title: string; body: string };
+  /** 이 주제를 다룬 글을 확인한 경우에만 붙는 참고 링크 */
+  source?: { label: string; url: string };
 }
 
-export const TIPS: readonly Tip[] = [
+const BASE_TIPS: readonly Tip[] = [
   {
     id: 'semantic-html',
     title: 'div 대신 알맞은 태그를 쓰세요',
@@ -135,6 +143,22 @@ export const TIPS: readonly Tip[] = [
     code: '<script src="/app.js" defer></script>',
   },
 ];
+
+/** 앱에 내장된 FE 지식 전체(기본 20개 + 추가 49개) */
+export const TIPS: readonly Tip[] = [
+  ...BASE_TIPS.map((t) => ({ ...t, en: TIPS_EN[t.id] })),
+  ...EXTRA_TIPS.map((t): Tip => ({ id: t.id, title: t.ko.title, body: t.ko.body, code: t.code, en: t.en, ...(t.source ? { source: t.source } : {}) })),
+];
+
+/** 언어에 맞는 제목·본문(번역이 없으면 한국어). 참고 링크가 있으면 본문 끝에 붙인다. */
+export function tipText(tip: Tip, lang: Lang): { title: string; body: string } {
+  const text = pick(lang, { ko: { title: tip.title, body: tip.body }, ...(tip.en ? { en: tip.en } : {}) });
+  if (!tip.source) return text;
+  const label = lang === 'en' ? 'Reference' : '참고';
+  return { title: text.title, body: `${text.body}
+
+${label}: ${tip.source.label} (${tip.source.url})` };
+}
 
 /** 한 번에 한 번만 알려 주는 간격 */
 export const TIP_EVERY_MS = 20 * 60_000;
