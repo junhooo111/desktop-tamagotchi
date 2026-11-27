@@ -43,3 +43,6 @@
 - **서버 카드가 안 보이면**: 먼저 `curl <주소>/functions/v1/card?user=<이름>` 로 200·`image/svg+xml` 인지 본다. GitHub 이 그림을 잠시 기억하므로 몇 분 늦을 수 있다.
 - **릴리스 = 공지도 함께**: 버전을 올릴 때마다 `news.json` 맨 앞에 새 소식을 한 개 추가한다(id 는 `v<버전>-<주제>`, 제목 40자·본문 200자 이내, 링크는 이 저장소 주소만, 쉬운 말로 사용자가 얻는 것 위주). 앱이 1시간마다 main 의 `news.json` 을 읽어 보여 주므로 **푸시하면 바로 기존 사용자에게 공지된다**. `src/shared/news-release.test.ts` 가 현재 버전의 공지가 없으면 시험을 실패시킨다.
 - **릴리스 절차**: 버전 올리기(`npm version X --no-git-tag-version`, README 배지) → 전체 시험·스모크 → `npm run dist` → 패키지 앱 스모크(`release/win-unpacked/Desktop Tamagotchi.exe --smoke`, 개발 앱을 먼저 종료) → 푸시 → `gh release create vX --target main --notes-file …` 에 `.exe`·`.exe.blockmap`·`latest.yml` 첨부(`release/notes-<버전>.md`). 맥(`npm run pack:mac`)은 **진짜 Python 3 가 필요**하다. 이 PC 의 `python` 은 Microsoft Store 안내용 껍데기라 맥 파일을 못 만든다(v0.10.0 은 Windows 만 올렸다). 맥 사용자는 `latest-mac.json` 이 없으면 업데이트를 못 찾는다.
+- **창을 닫는 저장 버튼은 결과를 말해 준다**: 꾸미기 창은 이름 저장 뒤 창을 닫고 펫이 '이제 내 이름은 …' 말풍선으로 알린다(저장이 됐는지 안 보인다는 사용자 피드백). 새 설정 창에도 같은 원칙을 쓴다.
+- **서버가 기준인 계정은 컬렉션 반영이 '합집합'이 아니다**: 경매장에서 팔면 서버 쪽 펫이 사라지므로, 이미 가져온 계정(`imported`)은 서버가 가진 종만 남긴다. 서버에 동물이 하나도 없으면 지우지 않는 안전장치를 둔다.
+- **Bash 에서 큰 heredoc 은 따옴표 때문에 깨진다**: 여러 파일은 Write 도구로 만든다.

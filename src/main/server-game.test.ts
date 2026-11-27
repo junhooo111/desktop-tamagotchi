@@ -26,13 +26,14 @@ function fakeRpc(handlers: Record<string, (args?: Record<string, unknown>) => Rp
 }
 
 const profileTables = {
-  profiles: [{ tickets: 15, pity: 7, equipped_pet_id: 'p2' }],
+  profiles: [{ tickets: 15, coins: 230, pity: 7, equipped_pet_id: 'p2' }],
   pets: [
     { id: 'p1', species_id: 'cat', xp: 250 },
     { id: 'p2', species_id: 'dragon', xp: 40 },
     { id: 'p3', species_id: 'cat', xp: 30 },
   ],
   cosmetics: [{ kind: 'accessory', item_id: 'crown' }, { kind: 'variant', item_id: 'pastel' }],
+  account_imports: [{ user_id: 'u1' }],
 };
 
 describe('ServerGame.refresh / activate', () => {
@@ -40,7 +41,7 @@ describe('ServerGame.refresh / activate', () => {
     const { rpc } = fakeRpc({}, profileTables);
     const g = new ServerGame(rpc, tmpDir());
     expect((await g.refresh()).ok).toBe(true);
-    expect(g.state).toEqual({ tickets: 15, pity: 7, equippedSpecies: 'dragon', species: { cat: 250, dragon: 40 }, accessories: ['crown'], variants: ['pastel'] });
+    expect(g.state).toEqual({ tickets: 15, coins: 230, imported: true, pity: 7, equippedSpecies: 'dragon', species: { cat: 250, dragon: 40 }, accessories: ['crown'], variants: ['pastel'] });
   });
 
   it('activate 는 기존 진행 가져오기를 부른 뒤 서버 상태를 읽는다', async () => {
@@ -159,7 +160,7 @@ describe('뽑기권 획득 대기열', () => {
 describe('컬렉션에 반영', () => {
   const now = 1_700_000_000_000;
   const local = () => startCollection(createPet('rabbit', now), now);
-  const state: ServerState = { tickets: 15, pity: 7, equippedSpecies: 'dragon', species: { cat: 250, dragon: 40 }, accessories: ['crown', 'laser'], variants: ['pastel'] };
+  const state: ServerState = { tickets: 15, coins: 0, imported: false, pity: 7, equippedSpecies: 'dragon', species: { cat: 250, dragon: 40 }, accessories: ['crown', 'laser'], variants: ['pastel'] };
 
   it('서버의 뽑기권·천장·동물·꾸미기를 덮어쓰되 로컬 동물과 지금 키우는 동물은 지우지 않는다', () => {
     const c = mirrorCollection(local(), state, now);
@@ -170,6 +171,17 @@ describe('컬렉션에 반영', () => {
     expect(c.active).toBe('rabbit');
     expect(c.accessories).toEqual(['crown']); // 모르는 꾸미기(laser)는 버린다
     expect(c.variants).toEqual(['pastel']);
+  });
+
+  it('이미 가져온 계정은 서버가 기준이다: 경매장에서 판 동물은 사라지고 키우던 동물이 없어지면 서버의 장착 동물로 바뀐다', () => {
+    const c = mirrorCollection(local(), { ...state, imported: true }, now);
+    expect(Object.keys(c.owned).sort()).toEqual(['cat', 'dragon']);
+    expect(c.active).toBe('dragon');
+  });
+
+  it('서버에 동물이 하나도 없으면 아무것도 지우지 않는다', () => {
+    const c = mirrorCollection(local(), { ...state, imported: true, species: {} }, now);
+    expect(Object.keys(c.owned)).toEqual(['rabbit']);
   });
 
   it('이미 가진 동물은 서버 경험치가 더 높을 때만 올린다', () => {

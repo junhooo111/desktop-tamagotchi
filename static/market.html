@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'" />
+    <title>경매장</title>
+    <link rel="stylesheet" href="./market.css" />
+  </head>
+  <body>
+    <main>
+      <h1>경매장</h1>
+      <p class="hint" id="wallet"></p>
+      <div class="tabs" id="tabs" role="tablist">
+        <button type="button" role="tab" data-tab="buy" aria-selected="true">사기</button>
+        <button type="button" role="tab" data-tab="mine" aria-selected="false">내 펫 팔기</button>
+      </div>
+      <ul class="list" id="list"></ul>
+      <p class="hint" id="note"></p>
+      <footer>
+        <button id="close" type="button">닫기</button>
+      </footer>
+    </main>
+    <script type="module" src="../dist/renderer/market.js"></script>
+  </body>
+</html>

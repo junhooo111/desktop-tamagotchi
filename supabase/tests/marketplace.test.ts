@@ -36,6 +36,7 @@ async function trio(name: string) {
   const seller = await signUp(db, `${name}-seller`);
   const buyer = await signUp(db, `${name}-buyer`);
   const pet = await givePet(db, seller, 'cat', 40);
+  await givePet(db, seller, 'duck', 0); // 판매자에게 항상 한 마리는 남는다(마지막 한 마리는 팔 수 없다)
   return { seller, buyer, pet };
 }
 
@@ -126,6 +127,8 @@ describe('구매 (buy_listing)', () => {
     await equip(buyer, pet);
     expect(await errorOf(() => equip(seller, pet))).toMatch(/not_your_pet/);
     expect(await errorOf(() => sell(seller, pet, 5))).toMatch(/not_your_pet/);
+    expect(await errorOf(() => sell(buyer, pet, 50))).toMatch(/last_pet/); // 산 펫이 유일한 펫이면 못 판다
+    await givePet(db, buyer, 'owl', 0);
     expect(await errorOf(() => sell(buyer, pet, 50))).toBeNull();
   });
 

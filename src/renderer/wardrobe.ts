@@ -95,6 +95,8 @@ async function saveName(): Promise<void> {
   $('lock-hint').textContent = '';
   data = await window.wardrobeApi.set({ name: $<HTMLInputElement>('pet-name').value });
   render();
+  // 저장했다는 걸 알 수 있게 창을 닫는다(펫이 바뀐 이름을 말풍선으로 알려 준다).
+  window.wardrobeApi.close();
 }
 
 $('name-save').addEventListener('click', () => void saveName());

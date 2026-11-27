@@ -76,6 +76,7 @@ describe('읽기 권한(RLS)', () => {
     await as(db, bob, async () => {
       expect(await rows('select id from public.pets')).toHaveLength(0);
     });
+    await givePet(db, alice, 'dog', 0); // 팔고도 한 마리는 남아야 한다(마지막 한 마리는 팔 수 없다)
     await as(db, alice, async () => {
       await db.query('select public.create_listing($1, 50)', [alicePet]);
     });

@@ -18,6 +18,10 @@ export interface ServerRpc {
 
 export interface ServerState {
   tickets: number;
+  /** 게임머니(경매장에서 쓰는 재화) */
+  coins: number;
+  /** 이 계정이 로컬 진행을 이미 서버로 가져왔는가(가져온 뒤에는 서버가 가진 동물이 기준이다) */
+  imported: boolean;
   pity: number;
   equippedSpecies: string | null;
   /** 가진 동물 종 → 가장 경험치가 높은 개체의 경험치 */
@@ -49,6 +53,13 @@ const MAX_PENDING = 100;
 export function friendlyError(message: string): string {
   if (/insufficient_tickets/.test(message)) return '뽑기권이 모자라요';
   if (/all_collected/.test(message)) return '꾸미기를 모두 모았어요!';
+  if (/insufficient_coins/.test(message)) return '게임머니가 모자라요';
+  if (/last_pet/.test(message)) return '마지막 한 마리는 팔 수 없어요';
+  if (/already_listed/.test(message)) return '이미 경매장에 올라가 있어요';
+  if (/listing_unavailable/.test(message)) return '이미 팔렸거나 내려간 펫이에요';
+  if (/own_listing/.test(message)) return '내가 올린 펫은 살 수 없어요';
+  if (/invalid_price/.test(message)) return '가격은 1~1,000,000 사이의 정수로 써 주세요';
+  if (/not_your_pet/.test(message)) return '내 펫이 아니에요';
   if (/not_authenticated/.test(message)) return '로그인이 끝나지 않았어요';
   if (/fetch failed|network|timeout|ENOTFOUND|ECONN|Failed to fetch/i.test(message)) return '서버에 연결하지 못했어요. 인터넷을 확인하고 다시 해 주세요';
   return '서버에서 처리하지 못했어요: ' + message.slice(0, 80);
@@ -107,10 +118,11 @@ export class ServerGame {
 
   /** 서버의 내 상태를 읽는다. */
   async refresh(): Promise<{ ok: boolean; message?: string }> {
-    const [profile, pets, cos] = await Promise.all([
-      this.rpc.select<{ tickets: number; pity: number; equipped_pet_id: string | null }>('profiles', 'tickets, pity, equipped_pet_id'),
+    const [profile, pets, cos, imp] = await Promise.all([
+      this.rpc.select<{ tickets: number; coins: number; pity: number; equipped_pet_id: string | null }>('profiles', 'tickets, coins, pity, equipped_pet_id'),
       this.rpc.select<{ id: string; species_id: string; xp: number }>('pets', 'id, species_id, xp'),
       this.rpc.select<{ kind: string; item_id: string }>('cosmetics', 'kind, item_id'),
+      this.rpc.select<{ user_id: string }>('account_imports', 'user_id'),
     ]);
     const err = profile.error ?? pets.error ?? cos.error;
     const p = profile.data?.[0];
@@ -120,6 +132,8 @@ export class ServerGame {
     const equipped = (pets.data ?? []).find((x) => x.id === p.equipped_pet_id)?.species_id ?? null;
     this.state = {
       tickets: p.tickets,
+      coins: p.coins,
+      imported: (imp.data ?? []).length > 0,
       pity: p.pity,
       equippedSpecies: equipped,
       species,
@@ -179,6 +193,23 @@ export class ServerGame {
     return r.data;
   }
 
+  /** 게임머니 획득(돌봄·업적). 양과 하루 상한은 서버가 정한다. 연결이 없으면 그냥 건너뛴다(작은 값이라 대기열을 두지 않는다). */
+  async grantCoins(kind: 'care' | 'achievement', key: string): Promise<{ granted: number; coins: number } | null> {
+    const r = await this.rpc.call<{ granted: number; coins: number }>('grant_coins', { p_kind: kind, p_key: key });
+    if (r.error || !r.data) return null;
+    if (this.state) this.state = { ...this.state, coins: r.data.coins };
+    return r.data;
+  }
+
+  /** 학습 이벤트(배움 카드 확인·고침·지식 읽기)를 서버에 보고한다. 게임머니는 서버가 정한 양만큼 받는다. */
+  async reportLearning(events: Array<{ id: string; kind: 'confirm' | 'quiz_bonus' | 'fixed' | 'tip' }>): Promise<{ granted: number; coins: number } | null> {
+    if (events.length === 0) return null;
+    const r = await this.rpc.call<{ granted: number; coins: number }>('report_learning', { p_events: events });
+    if (r.error || !r.data) return null;
+    if (this.state) this.state = { ...this.state, coins: r.data.coins };
+    return r.data;
+  }
+
   /** 대기 중이던 획득을 다시 보낸다. 합쳐서 얼마가 들어왔는지 돌려준다. */
   async flushPending(): Promise<{ granted: number; tickets: number | null }> {
     let granted = 0;
@@ -213,9 +244,19 @@ export function mirrorCollection(c: Collection, s: ServerState, now: number): Co
     if (!have) owned[id] = newOwned(id, now, xp);
     else if (xp > have.pet.xp) owned[id] = { ...have, pet: { ...have.pet, xp } };
   }
+  // 이미 서버로 가져온 계정은 서버가 가진 동물이 기준이다(경매장에서 판 동물은 사라지고 산 동물이 생긴다).
+  // 서버에 동물이 하나도 없으면(이상한 상태) 지우지 않는다.
+  let active = c.active;
+  if (s.imported && Object.keys(s.species).length > 0) {
+    for (const id of Object.keys(owned)) if (!(id in s.species)) delete owned[id as keyof typeof owned];
+    if (!owned[active]) {
+      const next = s.equippedSpecies && isSpeciesId(s.equippedSpecies) && owned[s.equippedSpecies] ? s.equippedSpecies : (Object.keys(owned)[0] as typeof active | undefined);
+      if (next) active = next;
+    }
+  }
   const accessories = [...new Set([...c.accessories, ...s.accessories.filter(isAccessory)])];
   const variants = [...new Set([...c.variants, ...s.variants.filter(isVariant)])];
-  return { ...c, owned, tickets: s.tickets, sinceHidden: s.pity, accessories, variants };
+  return { ...c, owned, active, tickets: s.tickets, sinceHidden: s.pity, accessories, variants };
 }
 
 /** 서버 뽑기 결과를 앱의 컬렉션에 반영한다(앱의 pullSpecies 와 같은 화면 규칙: 처음이면 새로, 중복이면 횟수와 경험치). */

@@ -129,10 +129,12 @@ describe('꾸미기 창', () => {
     el('name-save').click();
     await flush();
     expect(api.set).toHaveBeenLastCalledWith({ name: '두부' });
+    expect(api.close).toHaveBeenCalledTimes(1); // 저장하면 창이 닫힌다(적용됐다는 걸 알 수 있게)
     el<HTMLInputElement>('pet-name').value = '모찌';
     el('pet-name').dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter' }));
     await flush();
     expect(api.set).toHaveBeenLastCalledWith({ name: '모찌' });
+    expect(api.close).toHaveBeenCalledTimes(2); // Enter 로 저장해도 닫힌다
   });
 
   it('프로필 카드에 보여 줄 펫: 지금 키우는 펫 + 모든 동물을 보여 주고, 열린 것만 고른다', async () => {

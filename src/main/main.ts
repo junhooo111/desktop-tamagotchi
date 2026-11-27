@@ -658,6 +658,7 @@ function recordGrowth(event: GrowthEvent): void {
     if (care.tickets > 0) {
       collection = care.collection;
       saveCollectionSafe();
+      if (serverOn()) void serverGame?.grantCoins('care', `care:${collection.careTicketsGiven}`).then((r) => { if (r && r.granted > 0) say(`게임머니 +${r.granted}`); });
       if (!serverAward('care', care.tickets, 1, `care:${collection.careTicketsGiven - care.tickets}`, (g) => `열심히 돌봐 줘서 뽑기권 +${g}장!`)) {
         announceTickets(`열심히 돌봐 줘서 뽑기권 +${care.tickets}장!`);
       }
@@ -679,6 +680,7 @@ function recordGrowth(event: GrowthEvent): void {
     xp += a.xp;
     note += gained.note;
   }
+  if (serverOn()) for (const a of result.unlocked) void serverGame?.grantCoins('achievement', a.id);
   persist();
   updateTray();
   sendView();
@@ -778,7 +780,12 @@ function applyWardrobe(raw: unknown) {
     ...(ok.displayStage !== undefined ? { displayStage: ok.displayStage } : {}),
     ...(ok.cardSpecies !== undefined ? { cardSpecies: ok.cardSpecies } : {}),
   };
+  const previousName = settings.petName;
   if (Object.keys(settingsPatch).length > 0) applySettings(settingsPatch);
+  // 이름을 바꿨으면 펫이 말풍선으로 알려 준다(창이 닫혀도 적용됐다는 걸 알 수 있게).
+  if (ok.name !== undefined && ok.name !== previousName) {
+    say(ok.name === '' ? '이름을 지웠어요' : `이제 내 이름은 '${ok.name}'(이)에요!`);
+  }
   return wardrobeData();
 }
 
@@ -916,6 +923,79 @@ function openRanking(): void {
   });
   void w.loadFile(path.join(projectRoot, 'static', 'ranking.html'));
   rankingWin = w;
+}
+
+// ---- 경매장: 서버의 판매 목록을 보고 사고판다(로그인한 사용자만). 게임머니는 서버가 관리한다 ----
+let marketWin: BrowserWindow | null = null;
+
+async function marketData() {
+  const rpc = auth?.serverRpc;
+  if (!rpc || !serverOn() || !serverGame) return { ok: false, message: '로그인하면 경매장을 쓸 수 있어요', coins: 0, listings: [], pets: [] };
+  const [list, mine, st] = await Promise.all([rpc.call<unknown[]>('market_listings', { p_limit: 50 }), rpc.call<unknown[]>('my_pets'), serverGame.refresh()]);
+  if (list.error || mine.error) return { ok: false, message: friendlyError((list.error ?? mine.error)?.message ?? ''), coins: 0, listings: [], pets: [] };
+  return { ok: st.ok, coins: serverGame.state?.coins ?? 0, listings: list.data ?? [], pets: mine.data ?? [] };
+}
+
+/** 사고팔고 난 뒤: 서버 상태를 다시 읽어 앱의 컬렉션에 반영한다(판 펫은 사라지고 산 펫이 생긴다). */
+async function marketAfter(ok: boolean, message: string) {
+  if (ok && serverGame?.state) {
+    collection = mirrorCollection(collection, serverGame.state, Date.now());
+    saveCollectionSafe();
+    persist();
+    updateTray();
+    sendView();
+    refreshWardrobe();
+  }
+  return { ok, message, view: await marketData() };
+}
+
+async function marketAct(fn: string, args: Record<string, unknown>, done: string) {
+  const rpc = auth?.serverRpc;
+  if (!rpc || !serverOn()) return { ok: false, message: '로그인하면 경매장을 쓸 수 있어요', view: await marketData() };
+  const r = await rpc.call(fn, args);
+  if (r.error) return { ok: false, message: friendlyError(r.error.message), view: await marketData() };
+  await serverGame?.refresh();
+  return marketAfter(true, done);
+}
+
+const isUuid = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v);
+
+function openMarket(): void {
+  if (marketWin && !marketWin.isDestroyed()) {
+    marketWin.show();
+    marketWin.focus();
+    return;
+  }
+  const area = screen.getDisplayNearestPoint({ x: Math.round(behavior.x), y: Math.round(behavior.y) }).workArea;
+  const width = 480;
+  const height = Math.min(620, area.height - 40);
+  const w = new BrowserWindow({
+    x: area.x + Math.round((area.width - width) / 2),
+    y: area.y + Math.round((area.height - height) / 2),
+    width,
+    height,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    autoHideMenuBar: true,
+    title: '경매장',
+    backgroundColor: '#fffdf5',
+    show: false,
+    webPreferences: {
+      preload: path.join(projectRoot, 'static', 'market-preload.cjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  w.setMenu(null);
+  w.setAlwaysOnTop(true, 'screen-saver');
+  w.once('ready-to-show', () => w.show());
+  w.on('closed', () => {
+    if (marketWin === w) marketWin = null;
+  });
+  void w.loadFile(path.join(projectRoot, 'static', 'market.html'));
+  marketWin = w;
 }
 
 function openCodex(): void {
@@ -1546,6 +1626,7 @@ function buildMenu(): Menu {
     { label: '검사 결과…', click: () => openResults() },
     { label: '도감·기록…', click: () => openCodex() },
     { label: serverOn() ? '🏆 랭킹…' : '🏆 랭킹 (로그인하면 볼 수 있어요)', enabled: serverOn(), click: () => openRanking() },
+    { label: serverOn() ? '🏪 경매장…' : '🏪 경매장 (로그인하면 쓸 수 있어요)', enabled: serverOn(), click: () => openMarket() },
     { label: '🎟 뽑기·컬렉션… (' + collection.tickets + '장)', click: () => openCollection() },
     { label: '프로필 카드 내보내기…', click: () => void exportCard() },
     {
@@ -1888,6 +1969,17 @@ function setupIpc(): void {
   });
   ipcMain.on('ranking:close', () => {
     if (rankingWin && !rankingWin.isDestroyed()) rankingWin.close();
+  });
+  ipcMain.handle('market:get', () => marketData());
+  ipcMain.handle('market:buy', (_event, id: unknown) => (isUuid(id) ? marketAct('buy_listing', { p_listing_id: id }, '샀어요! 내 컬렉션에 들어왔어요') : marketData().then((view) => ({ ok: false, message: '잘못된 요청이에요', view }))));
+  ipcMain.handle('market:cancel', (_event, id: unknown) => (isUuid(id) ? marketAct('cancel_listing', { p_listing_id: id }, '판매를 내렸어요') : marketData().then((view) => ({ ok: false, message: '잘못된 요청이에요', view }))));
+  ipcMain.handle('market:sell', (_event, id: unknown, price: unknown) =>
+    isUuid(id) && typeof price === 'number' && Number.isInteger(price)
+      ? marketAct('create_listing', { p_pet_id: id, p_price: price }, '경매장에 올렸어요. 팔리면 게임머니가 들어와요')
+      : marketData().then((view) => ({ ok: false, message: '가격은 1~1,000,000 사이의 정수로 써 주세요', view })),
+  );
+  ipcMain.on('market:close', () => {
+    if (marketWin && !marketWin.isDestroyed()) marketWin.close();
   });
   ipcMain.handle('codex:get', () => buildCodex(growth, growthCtx(), Date.now()));
   ipcMain.on('codex:close', () => closeCodex());
