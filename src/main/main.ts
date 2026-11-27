@@ -15,7 +15,7 @@ import { scanLocalPages, type Finding } from '../inspect/scan.js';
 import { renderProfileCard } from '../shared/card.js';
 import { BACKEND } from '../shared/backend.js';
 import { AccountSync, type Choice, type ConflictInfo } from './account-sync.js';
-import { ServerGame, applyServerPull, mirrorCollection, type Grant } from './server-game.js';
+import { ServerGame, applyServerPull, friendlyError, mirrorCollection, type Grant } from './server-game.js';
 import { AUTH_SCHEME, AuthService, EncryptedFileStorage } from './auth.js';
 import { applyEvent, buildCodex, emptyGrowth, localDay, type Growth, type GrowthEvent } from '../shared/growth.js';
 import { LESSONS, RULE_IDS, type RuleId } from '../shared/lessons.js';
@@ -864,6 +864,60 @@ function closeCodex(): void {
   codexWin = null;
 }
 
+// ---- 랭킹: 서버가 계산한 점수를 보여 준다(로그인한 사용자만) ----
+let rankingWin: BrowserWindow | null = null;
+const RANKING_METRICS = ['species', 'hidden', 'pets', 'level', 'pulls', 'cosmetics'] as const;
+
+async function rankingData(metric: unknown) {
+  const m = RANKING_METRICS.find((x) => x === metric) ?? 'species';
+  const rpc = auth?.serverRpc;
+  if (!rpc || !serverOn()) return { ok: false, message: '로그인하면 랭킹을 볼 수 있어요', metric: m, rows: [] };
+  const [board, me] = await Promise.all([
+    rpc.call<unknown[]>('leaderboard', { p_metric: m, p_limit: 20 }),
+    rpc.call<{ github_login: string; show_in_ranking: boolean; scores: Record<string, number>; ranks: Record<string, number> }>('my_summary'),
+  ]);
+  if (board.error || !board.data) return { ok: false, message: friendlyError(board.error?.message ?? ''), metric: m, rows: [] };
+  return { ok: true, metric: m, rows: board.data, me: me.data ?? undefined };
+}
+
+function openRanking(): void {
+  if (rankingWin && !rankingWin.isDestroyed()) {
+    rankingWin.show();
+    rankingWin.focus();
+    return;
+  }
+  const area = screen.getDisplayNearestPoint({ x: Math.round(behavior.x), y: Math.round(behavior.y) }).workArea;
+  const width = 440;
+  const height = Math.min(640, area.height - 40);
+  const w = new BrowserWindow({
+    x: area.x + Math.round((area.width - width) / 2),
+    y: area.y + Math.round((area.height - height) / 2),
+    width,
+    height,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    autoHideMenuBar: true,
+    title: '랭킹',
+    backgroundColor: '#fffdf5',
+    show: false,
+    webPreferences: {
+      preload: path.join(projectRoot, 'static', 'ranking-preload.cjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  w.setMenu(null);
+  w.setAlwaysOnTop(true, 'screen-saver');
+  w.once('ready-to-show', () => w.show());
+  w.on('closed', () => {
+    if (rankingWin === w) rankingWin = null;
+  });
+  void w.loadFile(path.join(projectRoot, 'static', 'ranking.html'));
+  rankingWin = w;
+}
+
 function openCodex(): void {
   if (codexWin && !codexWin.isDestroyed()) {
     codexWin.show();
@@ -1482,6 +1536,7 @@ function buildMenu(): Menu {
     { label: '상태 보기', click: () => showStatus() },
     { label: '검사 결과…', click: () => openResults() },
     { label: '도감·기록…', click: () => openCodex() },
+    { label: serverOn() ? '🏆 랭킹…' : '🏆 랭킹 (로그인하면 볼 수 있어요)', enabled: serverOn(), click: () => openRanking() },
     { label: '🎟 뽑기·컬렉션… (' + collection.tickets + '장)', click: () => openCollection() },
     { label: '프로필 카드 내보내기…', click: () => void exportCard() },
     {
@@ -1817,6 +1872,14 @@ function setupIpc(): void {
     if (isKey(key)) applySettings({ ignored: settings.ignored.filter((k) => k !== key) });
   });
   ipcMain.on('results:close', () => closeResults());
+  ipcMain.handle('ranking:get', (_event, metric: unknown) => rankingData(metric));
+  ipcMain.handle('ranking:set-visible', async (_event, visible: unknown) => {
+    if (typeof visible !== 'boolean') return;
+    await auth?.serverRpc?.call('set_ranking_visibility', { p_visible: visible });
+  });
+  ipcMain.on('ranking:close', () => {
+    if (rankingWin && !rankingWin.isDestroyed()) rankingWin.close();
+  });
   ipcMain.handle('codex:get', () => buildCodex(growth, growthCtx(), Date.now()));
   ipcMain.on('codex:close', () => closeCodex());
   ipcMain.handle('settings:get', () => settings);

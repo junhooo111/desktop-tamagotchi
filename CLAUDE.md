@@ -37,3 +37,5 @@
 - **CLI 로 올리는 DB**: 0001~0003 은 SQL Editor 로 올렸고 `supabase migration repair --status applied 0001 0002 0003` 으로 기록했다. 새 PC 는 `npx supabase login` → `link --project-ref bqsidhjdxoxtrmmymwej`.
 - 개발 실행 중 `safeStorage.isEncryptionAvailable` 등이 deprecated 경고를 낸다. 동작에는 문제없고, 나중에 비동기 API 로 바꾼다.
 - **서버 기준 모드(C2)**: 로그인하면(`serverOn()`) 뽑기·꾸미기 뽑기·뽑기권 획득은 서버가 한다. 로컬 상수를 바꾸면 서버 함수(0005·0007)도 같이 바꾸고, SQL 시험이 앱 상수와 같은 값인지 비교한다. 뽑기권을 로컬에서 올리는 곳을 새로 만들면 `serverAward` 를 거치게 한다(안 그러면 로그인 사용자의 뽑기권이 서버와 어긋난다). 서버에 닿지 않을 때 로컬로 대신 뽑지 않는다(서버 기준이 갈라진다).
+- **서버에 정말 저장됐는지 확인하기**: Docker 가 없어도 `npx supabase inspect db table-stats --remote` 로 표별 행 수(추정)를 읽을 수 있다. 사용자 데이터의 내용을 읽는 도구는 쓰지 않는다. 내용 확인이 필요하면 앱의 `my_summary()` 결과(랭킹 창)를 사용자에게 보여 달라고 한다.
+- **다른 사람이 쓴 문자열(GitHub 이름 등)은 `textContent` 로만 그리고, 이미지 주소는 허용 목록(avatars.githubusercontent.com)만 쓴다.** 랭킹 창 CSP 도 같은 주소만 연다.

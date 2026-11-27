@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self'; img-src https://avatars.githubusercontent.com"
+    />
+    <title>랭킹</title>
+    <link rel="stylesheet" href="./ranking.css" />
+  </head>
+  <body>
+    <main>
+      <h1>랭킹</h1>
+      <p class="hint" id="me"></p>
+      <div class="tabs" id="tabs" role="tablist"></div>
+      <ol class="board" id="board"></ol>
+      <p class="hint" id="note"></p>
+      <label class="visible"><input type="checkbox" id="visible" /> 내 이름을 랭킹에 보이기</label>
+      <footer>
+        <button id="close" type="button">닫기</button>
+      </footer>
+    </main>
+    <script type="module" src="../dist/renderer/ranking.js"></script>
+  </body>
+</html>
