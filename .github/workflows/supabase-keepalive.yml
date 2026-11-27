@@ -1,0 +1,28 @@
+# Supabase 무료 프로젝트는 한 주 동안 DB 활동이 거의 없으면 일시정지된다.
+# 이틀에 한 번 공개 테이블(species)을 읽어서 활동을 남긴다. 실패하면 이 워크플로가 실패로 표시돼 GitHub 가 알려 준다.
+# 설정: 레포 Settings → Secrets and variables → Actions → Variables 에 SUPABASE_URL, SUPABASE_ANON_KEY (둘 다 공개 값).
+name: supabase-keepalive
+
+on:
+  schedule:
+    - cron: '17 3 */2 * *'
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read a public table to keep the project active
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "SUPABASE_URL / SUPABASE_ANON_KEY 변수가 아직 없어서 건너뜁니다."
+            exit 0
+          fi
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 \
+            "$SUPABASE_URL/rest/v1/species?select=id&limit=1" \
+            -H "apikey: $SUPABASE_ANON_KEY" -H "Authorization: Bearer $SUPABASE_ANON_KEY")
+          echo "HTTP $code"
+          test "$code" = "200"

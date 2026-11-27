@@ -8,11 +8,13 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { BrowserWindow, Menu, Notification, Tray, app, dialog, ipcMain, nativeImage, screen, shell } from 'electron';
+import { BrowserWindow, Menu, Notification, Tray, app, dialog, ipcMain, nativeImage, safeStorage, screen, shell } from 'electron';
 import electronUpdater from 'electron-updater';
 import { SnapshotFeed, mergeScans } from '../inspect/feed.js';
 import { scanLocalPages, type Finding } from '../inspect/scan.js';
 import { renderProfileCard } from '../shared/card.js';
+import { BACKEND } from '../shared/backend.js';
+import { AUTH_SCHEME, AuthService, EncryptedFileStorage } from './auth.js';
 import { applyEvent, buildCodex, emptyGrowth, localDay, type Growth, type GrowthEvent } from '../shared/growth.js';
 import { LESSONS, RULE_IDS, type RuleId } from '../shared/lessons.js';
 import { noticeOf } from '../shared/notice.js';
@@ -180,6 +182,8 @@ const extensionFeed = new SnapshotFeed();
 let feedServer: FeedServer | null = null;
 /** 사용자 설정(설정 창에서 바꾸면 바로 적용·저장한다) */
 let settings: Settings = { ...DEFAULT_SETTINGS };
+/** GitHub 로그인(Supabase). 서버 주소가 비어 있으면 꺼진 채로 둔다. */
+let auth: AuthService | null = null;
 let settingsPath = '';
 let settingsWin: BrowserWindow | null = null;
 let scanTimer: ReturnType<typeof setInterval> | undefined;
@@ -1286,6 +1290,34 @@ async function openDemo(): Promise<void> {
   if (openInspectBrowser(url)) say('시험 페이지를 열었어요. 곧 문제를 찾아볼게요!');
 }
 
+/** 딥링크(desktop-tamagotchi://auth?code=…)로 돌아온 로그인 결과를 처리한다. */
+async function handleAuthUrl(url: string): Promise<void> {
+  if (!auth) return;
+  const r = await auth.handleCallback(url);
+  if (!r.handled) return;
+  if (r.ok) say(`GitHub 로그인 완료! ${auth.user?.login ?? ''} 님, 어느 PC에서든 같은 계정이에요`);
+  else say('로그인하지 못했어요' + (r.message ? ': ' + r.message : ''));
+}
+
+/** 계정 메뉴: 서버가 설정되지 않았거나, 로그인·로그아웃. */
+function accountMenuItem(): Electron.MenuItemConstructorOptions {
+  if (!auth?.enabled) return { label: '☁ 계정 (서버 준비 중)', enabled: false };
+  const user = auth.user;
+  if (user) {
+    return {
+      label: `☁ ${user.login} · 로그아웃`,
+      click: () => void auth?.signOut().then(() => say('로그아웃했어요. 펫은 이 PC에 그대로 있어요')),
+    };
+  }
+  return {
+    label: '☁ GitHub로 로그인…',
+    click: () => {
+      say('브라우저에서 GitHub 로그인을 마치면 돌아와요');
+      void auth?.signIn().catch((e: unknown) => say('로그인을 시작하지 못했어요: ' + String(e instanceof Error ? e.message : e)));
+    },
+  };
+}
+
 function buildMenu(): Menu {
   const egg = stageOf(pet) === 'egg';
   const demo = (label: string, what: Trigger) => ({
@@ -1314,6 +1346,7 @@ function buildMenu(): Menu {
         ...(item.url ? [{ label: '    ↗ 자세히 보기', click: () => void shell.openExternal(item.url) }] : []),
       ]),
     },
+    accountMenuItem(),
     { label: '설정…', click: () => openSettings() },
     {
       // 새 버전이 준비돼 있지 않을 때도 직접 확인할 수 있게 항상 둔다
@@ -1684,10 +1717,36 @@ function runSmoke(w: BrowserWindow): void {
   });
 }
 
+// 로그인 딥링크(desktop-tamagotchi://)를 이 앱이 받도록 등록한다. 개발 실행(electron .)은 실행 경로를 같이 알려야 한다.
+if (app.isPackaged) app.setAsDefaultProtocolClient(AUTH_SCHEME);
+else if (process.defaultApp && process.argv[1]) app.setAsDefaultProtocolClient(AUTH_SCHEME, process.execPath, [path.resolve(process.argv[1])]);
+
 if (!app.requestSingleInstanceLock()) {
   app.quit();
 } else {
+  // 윈도우·리눅스: 딥링크는 두 번째 실행의 인자로 오고, 맥은 open-url 로 온다.
+  app.on('second-instance', (_e, argv) => {
+    const url = argv.find((a) => a.startsWith(AUTH_SCHEME + '://'));
+    if (url) void handleAuthUrl(url);
+  });
+  app.on('open-url', (event, url) => {
+    event.preventDefault();
+    void handleAuthUrl(url);
+  });
   app.whenReady().then(() => {
+    auth = new AuthService({
+      config: { url: process.env.PET_SUPABASE_URL ?? BACKEND.url, anonKey: process.env.PET_SUPABASE_ANON_KEY ?? BACKEND.anonKey },
+      storage: new EncryptedFileStorage(path.join(app.getPath('userData'), 'auth.bin'), {
+        isAvailable: () => safeStorage.isEncryptionAvailable(),
+        encrypt: (t) => safeStorage.encryptString(t),
+        decrypt: (b) => safeStorage.decryptString(b),
+      }),
+      openExternal: (u) => shell.openExternal(u),
+    });
+    auth.onChange(() => tray?.setContextMenu(buildMenu()));
+    void auth.restore();
+    const startUrl = process.argv.find((a) => a.startsWith(AUTH_SCHEME + '://'));
+    if (startUrl) setTimeout(() => void handleAuthUrl(startUrl), 2_000);
     savePath = path.join(app.getPath('userData'), 'pet.json');
     progressPath = path.join(app.getPath('userData'), 'progress.json');
     progress = loadProgress(progressPath);
