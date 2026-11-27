@@ -13,6 +13,8 @@ export interface NewsItem {
   date: string;
   title: string;
   body: string;
+  /** 영어 제목·본문(없으면 한국어를 보여 준다) */
+  en?: { title: string; body: string };
   /** 자세히 보기 링크(이 저장소 주소만 허용). 없으면 빈 문자열 */
   url: string;
 }
@@ -57,7 +59,10 @@ export function sanitizeNews(raw: unknown): NewsItem[] {
     if (date === '' || title === '') continue;
     const url = typeof e['url'] === 'string' && e['url'].startsWith(NEWS_LINK_PREFIX) && e['url'].length <= 300 && !/\s/.test(e['url']) ? e['url'] : '';
     ids.add(id);
-    items.push({ id, date, title, body: text(e['body'], MAX_BODY), url });
+    const enRaw = typeof e['en'] === 'object' && e['en'] !== null ? (e['en'] as Record<string, unknown>) : null;
+    const enTitle = enRaw ? text(enRaw['title'], MAX_TITLE * 2) : '';
+    const en = enTitle !== '' ? { title: enTitle, body: text(enRaw?.['body'], MAX_BODY * 2) } : undefined;
+    items.push({ id, date, title, body: text(e['body'], MAX_BODY), ...(en ? { en } : {}), url });
     if (items.length >= MAX_NEWS_ITEMS) break;
   }
   return items.sort((a, b) => (a.date === b.date ? (a.id < b.id ? 1 : -1) : a.date < b.date ? 1 : -1));
@@ -89,7 +94,13 @@ export function sanitizeSeen(raw: unknown): string[] {
   return [...new Set(list.filter((v): v is string => typeof v === 'string' && v.length > 0 && v.length <= MAX_ID))].slice(-MAX_SEEN);
 }
 
+/** 언어에 맞는 공지 제목·본문(영어가 없으면 한국어). */
+export function newsLocal(item: NewsItem, lang: 'ko' | 'en' = 'ko'): { title: string; body: string } {
+  return lang === 'en' && item.en ? item.en : { title: item.title, body: item.body };
+}
+
 /** 공지를 말풍선 문구로 만든다. */
-export function newsText(item: NewsItem): string {
-  return item.body ? `📢 ${item.title}\n${item.body}` : `📢 ${item.title}`;
+export function newsText(item: NewsItem, lang: 'ko' | 'en' = 'ko'): string {
+  const t = newsLocal(item, lang);
+  return t.body ? `📢 ${t.title}\n${t.body}` : `📢 ${t.title}`;
 }

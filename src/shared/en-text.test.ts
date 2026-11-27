@@ -32,3 +32,21 @@ describe('펫 말 영어 번역', () => {
     for (const a of ACHIEVEMENTS) expect(nameEn(a.name), a.id).not.toMatch(/[가-힣]/);
   });
 });
+
+describe('검사 상세 문구·계정 메시지 영어', () => {
+  it('collector 가 만드는 상세 문구를 영어로', () => {
+    expect(toEnglish('h1 다음에 h3')).toBe('h3 after h1');
+    expect(toEnglish('대비 3.2:1 (기준 4.5:1)')).toBe('contrast 3.2:1 (needs 4.5:1)');
+    expect(toEnglish('id="save" 가 2번 쓰임')).toBe('id="save" used 2 times');
+    expect(toEnglish('<a> 안에 <button>')).toBe('<button> inside <a>');
+    expect(toEnglish('div > p (th 없음)')).toBe('div > p (no th)');
+    expect(toEnglish('og:title, og:image 없음')).toBe('og:title, og:image missing');
+    expect(toEnglish('페이지 전체')).toBe('Whole page');
+  });
+
+  it('계정·서버 메시지를 영어로', () => {
+    expect(toEnglish('계정과 맞추지 못했어요: timeout')).toBe('Could not sync with your account: timeout');
+    expect(toEnglish('서버에서 처리하지 못했어요: boom')).toBe('The server could not handle it: boom');
+    expect(toEnglish('저장 데이터가 너무 커서 계정에 올리지 못했어요')).toBe('The save data is too large to upload to your account');
+  });
+});

@@ -5,35 +5,55 @@
       "date": "2026-11-27",
       "title": "배움으로 게임머니를 받아요",
       "body": "로그인하면 배움 카드 확인(10)·퀴즈 보너스(5)·문제 고침(20)·FE 지식 읽기(2)로 게임머니를 받아요(하루 150까지).",
-      "url": "https://github.com/junhooo111/desktop-tamagotchi/releases/tag/v0.12.1"
+      "url": "https://github.com/junhooo111/desktop-tamagotchi/releases/tag/v0.12.1",
+      "en": {
+        "title": "Earn game money by learning",
+        "body": "When logged in, confirming learning cards (10), quiz bonus (5), fixing problems (20), and reading FE tips (2) give you game money (up to 150 a day)."
+      }
     },
     {
       "id": "v0.12.0-english-and-tools",
       "date": "2026-11-27",
       "title": "영어 지원, 검사 규칙 50종, FE 지식 69개",
       "body": "설정에서 한국어·English를 고를 수 있어요(기본은 PC 언어). 검사 규칙이 50종으로, FE 지식이 69개로 늘고 선물 상자는 화면 중앙에서 기다려요.",
-      "url": "https://github.com/junhooo111/desktop-tamagotchi/releases/tag/v0.12.0"
+      "url": "https://github.com/junhooo111/desktop-tamagotchi/releases/tag/v0.12.0",
+      "en": {
+        "title": "English, 50 checks, 69 FE tips",
+        "body": "Pick Korean or English in Settings (default follows your PC). There are now 50 inspection rules, 69 FE tips, and the gift box waits at screen center."
+      }
     },
     {
       "id": "v0.11.0-market",
       "date": "2026-11-27",
       "title": "경매장과 게임머니가 생겼어요",
       "body": "로그인하면 펫을 사고팔 수 있어요. 게임머니는 돌봄·업적·GitHub 기여로 얻고, 수수료는 없어요. 펫 우클릭 → 경매장.",
-      "url": "https://github.com/junhooo111/desktop-tamagotchi#경매장과-게임머니-로그인한-사람끼리"
+      "url": "https://github.com/junhooo111/desktop-tamagotchi#경매장과-게임머니-로그인한-사람끼리",
+      "en": {
+        "title": "Auction house and game money",
+        "body": "Log in to buy and sell pets. Earn game money from care, achievements, and GitHub contributions, with no fees. Right-click the pet → Auction house."
+      }
     },
     {
       "id": "v0.10.0-account",
       "date": "2026-11-27",
       "title": "GitHub 계정 연동·랭킹·프로필 카드",
       "body": "GitHub 로그인(선택)으로 어느 PC에서든 같은 컬렉션을 이어 가고, 랭킹과 프로필 카드를 쓸 수 있어요. 로그인하지 않아도 그대로 쓸 수 있어요.",
-      "url": "https://github.com/junhooo111/desktop-tamagotchi#내-펫을-github-프로필에-붙이기-1분"
+      "url": "https://github.com/junhooo111/desktop-tamagotchi#내-펫을-github-프로필에-붙이기-1분",
+      "en": {
+        "title": "GitHub account, rankings, profile card",
+        "body": "Log in with GitHub (optional) to keep the same collection on any PC, see rankings, and use a profile card. It all still works without logging in."
+      }
     },
     {
       "id": "2026-11-26-news",
       "date": "2026-11-26",
       "title": "공지 기능이 생겼어요",
       "body": "앞으로 새 소식이 있으면 이렇게 알려 드릴게요. 설정에서 끌 수 있어요.",
-      "url": "https://github.com/junhooo111/desktop-tamagotchi/releases"
+      "url": "https://github.com/junhooo111/desktop-tamagotchi/releases",
+      "en": {
+        "title": "News is here",
+        "body": "From now on I will tell you about news like this. You can turn it off in Settings."
+      }
     }
   ]
 }

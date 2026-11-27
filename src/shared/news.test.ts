@@ -103,3 +103,26 @@ describe('sanitizeSeen / newsText', () => {
     expect(newsText({ id: 'a', date: '2026-11-26', title: 'T', body: '', url: '' })).toBe('📢 T');
   });
 });
+
+describe('공지 영어', () => {
+  it('en 제목·본문이 있으면 영어 모드에서 보여 주고, 없으면 한국어', async () => {
+    const { newsLocal, newsText, sanitizeNews } = await import('./news.js');
+    const [a, b] = sanitizeNews({
+      items: [
+        { id: 'a', date: '2026-11-27', title: '제목', body: '본문', en: { title: 'Title', body: 'Body' } },
+        { id: 'b', date: '2026-11-26', title: '제목2', body: '본문2' },
+      ],
+    });
+    expect(newsLocal(a!, 'en')).toEqual({ title: 'Title', body: 'Body' });
+    expect(newsLocal(a!, 'ko')).toEqual({ title: '제목', body: '본문' });
+    expect(newsLocal(b!, 'en')).toEqual({ title: '제목2', body: '본문2' });
+    expect(newsText(a!, 'en')).toBe('📢 Title\nBody');
+    expect(newsText(a!)).toBe('📢 제목\n본문');
+  });
+
+  it('en 이 이상해도 그 항목의 영어만 버린다', async () => {
+    const { sanitizeNews } = await import('./news.js');
+    const [a] = sanitizeNews({ items: [{ id: 'a', date: '2026-11-27', title: '제목', en: 'x' }, { id: 'c', date: '2026-11-25', title: 't', en: { title: '', body: 'b' } }] });
+    expect(a?.en).toBeUndefined();
+  });
+});

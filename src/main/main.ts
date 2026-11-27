@@ -117,7 +117,7 @@ import { FEED_PORT_DEFAULT, startFeedServer, type FeedServer } from './feed-serv
 import { petTargetFor } from './inspect-target.js';
 import { loadGrowth, saveGrowth } from './growth-store.js';
 import { loadSettings, saveSettings } from './settings-store.js';
-import { newsText, pickNews, type NewsItem } from '../shared/news.js';
+import { newsLocal, newsText, pickNews, type NewsItem } from '../shared/news.js';
 import { buildStatus } from '../shared/status.js';
 import { GIFT_LIFE_MS, GIFT_WINDOW, giftHtml, giftSpot, giftText, nextGiftDelayMs, offerGift, rollGift } from '../shared/gift.js';
 import { POOP_LIFE_MS, POOP_SIZE, poopHtml } from '../shared/poop.js';
@@ -273,7 +273,7 @@ function currentView(): PetView {
 function tipPayload(tip: Tip): TipBubble {
   const seen = progress.tipsSeen.includes(tip.id);
   const text = tipText(tip, currentLang());
-  return { title: text.title, body: text.body, code: tip.code, xp: seen ? 0 : LEARN_XP.tip };
+  return { title: text.title, body: text.body, code: text.code, xp: seen ? 0 : LEARN_XP.tip };
 }
 
 function sendTip(): void {
@@ -1161,7 +1161,7 @@ async function checkNews(): Promise<void> {
   }
   pick.show.forEach((item, i) => setTimeout(() => say(newsText(item)), i * NEWS_GAP_MS));
   const first = pick.show[0];
-  if (first && Notification.isSupported()) new Notification({ title: L('Desktop Tamagotchi 공지', 'Desktop Tamagotchi news'), body: first.title }).show();
+  if (first && Notification.isSupported()) new Notification({ title: L('Desktop Tamagotchi 공지', 'Desktop Tamagotchi news'), body: newsLocal(first, currentLang()).title }).show();
   updateTray();
 }
 
@@ -1685,7 +1685,7 @@ function buildMenu(): Menu {
       label: L('📢 공지', '📢 News'),
       enabled: newsItems.length > 0,
       submenu: newsItems.slice(0, 5).flatMap((item) => [
-        { label: `${item.date} ${item.title}`, click: () => say(newsText(item)) },
+        { label: `${item.date} ${newsLocal(item, currentLang()).title}`, click: () => say(newsText(item, currentLang())) },
         ...(item.url ? [{ label: L('    ↗ 자세히 보기', '    ↗ Learn more'), click: () => void shell.openExternal(item.url) }] : []),
       ]),
     },

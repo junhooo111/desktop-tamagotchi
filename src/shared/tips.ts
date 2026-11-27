@@ -6,6 +6,7 @@
 import { pick, type Lang } from './i18n.js';
 import type { Mode } from './motion.js';
 import type { Stage } from './pet.js';
+import { TIP_CODE_EN } from './code-en.js';
 import { TIPS_EN } from './tips-en.js';
 import { EXTRA_TIPS } from './tips-extra.js';
 
@@ -151,13 +152,12 @@ export const TIPS: readonly Tip[] = [
 ];
 
 /** 언어에 맞는 제목·본문(번역이 없으면 한국어). 참고 링크가 있으면 본문 끝에 붙인다. */
-export function tipText(tip: Tip, lang: Lang): { title: string; body: string } {
+export function tipText(tip: Tip, lang: Lang): { title: string; body: string; code: string } {
   const text = pick(lang, { ko: { title: tip.title, body: tip.body }, ...(tip.en ? { en: tip.en } : {}) });
-  if (!tip.source) return text;
+  const code = lang === 'en' ? (TIP_CODE_EN[tip.id] ?? tip.code) : tip.code;
+  if (!tip.source) return { ...text, code };
   const label = lang === 'en' ? 'Reference' : '참고';
-  return { title: text.title, body: `${text.body}
-
-${label}: ${tip.source.label} (${tip.source.url})` };
+  return { title: text.title, body: `${text.body}\n\n${label}: ${tip.source.label} (${tip.source.url})`, code };
 }
 
 /** 한 번에 한 번만 알려 주는 간격 */

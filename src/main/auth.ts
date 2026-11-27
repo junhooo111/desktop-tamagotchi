@@ -136,8 +136,8 @@ export function startLoopback(onUrl: (url: string) => void, timeoutMs = 5 * 60_0
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(
         parsed.kind === 'code'
-          ? '<!doctype html><meta charset="utf-8"><title>로그인 완료</title><body style="font-family:sans-serif;text-align:center;margin-top:20vh"><h2>로그인이 끝났어요</h2><p>이 창은 닫아도 돼요. 펫에게 돌아가 보세요.</p>'
-          : '<!doctype html><meta charset="utf-8"><title>로그인 실패</title><body style="font-family:sans-serif;text-align:center;margin-top:20vh"><h2>로그인하지 못했어요</h2><p>이 창을 닫고 펫 메뉴에서 다시 시도해 주세요.</p>',
+          ? '<!doctype html><meta charset="utf-8"><title>Login complete</title><body style="font-family:sans-serif;text-align:center;margin-top:20vh"><h2>로그인이 끝났어요 / Login complete</h2><p>이 창은 닫아도 돼요. 펫에게 돌아가 보세요.<br>You can close this window and go back to your pet.</p>'
+          : '<!doctype html><meta charset="utf-8"><title>Login failed</title><body style="font-family:sans-serif;text-align:center;margin-top:20vh"><h2>로그인하지 못했어요 / Login failed</h2><p>이 창을 닫고 펫 메뉴에서 다시 시도해 주세요.<br>Close this window and try again from the pet menu.</p>',
       );
       onUrl(raw);
       close();

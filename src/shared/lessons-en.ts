@@ -625,13 +625,14 @@ export const QUIZZES_EN: Record<RuleId, QuizEn> = {
 };
 
 import { pick, type Lang } from './i18n.js';
+import { LESSON_CODE_EN } from './code-en.js';
 import { LESSONS, type Lesson } from './lessons.js';
 import { QUIZZES, type Quiz } from './quizzes.js';
 
 /** 언어에 맞는 학습 카드(영어는 코드 예시만 한국어 원본을 그대로 쓴다). */
 export function lessonFor(id: RuleId, lang: Lang): Lesson {
   const ko = LESSONS[id];
-  return pick(lang, { ko, en: { ...ko, ...LESSONS_EN[id] } });
+  return pick(lang, { ko, en: { ...ko, ...LESSONS_EN[id], code: LESSON_CODE_EN[id] ?? ko.code } });
 }
 
 /** 언어에 맞는 확인 퀴즈(정답 위치는 같다). */

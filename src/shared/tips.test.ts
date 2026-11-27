@@ -90,8 +90,8 @@ describe('FE 지식 한/영', () => {
 
   it('언어에 맞는 제목·본문을 고르고, 참고 링크는 본문 끝에 붙인다', () => {
     const plain = TIPS.find((t) => !t.source)!;
-    expect(tipText(plain, 'ko')).toEqual({ title: plain.title, body: plain.body });
-    expect(tipText(plain, 'en')).toEqual(plain.en);
+    expect(tipText(plain, 'ko')).toEqual({ title: plain.title, body: plain.body, code: plain.code });
+    expect(tipText(plain, 'en')).toMatchObject(plain.en!);
     const sourced = TIPS.find((t) => t.source)!;
     expect(tipText(sourced, 'ko').body).toContain('참고: ' + sourced.source!.label);
     expect(tipText(sourced, 'en').body).toContain('Reference: ' + sourced.source!.label);
