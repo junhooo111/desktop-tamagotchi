@@ -1097,7 +1097,12 @@ var ACHIEVEMENTS = [
   { id: "stroll-10", name: "\uC0B0\uCC45 \uCE5C\uAD6C", description: "\uC0B0\uCC45\uC744 10\uBC88 \uB2E4\uB140\uC654\uC5B4\uC694", metric: "strolls", goal: 10, xp: 30 },
   { id: "collect-5", name: "\uB3D9\uBB3C \uC218\uC9D1\uAC00", description: "\uC11C\uB85C \uB2E4\uB978 \uB3D9\uBB3C\uC744 5\uC885 \uBAA8\uC558\uC5B4\uC694", metric: "collected", goal: 5, xp: 40 },
   { id: "pull-10", name: "\uBF51\uAE30 \uB2E8\uACE8", description: "\uB3D9\uBB3C \uBF51\uAE30\uB97C 10\uBC88 \uD588\uC5B4\uC694", metric: "pulls", goal: 10, xp: 40 },
-  { id: "hidden-1", name: "\uC804\uC124\uC758 \uB9CC\uB0A8", description: "\uD788\uB4E0 \uB3D9\uBB3C\uC744 \uCC98\uC74C \uB9CC\uB0AC\uC5B4\uC694", metric: "hiddenOwned", goal: 1, xp: 80 }
+  { id: "hidden-1", name: "\uC804\uC124\uC758 \uB9CC\uB0A8", description: "\uD788\uB4E0 \uB3D9\uBB3C\uC744 \uCC98\uC74C \uB9CC\uB0AC\uC5B4\uC694", metric: "hiddenOwned", goal: 1, xp: 80 },
+  { id: "friend-1", name: "\uCCAB \uCE5C\uAD6C", description: "\uCE5C\uAD6C\uB97C \uCC98\uC74C \uC0AC\uADC0\uC5C8\uC5B4\uC694", metric: "friends", goal: 1, xp: 10 },
+  { id: "friend-3", name: "\uCE5C\uAD6C \uBD80\uC790", description: "\uCE5C\uAD6C\uAC00 3\uBA85\uC774 \uB418\uC5C8\uC5B4\uC694", metric: "friends", goal: 3, xp: 25 },
+  { id: "friendship-3", name: "\uB2E8\uC9DD", description: "\uCE5C\uAD6C\uC640 \uCE5C\uBC00\uB3C4 \uB808\uBCA8 3\uC774 \uB418\uC5C8\uC5B4\uC694", metric: "friendLevel", goal: 3, xp: 25 },
+  { id: "friendship-5", name: "\uC808\uCE5C", description: "\uCE5C\uAD6C\uC640 \uCE5C\uBC00\uB3C4 \uB808\uBCA8 5\uAC00 \uB418\uC5C8\uC5B4\uC694", metric: "friendLevel", goal: 5, xp: 50 },
+  { id: "friendship-10", name: "\uC601\uD63C\uC758 \uB2E8\uC9DD", description: "\uCE5C\uAD6C\uC640 \uCE5C\uBC00\uB3C4 \uB808\uBCA8 10\uC774 \uB418\uC5C8\uC5B4\uC694", metric: "friendLevel", goal: 10, xp: 150 }
 ];
 function rulesLearned(g) {
   return RULE_IDS.filter((id) => (g.rules[id]?.confirms ?? 0) > 0).length;
@@ -1128,6 +1133,10 @@ function metricValue(g, ctx, metric, today) {
       return ctx.pulls ?? 0;
     case "hiddenOwned":
       return ctx.hiddenOwned ?? 0;
+    case "friends":
+      return ctx.friends ?? 0;
+    case "friendLevel":
+      return ctx.friendLevel ?? 0;
   }
 }
 function buildCodex(g, ctx, now) {
@@ -1711,7 +1720,7 @@ function makeRig(spec, stage) {
   };
 }
 var lowered = (r, oy, ox = 0) => ({ ...r, X: (x) => r.X(x) + ox, Y: (y) => r.Y(y) + oy });
-var headChar = (r) => r.spec.kind === "duck" ? "g" : "f";
+var headChar = (r) => r.spec.kind === "duck" || r.spec.coloredHead ? "g" : "f";
 function drawEye(g, ex0, ey0, kind) {
   const ex = ex0 - (ex0 & 1);
   const ey = ey0 - (ey0 & 1);
@@ -1809,9 +1818,9 @@ function drawHead(g, r, pose) {
   }, { outline: "k", shade: SHADE });
   if (hasTuft(r.spec)) {
     for (const [dx, h] of [[0.4, 4]]) {
-      part(g, (t) => triangle(t, head.cx + dx * k - 1.4, head.cy - head.ry + 1.4, head.cx + dx * k + 1.4, head.cy - head.ry + 1.4, head.cx + dx * k, head.cy - head.ry - h * k + 1, "f"), { outline: "k", shade: SHADE });
+      part(g, (t) => triangle(t, head.cx + dx * k - 1.4, head.cy - head.ry + 1.4, head.cx + dx * k + 1.4, head.cy - head.ry + 1.4, head.cx + dx * k, head.cy - head.ry - h * k + 1, headChar(r)), { outline: "k", shade: SHADE });
     }
-    part(g, (t) => ellipse(t, head.cx, head.cy, head.rx, head.ry, "f"), { outline: null, shade: SHADE });
+    part(g, (t) => ellipse(t, head.cx, head.cy, head.rx, head.ry, headChar(r)), { outline: null, shade: SHADE });
   }
   drawFace(g, r, pose, head);
   return head;
@@ -1866,7 +1875,7 @@ function lying(r, pose) {
   drawWing(g, r, { ...pose, wing: 0 }, r.X(12.6), r.Y(25.2));
   drawBackWings(g, wingKind(r.spec), r.X(11), r.Y(25.4) - 5.5 * r.size, r.size);
   const head = { cx: r.X(22), cy: r.Y(24), rx: 5.4 * r.size * r.headMod, ry: 4.8 * r.size * r.headMod };
-  part(g, (t) => ellipse(t, head.cx, head.cy, head.rx, head.ry, duck ? "g" : "f"), { outline: "k", shade: SHADE });
+  part(g, (t) => ellipse(t, head.cx, head.cy, head.rx, head.ry, headChar(r)), { outline: "k", shade: SHADE });
   const ex = Math.round(head.cx + head.rx * 0.2);
   drawEye(g, ex, Math.round(head.cy - 1.4), pose.eyes);
   drawBeak(g, r, Math.round(head.cx + head.rx * 0.95), Math.round(head.cy + 0.6), false);
@@ -1884,7 +1893,7 @@ function curled(r, pose) {
   drawWing(g, r, { ...pose, wing: 0 }, r.X(11.8), r.Y(22));
   drawBackWings(g, wingKind(r.spec), r.X(12.5), r.Y(21.6) - 8 * r.size + 2, r.size);
   const head = { cx: r.X(19.8), cy: r.Y(16.4), rx: 6.3 * r.size * r.headMod, ry: 5.7 * r.size * r.headMod };
-  part(g, (t) => ellipse(t, head.cx, head.cy, head.rx, head.ry, duck ? "g" : "f"), { outline: "k", shade: SHADE });
+  part(g, (t) => ellipse(t, head.cx, head.cy, head.rx, head.ry, headChar(r)), { outline: "k", shade: SHADE });
   drawFace(g, r, { ...pose, mouth: "none" }, head);
   return g;
 }
@@ -1909,10 +1918,10 @@ function hanging(r, pose) {
     markEllipse(t, hx, Yh(23), 3.6 * sz, 4.2 * sz, "b");
   }, { outline: "k", shade: SHADE });
   drawHangArms(g, { cx: hx, reach: Math.max(hrx, 6.4 * sz) + 1.8, shoulderY: Yh(18.5), arm: "a", hand: "b", scale: sz, sway: swing });
-  part(g, (t) => ellipse(t, hx, hy, hrx, hry, duck ? "g" : "f"), { outline: "k", shade: SHADE });
+  part(g, (t) => ellipse(t, hx, hy, hrx, hry, headChar(r)), { outline: "k", shade: SHADE });
   if (hasTuft(r.spec)) {
     for (const dx of [0]) {
-      part(g, (t) => triangle(t, hx + dx - 1.2, hy - hry + 1.2, hx + dx + 1.2, hy - hry + 1.2, hx + dx, hy - hry - 2.6, "f"), { outline: null });
+      part(g, (t) => triangle(t, hx + dx - 1.2, hy - hry + 1.2, hx + dx + 1.2, hy - hry + 1.2, hx + dx, hy - hry - 2.6, headChar(r)), { outline: null });
     }
   }
   const ey = Math.round(hy - hry * 0.25);
@@ -2095,6 +2104,20 @@ var OWL = {
     eye: "#2a1a10"
   })
 };
+var PARROT = {
+  kind: "chick",
+  tuft: true,
+  coloredHead: true,
+  look: makeLook({
+    fur: "#3fbf5a",
+    outline: "#1f3a28",
+    belly: tone("#d8ef6a"),
+    accent: tone("#2f7fe0"),
+    beak: tone("#ffc14a"),
+    head: tone("#e8473a"),
+    eye: "#1f2a1f"
+  })
+};
 
 // dist/shared/art/egg.js
 var EGG_LOOK = makeLook({
@@ -2214,6 +2237,11 @@ function drawMarkings(g, markings, head, eyeX, eyeY) {
     paintFur(g, eyeX - 2, eyeY - 1, 6, 5, "a");
     return;
   }
+  if (markings === "mask") {
+    paintFur(g, eyeX - 4, eyeY - 1, 8, 3, "a");
+    paintFur(g, eyeX - 3, eyeY + 2, 5, 1, "a");
+    return;
+  }
   if (markings !== "tiger")
     return;
   const top = head.cy - head.ry + 1;
@@ -2301,6 +2329,16 @@ function drawTail2(g, r, pose, root) {
   if (r.spec.markings === "tiger")
     for (let i = 1; i < pts.length; i++)
       paintFur(g, pts[i][0] - 1, pts[i][1] - 2, 2, 4, "a");
+  if (r.spec.ringTail) {
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1];
+      const b = pts[i];
+      paintFur(g, (a[0] + b[0]) / 2 - 1, (a[1] + b[1]) / 2 - 2, 2, 4, "a");
+      if (i < pts.length - 1)
+        continue;
+      paintFur(g, b[0] - 1, b[1] - 2, 2, 4, "a");
+    }
+  }
 }
 function drawEars(g, r, pose, head) {
   const { ears } = r.spec;
@@ -3095,6 +3133,80 @@ var QILIN = {
   hooves: true,
   legScale: 1.1
 };
+var OTTER = {
+  look: makeLook({
+    fur: "#8a5a3b",
+    outline: "#3a271c",
+    belly: tone("#ead2a8"),
+    accent: tone("#5e3b25"),
+    inner: tone("#d9a98a"),
+    nose: "#2b1d17",
+    eye: "#2b1d17"
+  }),
+  ears: "none",
+  tail: "turtle",
+  snout: false,
+  whiskers: true,
+  stripes: false,
+  patch: false,
+  shell: false,
+  haunch: false,
+  socks: false,
+  head: { cx: 21, cy: 14.6, rx: 6.6, ry: 5.6 },
+  bodyScale: { rx: 1.14, ry: 0.84 },
+  legScale: 0.78
+};
+var ALPACA = {
+  look: makeLook({
+    fur: "#e4cba3",
+    outline: "#4a3a2a",
+    belly: tone("#fff4df"),
+    accent: tone("#9a7a55"),
+    inner: tone("#f2b9a8"),
+    nose: "#6b4a38",
+    eye: "#2b1d17"
+  }),
+  ears: "cat",
+  tail: "rabbit",
+  snout: false,
+  whiskers: false,
+  stripes: false,
+  patch: false,
+  shell: false,
+  haunch: false,
+  socks: false,
+  head: { cx: 21, cy: 11.9, rx: 5.9, ry: 6.5 },
+  bodyScale: { rx: 0.96, ry: 0.98 },
+  legScale: 1.18,
+  mane: "ruff"
+};
+var RACCOON = {
+  look: makeLook({
+    fur: "#9aa1ab",
+    outline: "#2f3238",
+    belly: tone("#e9ecef"),
+    accent: tone("#3d4048"),
+    inner: tone("#d9a9b3"),
+    nose: "#25272b",
+    eye: "#f4f4f4"
+  }),
+  ears: "round",
+  tail: "cat",
+  snout: true,
+  whiskers: false,
+  stripes: false,
+  patch: false,
+  shell: false,
+  haunch: false,
+  socks: false,
+  head: { cx: 20.8, cy: 14, rx: 6.9, ry: 6 },
+  bodyScale: { rx: 1, ry: 0.96 },
+  markings: "mask",
+  ringTail: true
+};
+
+// dist/shared/rarity.js
+var hasLegendFormRarity = (r) => r === "legend" || r === "hidden";
 
 // dist/shared/species.js
 var DESIGNS = {
@@ -3117,33 +3229,45 @@ var DESIGNS = {
   whitetiger: { kind: "quad", spec: WHITETIGER, gait: "trot", skin: "f" },
   tortoise: { kind: "quad", spec: TORTOISE, gait: "trot", skin: "f" },
   phoenix: { kind: "bird", spec: PHOENIX, skin: "f" },
-  qilin: { kind: "quad", spec: QILIN, gait: "trot", skin: "f" }
+  qilin: { kind: "quad", spec: QILIN, gait: "trot", skin: "f" },
+  otter: { kind: "quad", spec: OTTER, gait: "trot", skin: "f" },
+  alpaca: { kind: "quad", spec: ALPACA, gait: "trot", skin: "f" },
+  parrot: { kind: "bird", spec: PARROT, skin: "f" },
+  raccoon: { kind: "quad", spec: RACCOON, gait: "trot", skin: "f" }
 };
+var R = (id, name, rarity) => ({ id, name, rarity });
 var SPECIES = [
-  { id: "rabbit", name: "\uD1A0\uB07C" },
-  { id: "cat", name: "\uACE0\uC591\uC774" },
-  { id: "dog", name: "\uAC15\uC544\uC9C0" },
-  { id: "turtle", name: "\uAC70\uBD81\uC774" },
-  { id: "chick", name: "\uBCD1\uC544\uB9AC" },
-  { id: "duck", name: "\uC624\uB9AC" },
-  { id: "fox", name: "\uC5EC\uC6B0" },
-  { id: "hamster", name: "\uD584\uC2A4\uD130" },
-  { id: "penguin", name: "\uD3AD\uADC4" },
-  { id: "panda", name: "\uD310\uB2E4" },
-  { id: "bear", name: "\uACF0" },
-  { id: "pig", name: "\uB3FC\uC9C0" },
-  { id: "sheep", name: "\uC591" },
-  { id: "owl", name: "\uBD80\uC5C9\uC774" },
-  { id: "dragon", name: "\uC6A9", hidden: true },
-  { id: "azure", name: "\uCCAD\uB8E1", hidden: true },
-  { id: "whitetiger", name: "\uBC31\uD638", hidden: true },
-  { id: "tortoise", name: "\uD604\uBB34", hidden: true },
-  { id: "phoenix", name: "\uC8FC\uC791", hidden: true },
-  { id: "qilin", name: "\uAE30\uB9B0", hidden: true }
+  R("rabbit", "\uD1A0\uB07C", "common"),
+  R("cat", "\uACE0\uC591\uC774", "common"),
+  R("dog", "\uAC15\uC544\uC9C0", "common"),
+  R("turtle", "\uAC70\uBD81\uC774", "common"),
+  R("chick", "\uBCD1\uC544\uB9AC", "common"),
+  R("duck", "\uC624\uB9AC", "common"),
+  R("fox", "\uC5EC\uC6B0", "common"),
+  R("hamster", "\uD584\uC2A4\uD130", "uncommon"),
+  R("bear", "\uACF0", "uncommon"),
+  R("pig", "\uB3FC\uC9C0", "uncommon"),
+  R("owl", "\uBD80\uC5C9\uC774", "rare"),
+  R("sheep", "\uC591", "rare"),
+  R("otter", "\uC218\uB2EC", "rare"),
+  R("alpaca", "\uC54C\uD30C\uCE74", "rare"),
+  R("parrot", "\uC575\uBB34\uC0C8", "rare"),
+  R("raccoon", "\uB108\uAD6C\uB9AC", "rare"),
+  R("panda", "\uD310\uB2E4", "special"),
+  R("penguin", "\uD3AD\uADC4", "special"),
+  R("dragon", "\uC6A9", "legend"),
+  R("azure", "\uCCAD\uB8E1", "hidden"),
+  R("whitetiger", "\uBC31\uD638", "hidden"),
+  R("tortoise", "\uD604\uBB34", "hidden"),
+  R("phoenix", "\uC8FC\uC791", "hidden"),
+  R("qilin", "\uAE30\uB9B0", "hidden")
 ];
-var COMMON_SPECIES = SPECIES.filter((s) => !s.hidden);
-var HIDDEN_SPECIES = SPECIES.filter((s) => s.hidden);
-var isHiddenSpecies = (id) => HIDDEN_SPECIES.some((s) => s.id === id);
+var speciesOf = (rarity) => SPECIES.filter((s) => s.rarity === rarity);
+var COMMON_SPECIES = speciesOf("common");
+var LEGEND_SPECIES = speciesOf("legend");
+var HIDDEN_SPECIES = speciesOf("hidden");
+var rarityOf = (id) => SPECIES.find((s) => s.id === id)?.rarity ?? "common";
+var hasLegendForm = (id) => hasLegendFormRarity(rarityOf(id));
 function legendDesign(d) {
   if (d.kind === "bird")
     return { ...d, spec: { ...d.spec, bodyWings: true } };
@@ -3154,7 +3278,7 @@ function chunkAll(frames) {
 }
 var cache = /* @__PURE__ */ new Map();
 function spriteSet(id, stage, style = DEFAULT_STYLE) {
-  const key = stage === "egg" ? "egg" : [id, stage === "legend" && !isHiddenSpecies(id) ? "adult" : stage, style.variant, style.accessory].join("/");
+  const key = stage === "egg" ? "egg" : [id, stage === "legend" && !hasLegendForm(id) ? "adult" : stage, style.variant, style.accessory].join("/");
   const cached = cache.get(key);
   if (cached)
     return cached;
@@ -3162,7 +3286,7 @@ function spriteSet(id, stage, style = DEFAULT_STYLE) {
   if (stage === "egg") {
     made = { palette: paletteOf(EGG_LOOK), frames: chunkAll(eggFrames()), skin: "" };
   } else {
-    const legend = stage === "legend" && isHiddenSpecies(id);
+    const legend = stage === "legend" && hasLegendForm(id);
     const d = legend ? legendDesign(DESIGNS[id]) : DESIGNS[id];
     const artStage = stage === "baby" ? "baby" : "adult";
     const look = tintLook(d.spec.look, style.variant);
@@ -3187,7 +3311,7 @@ function stageOf(pet) {
   if (pet.xp < HATCH_XP)
     return "egg";
   const level = levelOf(pet.xp);
-  if (level >= LEGEND_LEVEL && isHiddenSpecies(pet.speciesId))
+  if (level >= LEGEND_LEVEL && hasLegendForm(pet.speciesId))
     return "legend";
   return level >= ADULT_LEVEL ? "adult" : "baby";
 }
@@ -3498,7 +3622,7 @@ function readExtras(raw, speciesId, now) {
     accessory: isAccessory(e["accessory"]) ? e["accessory"] : DEFAULT_STYLE.accessory
   };
   const name = sanitizePetName(e["name"]);
-  const stage = e["stage"] === "baby" || e["stage"] === "adult" || e["stage"] === "legend" && speciesId !== null && isSpeciesId(speciesId) && isHiddenSpecies(speciesId) ? e["stage"] : void 0;
+  const stage = e["stage"] === "baby" || e["stage"] === "adult" || e["stage"] === "legend" && speciesId !== null && isSpeciesId(speciesId) && hasLegendForm(speciesId) ? e["stage"] : void 0;
   const day = typeof e["day"] === "string" && /^\d{4}-\d{2}-\d{2}$/.test(e["day"]) ? Date.parse(e["day"] + "T00:00:00Z") : NaN;
   const fresh = Number.isFinite(day) && now - day <= 2 * DAY_MS;
   const streak = fresh ? num(e["streak"], 3650) : 0;

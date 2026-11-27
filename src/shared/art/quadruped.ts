@@ -66,6 +66,8 @@ export interface QuadSpec {
   darkFace?: boolean;
   /** 다리를 무늬색으로(판다·양) */
   darkLegs?: boolean;
+  /** 꼬리에 어두운 고리 무늬(너구리) */
+  ringTail?: boolean;
 }
 
 const GROUND = 30;
@@ -172,6 +174,16 @@ function drawTail(g: Grid, r: Rig, pose: Pose, root: { x: number; y: number }): 
   );
   // 백호의 꼬리 줄무늬
   if (r.spec.markings === 'tiger') for (let i = 1; i < pts.length; i++) paintFur(g, (pts[i] as [number, number])[0] - 1, (pts[i] as [number, number])[1] - 2, 2, 4, 'a');
+  // 너구리의 꼬리 고리: 마디의 가운데와 끝에 어두운 띠를 번갈아 두른다
+  if (r.spec.ringTail) {
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1] as [number, number];
+      const b = pts[i] as [number, number];
+      paintFur(g, (a[0] + b[0]) / 2 - 1, (a[1] + b[1]) / 2 - 2, 2, 4, 'a');
+      if (i < pts.length - 1) continue;
+      paintFur(g, b[0] - 1, b[1] - 2, 2, 4, 'a');
+    }
+  }
 }
 
 /** 귀. 머리보다 먼저 그려서 머리가 귀 밑동을 덮는다. */

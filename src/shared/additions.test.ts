@@ -10,8 +10,8 @@ const NEW_ANIMALS = ['panda', 'bear', 'pig', 'sheep', 'owl'] as const;
 const NEW_ACCESSORIES = ['cap', 'witch', 'chef', 'santa', 'headband', 'antenna', 'bunnyears', 'eyepatch', 'monocle', 'star'] as const;
 
 describe('동물 5종 추가', () => {
-  it('판다·곰·돼지·양·부엉이는 일반보다 높은 등급으로 들어와 있고, 전체는 20종이다', () => {
-    expect(SPECIES).toHaveLength(20);
+  it('판다·곰·돼지·양·부엉이는 일반보다 높은 등급으로 들어와 있고, 전체는 24종이다', () => {
+    expect(SPECIES).toHaveLength(24);
     expect(COMMON_SPECIES).toHaveLength(7);
     expect(HIDDEN_SPECIES).toHaveLength(5);
     for (const id of ['panda', 'bear', 'pig', 'sheep', 'owl']) expect(SPECIES.some((s) => s.id === id && s.rarity !== 'common' && s.rarity !== 'hidden'), id).toBe(true);
@@ -31,6 +31,24 @@ describe('동물 5종 추가', () => {
     expect(count('sheep', 'h')).toBeGreaterThan(5); // 갈기처럼 풍성한 털
     expect(count('pig', 'a')).toBeLessThan(count('panda', 'a')); // 돼지는 무늬 없이 분홍 한 색
     expect(spriteSet('owl', 'adult').palette['p']).toBeDefined(); // 부리
+  });
+});
+
+describe('희귀 동물 4종(수달·알파카·앵무새·너구리)', () => {
+  const rows = (id: 'otter' | 'alpaca' | 'parrot' | 'raccoon', stage: 'baby' | 'adult' = 'adult') => spriteSet(id, stage).frames.idleA.join('');
+  const count = (text: string, ch: string): number => text.split(ch).length - 1;
+
+  it('모두 희귀 등급이고 이름이 있다', () => {
+    for (const [id, name] of [['otter', '수달'], ['alpaca', '알파카'], ['parrot', '앵무새'], ['raccoon', '너구리']] as const) {
+      expect(SPECIES.find((s) => s.id === id)).toMatchObject({ name, rarity: 'rare' });
+    }
+  });
+
+  it('너구리는 가면 무늬와 고리 꼬리(무늬색 a)가 있고, 앵무새는 머리색(g)이 몸(f)과 다르다', () => {
+    expect(count(rows('raccoon'), 'a')).toBeGreaterThan(20);
+    const parrot = spriteSet('parrot', 'adult');
+    expect(count(rows('parrot'), 'g')).toBeGreaterThan(10);
+    expect(parrot.palette['g']).not.toBe(parrot.palette['f']);
   });
 });
 

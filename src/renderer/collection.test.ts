@@ -68,7 +68,7 @@ describe('뽑기·컬렉션 창', () => {
   it('뽑기권, 가진 동물 수, 비용, 확률, 천장을 보여 준다', async () => {
     await open(view(base(5)));
     expect(el('tickets').textContent).toContain('5장');
-    expect(el('owned-count').textContent).toContain('1/20');
+    expect(el('owned-count').textContent).toContain('1/24');
     expect(el('pull-species').textContent).toContain('3장');
     expect(el('pull-cosmetic').textContent).toContain('2장');
     expect(el('chances').textContent).toContain('일반 7종 각 7.1%');
@@ -111,7 +111,7 @@ describe('뽑기·컬렉션 창', () => {
   });
 
   it('동물 뽑기: 누르면 연출을 하고, 결과(새 동물)와 늘어난 목록을 보여 준다', async () => {
-    const after = pullSpecies(base(3), 2, () => 0.8).collection;
+    const after = pullSpecies(base(3), 2, () => 0.75).collection;
     const { api } = await open(view(base(3)));
     // 서버 응답이 오기 전까지는 알이 흔들리며 "뽑는 중"이 보인다
     api.pullSpecies.mockImplementation(() => new Promise((r) => setTimeout(() => r({ ok: true, message: '부엉이(이)가 새로 왔어요!', id: 'owl', isNew: true, hidden: false, count: 1, view: view(after) }), 50)));
@@ -131,24 +131,24 @@ describe('뽑기·컬렉션 창', () => {
 
   it('뽑고 나면 뽑기권·가진 수·천장·뽑은 횟수 문구가 새 값으로 바뀐다', async () => {
     const before = base(7);
-    const after = pullSpecies(before, 2, () => 0.8).collection; // 부엉이
+    const after = pullSpecies(before, 2, () => 0.75).collection; // 부엉이
     const { api } = await open(view(before));
     expect(el('pity').textContent).toContain('50번 안에');
     expect(el('pity').textContent).toContain('지금까지 0번');
     expect(el('tickets').textContent).toContain('7장');
-    expect(el('owned-count').textContent).toContain('1/20');
+    expect(el('owned-count').textContent).toContain('1/24');
     api.pullSpecies.mockResolvedValue({ ok: true, message: '부엉이(이)가 새로 왔어요!', id: 'owl', isNew: true, hidden: false, count: 1, view: view(after) });
     el('pull-species').click();
     await settle();
     expect(el('pity').textContent).toContain('49번 안에');
     expect(el('pity').textContent).toContain('지금까지 1번');
     expect(el('tickets').textContent).toContain('4장');
-    expect(el('owned-count').textContent).toContain('2/20');
+    expect(el('owned-count').textContent).toContain('2/24');
   });
 
   it('뽑는 중에 새로고침 신호가 와도 연출이 끝난 뒤 최신 값으로 다시 맞춘다', async () => {
     const before = base(7);
-    const after = pullSpecies(before, 2, () => 0.8).collection;
+    const after = pullSpecies(before, 2, () => 0.75).collection;
     const newer: Collection = { ...after, tickets: after.tickets + 2 }; // 뽑는 사이에 레벨 보상으로 뽑기권이 늘었다
     const { api, refresh, set } = await open(view(before));
     api.pullSpecies.mockResolvedValue({ ok: true, message: '부엉이(이)가 새로 왔어요!', id: 'owl', isNew: true, hidden: false, count: 1, view: view(after) });
@@ -199,7 +199,7 @@ describe('뽑기·컬렉션 창', () => {
   });
 
   it('꺼내기를 누르면 그 동물만 메인에 보내고, 돌려받은 상태(키우는 중 표시)로 다시 그린다', async () => {
-    const two = pullSpecies(base(3), 2, () => 0.8).collection;
+    const two = pullSpecies(base(3), 2, () => 0.75).collection;
     const { api } = await open(view(two));
     const switched: Collection = { ...two, active: 'owl' };
     api.switchTo.mockResolvedValue({ ok: true, message: '펭귄(을)를 꺼냈어요', view: view(switched) });
@@ -245,7 +245,7 @@ describe('뽑기 룰렛', () => {
   });
 
   it('동물 뽑기를 하면 룰렛이 칸을 만들고 끝나면 결과 그림이 다시 보인다', async () => {
-    const after = pullSpecies(base(3), 2, () => 0.8).collection;
+    const after = pullSpecies(base(3), 2, () => 0.75).collection;
     const { api } = await open(view(base(3)));
     api.pullSpecies.mockResolvedValue({ ok: true, message: '부엉이(이)가 새로 왔어요!', id: 'owl', isNew: true, hidden: false, count: 1, view: view(after) });
     el('pull-species').click();

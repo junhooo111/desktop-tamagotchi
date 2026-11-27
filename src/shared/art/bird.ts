@@ -16,6 +16,8 @@ export interface BirdSpec {
   accessory?: Accessory;
   /** 몸에 달린 날개(전설 단계). 꾸미기 날개를 달면 그쪽이 우선한다. */
   bodyWings?: boolean;
+  /** 머리(와 머리깃)를 털과 다른 색(look.head)으로 칠한다(앵무새의 붉은 머리). 오리는 늘 그렇다. */
+  coloredHead?: boolean;
 }
 
 const hasTuft = (spec: BirdSpec): boolean => spec.tuft ?? spec.kind === 'chick';
@@ -50,7 +52,7 @@ function makeRig(spec: BirdSpec, stage: ArtStage): Rig {
 const lowered = (r: Rig, oy: number, ox = 0): Rig => ({ ...r, X: (x) => r.X(x) + ox, Y: (y) => r.Y(y) + oy });
 
 /** 머리 색 문자: 오리는 초록 머리('g'), 병아리는 털색('f') */
-const headChar = (r: Rig): string => (r.spec.kind === 'duck' ? 'g' : 'f');
+const headChar = (r: Rig): string => (r.spec.kind === 'duck' || r.spec.coloredHead ? 'g' : 'f');
 
 function drawEye(g: Grid, ex0: number, ey0: number, kind: EyePose): void {
   // 눈은 2칸 격자에 맞춘다(그림을 16칸 굵기로 뭉칠 때 눈이 한 덩어리로 남도록)
@@ -170,10 +172,10 @@ function drawHead(g: Grid, r: Rig, pose: Pose): { cx: number; cy: number; rx: nu
   // 병아리: 머리 위 솜털
   if (hasTuft(r.spec)) {
     for (const [dx, h] of [[0.4, 4]] as const) {
-      part(g, (t) => triangle(t, head.cx + dx * k - 1.4, head.cy - head.ry + 1.4, head.cx + dx * k + 1.4, head.cy - head.ry + 1.4, head.cx + dx * k, head.cy - head.ry - h * k + 1, 'f'), { outline: 'k', shade: SHADE });
+      part(g, (t) => triangle(t, head.cx + dx * k - 1.4, head.cy - head.ry + 1.4, head.cx + dx * k + 1.4, head.cy - head.ry + 1.4, head.cx + dx * k, head.cy - head.ry - h * k + 1, headChar(r)), { outline: 'k', shade: SHADE });
     }
     // 솜털이 머리와 이어지도록 머리 윗선을 다시 채운다
-    part(g, (t) => ellipse(t, head.cx, head.cy, head.rx, head.ry, 'f'), { outline: null, shade: SHADE });
+    part(g, (t) => ellipse(t, head.cx, head.cy, head.rx, head.ry, headChar(r)), { outline: null, shade: SHADE });
   }
   drawFace(g, r, pose, head);
   return head;
@@ -244,7 +246,7 @@ function lying(r: Rig, pose: Pose): Grid {
   drawWing(g, r, { ...pose, wing: 0 }, r.X(12.6), r.Y(25.2));
   drawBackWings(g, wingKind(r.spec), r.X(11), r.Y(25.4) - 5.5 * r.size, r.size);
   const head = { cx: r.X(22), cy: r.Y(24), rx: 5.4 * r.size * r.headMod, ry: 4.8 * r.size * r.headMod };
-  part(g, (t) => ellipse(t, head.cx, head.cy, head.rx, head.ry, duck ? 'g' : 'f'), { outline: 'k', shade: SHADE });
+  part(g, (t) => ellipse(t, head.cx, head.cy, head.rx, head.ry, headChar(r)), { outline: 'k', shade: SHADE });
   const ex = Math.round(head.cx + head.rx * 0.2);
   drawEye(g, ex, Math.round(head.cy - 1.4), pose.eyes);
   drawBeak(g, r, Math.round(head.cx + head.rx * 0.95), Math.round(head.cy + 0.6), false);
@@ -267,7 +269,7 @@ function curled(r: Rig, pose: Pose): Grid {
   drawWing(g, r, { ...pose, wing: 0 }, r.X(11.8), r.Y(22));
   drawBackWings(g, wingKind(r.spec), r.X(12.5), r.Y(21.6) - 8 * r.size + 2, r.size);
   const head = { cx: r.X(19.8), cy: r.Y(16.4), rx: 6.3 * r.size * r.headMod, ry: 5.7 * r.size * r.headMod };
-  part(g, (t) => ellipse(t, head.cx, head.cy, head.rx, head.ry, duck ? 'g' : 'f'), { outline: 'k', shade: SHADE });
+  part(g, (t) => ellipse(t, head.cx, head.cy, head.rx, head.ry, headChar(r)), { outline: 'k', shade: SHADE });
   drawFace(g, r, { ...pose, mouth: 'none' }, head);
   return g;
 }
@@ -303,10 +305,10 @@ function hanging(r: Rig, pose: Pose): Grid {
   // 두 날개(팔): 만세 하듯 머리 바깥으로 들어 올려 마우스 포인터 양옆을 붙잡는다
   drawHangArms(g, { cx: hx, reach: Math.max(hrx, 6.4 * sz) + 1.8, shoulderY: Yh(18.5), arm: 'a', hand: 'b', scale: sz, sway: swing });
   // 머리
-  part(g, (t) => ellipse(t, hx, hy, hrx, hry, duck ? 'g' : 'f'), { outline: 'k', shade: SHADE });
+  part(g, (t) => ellipse(t, hx, hy, hrx, hry, headChar(r)), { outline: 'k', shade: SHADE });
   if (hasTuft(r.spec)) {
     for (const dx of [0]) {
-      part(g, (t) => triangle(t, hx + dx - 1.2, hy - hry + 1.2, hx + dx + 1.2, hy - hry + 1.2, hx + dx, hy - hry - 2.6, 'f'), { outline: null });
+      part(g, (t) => triangle(t, hx + dx - 1.2, hy - hry + 1.2, hx + dx + 1.2, hy - hry + 1.2, hx + dx, hy - hry - 2.6, headChar(r)), { outline: null });
     }
   }
   const ey = Math.round(hy - hry * 0.25);

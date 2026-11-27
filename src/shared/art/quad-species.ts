@@ -384,3 +384,80 @@ export const QILIN: QuadSpec = {
   hooves: true,
   legScale: 1.1,
 };
+
+/** 수달: 길고 낮은 몸, 작고 둥근 귀, 통통한 꼬리, 볼의 수염 */
+export const OTTER: QuadSpec = {
+  look: makeLook({
+    fur: '#8a5a3b',
+    outline: '#3a271c',
+    belly: tone('#ead2a8'),
+    accent: tone('#5e3b25'),
+    inner: tone('#d9a98a'),
+    nose: '#2b1d17',
+    eye: '#2b1d17',
+  }),
+  ears: 'none',
+  tail: 'turtle',
+  snout: false,
+  whiskers: true,
+  stripes: false,
+  patch: false,
+  shell: false,
+  haunch: false,
+  socks: false,
+  head: { cx: 21, cy: 14.6, rx: 6.6, ry: 5.6 },
+  bodyScale: { rx: 1.14, ry: 0.84 },
+  legScale: 0.78,
+};
+
+/** 알파카: 긴 목처럼 높이 얹힌 얼굴, 뾰족한 귀, 복슬복슬한 털, 긴 다리 */
+export const ALPACA: QuadSpec = {
+  look: makeLook({
+    fur: '#e4cba3',
+    outline: '#4a3a2a',
+    belly: tone('#fff4df'),
+    accent: tone('#9a7a55'),
+    inner: tone('#f2b9a8'),
+    nose: '#6b4a38',
+    eye: '#2b1d17',
+  }),
+  ears: 'cat',
+  tail: 'rabbit',
+  snout: false,
+  whiskers: false,
+  stripes: false,
+  patch: false,
+  shell: false,
+  haunch: false,
+  socks: false,
+  head: { cx: 21, cy: 11.9, rx: 5.9, ry: 6.5 },
+  bodyScale: { rx: 0.96, ry: 0.98 },
+  legScale: 1.18,
+  mane: 'ruff',
+};
+
+/** 너구리: 회색 털, 눈을 가로지르는 가면 무늬, 고리무늬 꼬리 */
+export const RACCOON: QuadSpec = {
+  look: makeLook({
+    fur: '#9aa1ab',
+    outline: '#2f3238',
+    belly: tone('#e9ecef'),
+    accent: tone('#3d4048'),
+    inner: tone('#d9a9b3'),
+    nose: '#25272b',
+    eye: '#f4f4f4',
+  }),
+  ears: 'round',
+  tail: 'cat',
+  snout: true,
+  whiskers: false,
+  stripes: false,
+  patch: false,
+  shell: false,
+  haunch: false,
+  socks: false,
+  head: { cx: 20.8, cy: 14, rx: 6.9, ry: 6 },
+  bodyScale: { rx: 1, ry: 0.96 },
+  markings: 'mask',
+  ringTail: true,
+};

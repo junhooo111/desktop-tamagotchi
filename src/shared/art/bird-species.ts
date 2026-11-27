@@ -69,3 +69,19 @@ export const OWL: BirdSpec = {
     eye: '#2a1a10',
   }),
 };
+
+/** 앵무새: 초록 몸에 붉은 머리깃, 노란 배, 푸른 날개 끝 */
+export const PARROT: BirdSpec = {
+  kind: 'chick',
+  tuft: true,
+  coloredHead: true,
+  look: makeLook({
+    fur: '#3fbf5a',
+    outline: '#1f3a28',
+    belly: tone('#d8ef6a'),
+    accent: tone('#2f7fe0'),
+    beak: tone('#ffc14a'),
+    head: tone('#e8473a'),
+    eye: '#1f2a1f',
+  }),
+};

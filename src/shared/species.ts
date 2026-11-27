@@ -13,12 +13,12 @@ import { chunky } from './art/chunky.js';
 import { accessoryPalette, DEFAULT_STYLE, tintLook, type PetStyle } from './art/style.js';
 import { birdFrames } from './art/bird-plan.js';
 import { type BirdSpec } from './art/bird.js';
-import { CHICK, DUCK, OWL, PENGUIN, PHOENIX } from './art/bird-species.js';
+import { CHICK, DUCK, OWL, PARROT, PENGUIN, PHOENIX } from './art/bird-species.js';
 import { EGG_LOOK, eggFrames } from './art/egg.js';
 import { type Frames } from './art/frames.js';
 import { quadFrames, type Gait } from './art/quad-plan.js';
 import { type QuadSpec } from './art/quadruped.js';
-import { AZURE, BEAR, CAT, DOG, DRAGON, FOX, HAMSTER, PANDA, PIG, QILIN, RABBIT, SHEEP, TORTOISE, TURTLE, WHITETIGER } from './art/quad-species.js';
+import { ALPACA, AZURE, BEAR, CAT, DOG, DRAGON, FOX, HAMSTER, OTTER, PANDA, PIG, QILIN, RABBIT, RACCOON, SHEEP, TORTOISE, TURTLE, WHITETIGER } from './art/quad-species.js';
 import { paletteOf, type Look } from './art/types.js';
 import { SIZE } from './pixel.js';
 import { hasLegendFormRarity, type Rarity } from './rarity.js';
@@ -49,7 +49,11 @@ export type SpeciesId =
   | 'whitetiger'
   | 'tortoise'
   | 'phoenix'
-  | 'qilin';
+  | 'qilin'
+  | 'otter'
+  | 'alpaca'
+  | 'parrot'
+  | 'raccoon';
 /** 전설(legend)은 히든 동물만 가는 성체 다음 단계다. 히든이 아닌 동물에게 요청하면 성체 그림을 쓴다. */
 export type SpriteStage = 'egg' | 'baby' | 'adult' | 'legend';
 
@@ -93,6 +97,10 @@ const DESIGNS: Record<SpeciesId, Design> = {
   tortoise: { kind: 'quad', spec: TORTOISE, gait: 'trot', skin: 'f' },
   phoenix: { kind: 'bird', spec: PHOENIX, skin: 'f' },
   qilin: { kind: 'quad', spec: QILIN, gait: 'trot', skin: 'f' },
+  otter: { kind: 'quad', spec: OTTER, gait: 'trot', skin: 'f' },
+  alpaca: { kind: 'quad', spec: ALPACA, gait: 'trot', skin: 'f' },
+  parrot: { kind: 'bird', spec: PARROT, skin: 'f' },
+  raccoon: { kind: 'quad', spec: RACCOON, gait: 'trot', skin: 'f' },
 };
 
 const R = (id: SpeciesId, name: string, rarity: Rarity): Species => ({ id, name, rarity });
@@ -110,6 +118,10 @@ export const SPECIES: readonly Species[] = [
   R('pig', '돼지', 'uncommon'),
   R('owl', '부엉이', 'rare'),
   R('sheep', '양', 'rare'),
+  R('otter', '수달', 'rare'),
+  R('alpaca', '알파카', 'rare'),
+  R('parrot', '앵무새', 'rare'),
+  R('raccoon', '너구리', 'rare'),
   R('panda', '판다', 'special'),
   R('penguin', '펭귄', 'special'),
   R('dragon', '용', 'legend'),

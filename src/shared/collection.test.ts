@@ -43,12 +43,13 @@ describe('확률', () => {
     expect(RARITIES.reduce((n, r) => n + GRADE_PERCENT[r], 0)).toBe(100);
     expect(speciesOf('common')).toHaveLength(7);
     expect(speciesOf('uncommon').map((s) => s.id)).toEqual(['hamster', 'bear', 'pig']);
-    expect(speciesOf('rare').map((s) => s.id)).toEqual(['owl', 'sheep']);
+    expect(speciesOf('rare').map((s) => s.id)).toEqual(['owl', 'sheep', 'otter', 'alpaca', 'parrot', 'raccoon']);
     expect(speciesOf('special').map((s) => s.id)).toEqual(['panda', 'penguin']);
     expect(speciesOf('legend').map((s) => s.id)).toEqual(['dragon']);
     expect(HIDDEN_SPECIES.map((s) => s.id)).toEqual(['azure', 'whitetiger', 'tortoise', 'phoenix', 'qilin']);
     expect(percentEach('common')).toBeCloseTo(50 / 7);
     expect(percentEach('uncommon')).toBeCloseTo(8);
+    expect(percentEach('rare')).toBeCloseTo(2.5);
     expect(percentEach('legend')).toBeCloseTo(3);
     expect(percentEach('hidden')).toBeCloseTo(0.2);
     expect(SPECIES.reduce((n, s) => n + percentEach(s.rarity), 0)).toBeCloseTo(100);
@@ -60,7 +61,12 @@ describe('확률', () => {
     expect(rollSpecies(() => 0.5001, 0)).toEqual({ id: 'hamster', rarity: 'uncommon', hidden: false });
     expect(rollSpecies(() => 0.7399, 0).id).toBe('pig');
     expect(rollSpecies(() => 0.7401, 0)).toEqual({ id: 'owl', rarity: 'rare', hidden: false });
-    expect(rollSpecies(() => 0.8899, 0).id).toBe('sheep');
+    expect(rollSpecies(() => 0.7649, 0).id).toBe('owl');
+    expect(rollSpecies(() => 0.7651, 0).id).toBe('sheep');
+    expect(rollSpecies(() => 0.8149, 0).id).toBe('otter');
+    expect(rollSpecies(() => 0.8399, 0).id).toBe('alpaca');
+    expect(rollSpecies(() => 0.8649, 0).id).toBe('parrot');
+    expect(rollSpecies(() => 0.8899, 0).id).toBe('raccoon');
     expect(rollSpecies(() => 0.8901, 0)).toEqual({ id: 'panda', rarity: 'special', hidden: false });
     expect(rollSpecies(() => 0.9599, 0).id).toBe('penguin');
     expect(rollSpecies(() => 0.9601, 0)).toEqual({ id: 'dragon', rarity: 'legend', hidden: false });
@@ -97,7 +103,7 @@ describe('동물 뽑기', () => {
 
   it('처음 나온 동물은 새끼로 컬렉션에 들어오고, 뽑기권과 횟수가 바뀐다', () => {
     const c = withTickets(start(), 5);
-    const { collection, result } = pullSpecies(c, NOW, () => 0.8); // 부엉이(희귀)
+    const { collection, result } = pullSpecies(c, NOW, () => 0.75); // 부엉이(희귀)
     expect(result).toMatchObject({ ok: true, id: 'owl', rarity: 'rare', isNew: true, hidden: false, count: 1, xpBonus: 0 });
     expect(collection.tickets).toBe(5 - COST.species);
     expect(collection.pulls).toBe(1);
@@ -109,8 +115,8 @@ describe('동물 뽑기', () => {
 
   it('이미 가진 동물이 나오면 중복으로 세고, 그 동물이 경험치를 받는다', () => {
     const c = withTickets(start(), 10);
-    const first = pullSpecies(c, NOW, () => 0.8).collection;
-    const { collection, result } = pullSpecies(first, NOW, () => 0.8);
+    const first = pullSpecies(c, NOW, () => 0.75).collection;
+    const { collection, result } = pullSpecies(first, NOW, () => 0.75);
     expect(result).toMatchObject({ ok: true, id: 'owl', isNew: false, count: 2, xpBonus: DUPLICATE_XP });
     expect(collection.owned.owl!.count).toBe(2);
     expect(collection.owned.owl!.pet.xp).toBe(PULLED_START_XP + DUPLICATE_XP);
@@ -200,7 +206,7 @@ describe('뽑기권을 버는 길', () => {
   });
 
   it('동물마다 레벨 보상을 따로 센다(새로 뽑은 동물의 낮은 레벨에는 보상이 없다)', () => {
-    const c = pullSpecies(withTickets(start(), 3), NOW, () => 0.8).collection;
+    const c = pullSpecies(withTickets(start(), 3), NOW, () => 0.75).collection;
     expect(levelRewards(c, 'owl').tickets).toBe(0);
   });
 
@@ -249,7 +255,7 @@ describe('시작과 옮겨 오기', () => {
 });
 
 describe('한 마리만 꺼내기', () => {
-  const two = (): Collection => pullSpecies(withTickets(start(), 6), NOW, () => 0.8).collection; // 고양이 + 부엉이
+  const two = (): Collection => pullSpecies(withTickets(start(), 6), NOW, () => 0.75).collection; // 고양이 + 부엉이
 
   it('가진 동물만 꺼낼 수 있다', () => {
     expect(switchActive(two(), 'dragon', createPet('cat', NOW), '', NOW)).toBeNull();
@@ -289,11 +295,11 @@ describe('한 마리만 꺼내기', () => {
 
 describe('화면에 보여 줄 값', () => {
   it('모든 동물을 보여 주고 가진 것·꺼낸 것을 표시하며, 천장까지 남은 수를 센다', () => {
-    const c = pullSpecies(withTickets(start(), 3), NOW, () => 0.8).collection;
+    const c = pullSpecies(withTickets(start(), 3), NOW, () => 0.75).collection;
     const v = buildCollectionView(c, 5);
-    expect(v.entries).toHaveLength(20);
+    expect(v.entries).toHaveLength(24);
     expect(v.ownedCount).toBe(2);
-    expect(v.total).toBe(20);
+    expect(v.total).toBe(24);
     expect(v.entries.find((e) => e.id === 'cat')).toMatchObject({ owned: true, active: true, level: 6, stage: 'adult' });
     expect(v.entries.find((e) => e.id === 'owl')).toMatchObject({ owned: true, active: false, stage: 'baby', count: 1 });
     expect(v.entries.find((e) => e.id === 'azure')).toMatchObject({ owned: false, hidden: true, rarity: 'hidden' });
@@ -301,7 +307,7 @@ describe('화면에 보여 줄 값', () => {
     expect(v.entries.find((e) => e.id === 'owl')!.rarity).toBe('rare');
     expect(v.untilPity).toBe(LEGEND_PITY - 1);
     expect(v.cosmeticLeft).toBe(5);
-    expect(v.chances.map((c) => [c.rarity, c.count, c.total])).toEqual([['common', 7, 50], ['uncommon', 3, 24], ['rare', 2, 15], ['special', 2, 7], ['legend', 1, 3], ['hidden', 5, 1]]);
+    expect(v.chances.map((c) => [c.rarity, c.count, c.total])).toEqual([['common', 7, 50], ['uncommon', 3, 24], ['rare', 6, 15], ['special', 2, 7], ['legend', 1, 3], ['hidden', 5, 1]]);
     expect(v.chances.find((c) => c.rarity === 'hidden')!.each).toBeCloseTo(0.2);
   });
 

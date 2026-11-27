@@ -11,7 +11,7 @@ export type Crest = 'spikes' | 'fin';
 /** 얼굴 뒤·아래로 뻗는 갈기: ruff 는 풍성한 볼 털(호랑이), flame 은 불꽃(기린·전설 용) */
 export type Mane = 'ruff' | 'flame';
 /** 머리 장식 무늬: tiger 는 이마의 임금 왕(王)자 줄무늬와 볼 줄무늬 */
-export type Markings = 'tiger' | 'panda';
+export type Markings = 'tiger' | 'panda' | 'mask';
 
 interface Head {
   cx: number;
@@ -90,6 +90,12 @@ export function drawMarkings(g: Grid, markings: Markings | undefined, head: Head
   if (markings === 'panda') {
     // 판다: 눈 둘레의 까만 눈 무늬(눈동자는 그대로 남는다)
     paintFur(g, eyeX - 2, eyeY - 1, 6, 5, 'a');
+    return;
+  }
+  if (markings === 'mask') {
+    // 너구리: 눈을 가로질러 뒤로 뻗는 도둑 가면 무늬
+    paintFur(g, eyeX - 4, eyeY - 1, 8, 3, 'a');
+    paintFur(g, eyeX - 3, eyeY + 2, 5, 1, 'a');
     return;
   }
   if (markings !== 'tiger') return;
