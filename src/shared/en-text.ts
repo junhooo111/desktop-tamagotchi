@@ -22,6 +22,7 @@ export const NAMES_EN: Record<string, string> = {
   '도감 완성': 'Codex complete', '지식 수집가': 'Knowledge collector', '지식 박사': 'Knowledge master', '사흘 연속': 'Three-day streak',
   '일주일 연속': 'One-week streak', '한 달 연속': 'One-month streak', '다정한 친구': 'Kind friend', '금손 집사': 'Golden-hand keeper',
   깔끔쟁이: 'Neat freak', '산책 친구': 'Walking buddy', '동물 수집가': 'Animal collector', '뽑기 단골': 'Gacha regular', '전설의 만남': 'Legendary encounter',
+  '첫 친구': 'First friend', '친구 부자': 'Friend collector', 단짝: 'Best buddies', 절친: 'Close friends', '영혼의 단짝': 'Soul mates',
   // 등급·단계
   경험치: 'XP', 배부름: 'Fullness', 기분: 'Mood', 청결: 'Clean',
   새내기: 'Newbie', 숙련: 'Skilled', 베테랑: 'Veteran', 달인: 'Master', 명인: 'Grandmaster', 신화: 'Mythic',
@@ -55,6 +56,11 @@ export const ACH_DESC_EN: Record<string, string> = {
   '서로 다른 동물을 5종 모았어요': 'You collected 5 different animals',
   '동물 뽑기를 10번 했어요': 'You pulled for animals 10 times',
   '히든 동물을 처음 만났어요': 'You met a hidden animal for the first time',
+  '친구를 처음 사귀었어요': 'You made your first friend',
+  '친구가 3명이 되었어요': 'You have 3 friends',
+  '친구와 친밀도 레벨 3이 되었어요': 'You reached friendship level 3 with a friend',
+  '친구와 친밀도 레벨 5가 되었어요': 'You reached friendship level 5 with a friend',
+  '친구와 친밀도 레벨 10이 되었어요': 'You reached friendship level 10 with a friend',
 };
 
 NAMES_EN['없음'] = 'None';

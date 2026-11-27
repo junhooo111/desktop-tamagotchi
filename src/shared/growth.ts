@@ -90,7 +90,7 @@ export function streakOf(days: readonly string[], today: string): { current: num
 
 // ---- 업적 ----
 
-export type Metric = 'confirms' | 'fixes' | 'quizCorrect' | 'rulesLearned' | 'tipsSeen' | 'streak' | 'care' | 'washes' | 'strolls' | 'collected' | 'pulls' | 'hiddenOwned';
+export type Metric = 'confirms' | 'fixes' | 'quizCorrect' | 'rulesLearned' | 'tipsSeen' | 'streak' | 'care' | 'washes' | 'strolls' | 'collected' | 'pulls' | 'hiddenOwned' | 'friends' | 'friendLevel';
 
 export interface Achievement {
   id: string;
@@ -126,6 +126,11 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   { id: 'collect-5', name: '동물 수집가', description: '서로 다른 동물을 5종 모았어요', metric: 'collected', goal: 5, xp: 40 },
   { id: 'pull-10', name: '뽑기 단골', description: '동물 뽑기를 10번 했어요', metric: 'pulls', goal: 10, xp: 40 },
   { id: 'hidden-1', name: '전설의 만남', description: '히든 동물을 처음 만났어요', metric: 'hiddenOwned', goal: 1, xp: 80 },
+  { id: 'friend-1', name: '첫 친구', description: '친구를 처음 사귀었어요', metric: 'friends', goal: 1, xp: 10 },
+  { id: 'friend-3', name: '친구 부자', description: '친구가 3명이 되었어요', metric: 'friends', goal: 3, xp: 25 },
+  { id: 'friendship-3', name: '단짝', description: '친구와 친밀도 레벨 3이 되었어요', metric: 'friendLevel', goal: 3, xp: 25 },
+  { id: 'friendship-5', name: '절친', description: '친구와 친밀도 레벨 5가 되었어요', metric: 'friendLevel', goal: 5, xp: 50 },
+  { id: 'friendship-10', name: '영혼의 단짝', description: '친구와 친밀도 레벨 10이 되었어요', metric: 'friendLevel', goal: 10, xp: 150 },
 ];
 
 /** 업적 계산에 필요한 바깥 정보(읽은 지식 수는 progress 가 갖고 있다) */
@@ -135,6 +140,9 @@ export interface GrowthContext {
   collected?: number;
   pulls?: number;
   hiddenOwned?: number;
+  /** 친구 수와 가장 높은 친밀도 레벨(서버의 친구 목록에서 온다). 모르면 0 으로 본다. */
+  friends?: number;
+  friendLevel?: number;
 }
 
 export function rulesLearned(g: Growth): number {
@@ -167,6 +175,10 @@ export function metricValue(g: Growth, ctx: GrowthContext, metric: Metric, today
       return ctx.pulls ?? 0;
     case 'hiddenOwned':
       return ctx.hiddenOwned ?? 0;
+    case 'friends':
+      return ctx.friends ?? 0;
+    case 'friendLevel':
+      return ctx.friendLevel ?? 0;
   }
 }
 
