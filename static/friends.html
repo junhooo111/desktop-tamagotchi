@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'" />
+    <title>친구</title>
+    <link rel="stylesheet" href="./friends.css" />
+  </head>
+  <body>
+    <main>
+      <h1>친구</h1>
+      <p class="hint" id="wallet"></p>
+      <form id="add" autocomplete="off">
+        <label for="login">GitHub 아이디로 친구 요청</label>
+        <div class="addrow">
+          <input id="login" type="text" maxlength="39" placeholder="예: octocat" spellcheck="false" />
+          <button type="submit">요청 보내기</button>
+        </div>
+      </form>
+      <p class="hint" id="note" role="status" aria-live="polite"></p>
+      <section id="incoming-box" hidden>
+        <h2>받은 요청</h2>
+        <ul class="list" id="incoming"></ul>
+      </section>
+      <section>
+        <h2>내 친구</h2>
+        <ul class="list" id="friends"></ul>
+      </section>
+      <section id="outgoing-box" hidden>
+        <h2>보낸 요청</h2>
+        <ul class="list" id="outgoing"></ul>
+      </section>
+      <p class="hint">인사하기·선물·경매장 거래를 하면 친밀도가 올라요. 레벨이 오를 때마다 둘 다 뽑기권을 받아요.</p>
+      <footer>
+        <button id="close" type="button">닫기</button>
+      </footer>
+    </main>
+    <script type="module" src="../dist/renderer/friends.js"></script>
+  </body>
+</html>

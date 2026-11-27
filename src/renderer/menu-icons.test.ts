@@ -8,7 +8,7 @@ const names = Object.keys(ICONS) as MenuIcon[];
 
 describe('메뉴 도트 아이콘(16x16)', () => {
   it('모든 아이콘이 16줄 x 16칸이고, 쓰는 글자는 모두 팔레트에 있다', () => {
-    expect(names).toHaveLength(28);
+    expect(names).toHaveLength(29);
     for (const n of names) {
       const rows = ICONS[n];
       expect(rows, n).toHaveLength(SIZE);

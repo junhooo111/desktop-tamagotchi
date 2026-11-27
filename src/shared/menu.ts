@@ -8,7 +8,7 @@
 export type MenuIcon =
   | 'touch' | 'feed' | 'play' | 'wash' | 'walk'
   | 'paw' | 'ticket' | 'shop' | 'trophy' | 'gear' | 'bell' | 'dots' | 'power' | 'cloud'
-  | 'tool' | 'scan' | 'bulb' | 'star' | 'book' | 'card' | 'home' | 'refresh' | 'back' | 'update' | 'list' | 'info' | 'globe' | 'bug';
+  | 'tool' | 'scan' | 'bulb' | 'star' | 'book' | 'card' | 'home' | 'refresh' | 'back' | 'update' | 'list' | 'info' | 'globe' | 'bug' | 'friends';
 
 export interface MenuItem {
   id: string;

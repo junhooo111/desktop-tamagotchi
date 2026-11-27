@@ -57,7 +57,7 @@ describe('창 화면 영어 전환', () => {
 
 const hangul = /[가-힣]/;
 describe('모든 창의 고정 글자가 영어에서 한글 없이 나온다', () => {
-  it.each(['settings.html', 'market.html', 'ranking.html', 'card.html', 'codex.html', 'collection.html', 'results.html', 'wardrobe.html', 'index.html'])('%s', (name) => {
+  it.each(['settings.html', 'market.html', 'ranking.html', 'card.html', 'codex.html', 'collection.html', 'results.html', 'wardrobe.html', 'friends.html', 'index.html'])('%s', (name) => {
     document.body.innerHTML = body(name);
     setUiLang('en');
     localize();

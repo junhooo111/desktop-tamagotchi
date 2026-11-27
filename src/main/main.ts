@@ -15,7 +15,7 @@ import { scanLocalPages, type Finding } from '../inspect/scan.js';
 import { renderProfileCard } from '../shared/card.js';
 import { BACKEND, cardMarkdown } from '../shared/backend.js';
 import { AccountSync, type Choice, type ConflictInfo } from './account-sync.js';
-import { ServerGame, applyServerPull, friendlyError, mirrorCollection, type Grant } from './server-game.js';
+import { ServerGame, applyServerPull, friendlyError, mirrorCollection, type FriendRow, type Grant } from './server-game.js';
 import { AUTH_SCHEME, AuthService, EncryptedFileStorage } from './auth.js';
 import { applyEvent, buildCodex, emptyGrowth, localDay, type Growth, type GrowthEvent } from '../shared/growth.js';
 import { LESSONS, RULE_IDS, type RuleId } from '../shared/lessons.js';
@@ -681,9 +681,12 @@ function ruleIdOfKey(key: string): RuleId | null {
 }
 
 /** 업적 계산에 쓰는 바깥 정보: 읽은 지식 수와 컬렉션 현황 */
-function growthCtx(): { tipsSeen: number; collected: number; pulls: number; hiddenOwned: number } {
+function growthCtx(): { tipsSeen: number; collected: number; pulls: number; hiddenOwned: number; friends: number; friendLevel: number } {
   const owned = collection ? ownedIds(collection) : [];
+  const mates = friendsCache.filter((f) => f.status === 'friend');
   return {
+    friends: mates.length,
+    friendLevel: mates.reduce((m, f) => Math.max(m, f.level), 0),
     tipsSeen: progress.tipsSeen.length,
     collected: owned.length,
     pulls: collection?.pulls ?? 0,
@@ -966,6 +969,111 @@ function openRanking(): void {
   });
   void w.loadFile(path.join(projectRoot, 'static', 'ranking.html'));
   rankingWin = w;
+}
+
+// ---- 친구: GitHub 아이디로 요청 → 수락. 인사·선물·거래로 친밀도(Lv)가 오르고 레벨마다 둘 다 뽑기권을 받는다 ----
+let friendsCache: FriendRow[] = [];
+let friendsWin: BrowserWindow | null = null;
+let friendsSeen: { incoming: Set<string>; friends: Set<string> } | null = null;
+
+interface FriendsView {
+  ok: boolean;
+  message?: string;
+  tickets: number;
+  rows: FriendRow[];
+}
+
+function pendingFriendRequests(): number {
+  return friendsCache.filter((f) => f.status === 'incoming').length;
+}
+
+/** 서버의 친구 목록을 읽어 캐시한다. notify 면 새 요청·새 친구를 펫이 알린다(처음 읽을 때는 알리지 않는다). */
+async function refreshFriends(notify = false): Promise<boolean> {
+  const game = serverGame;
+  if (!serverOn() || !game) return false;
+  const rows = await game.friends();
+  if (!rows) return false;
+  const prev = friendsSeen;
+  friendsCache = rows;
+  const incoming = new Set(rows.filter((f) => f.status === 'incoming').map((f) => f.friendship_id));
+  const friends = new Set(rows.filter((f) => f.status === 'friend').map((f) => f.friendship_id));
+  friendsSeen = { incoming, friends };
+  if (notify && prev) {
+    const fresh = rows.find((f) => f.status === 'incoming' && !prev.incoming.has(f.friendship_id));
+    const accepted = rows.find((f) => f.status === 'friend' && !prev.friends.has(f.friendship_id) && !prev.incoming.has(f.friendship_id));
+    if (fresh) say(L(`👋 ${fresh.login} 님이 친구 요청을 보냈어요!`, `👋 ${fresh.login} sent you a friend request!`));
+    else if (accepted) say(L(`🎉 ${accepted.login} 님과 친구가 되었어요!`, `🎉 You are now friends with ${accepted.login}!`));
+  }
+  recordGrowth({ kind: 'sync' });
+  return true;
+}
+
+async function friendsData(): Promise<FriendsView> {
+  if (!serverOn() || !serverGame) return { ok: false, message: L('로그인하면 친구를 사귈 수 있어요', 'Log in to make friends'), tickets: 0, rows: [] };
+  const [ok] = await Promise.all([refreshFriends(), serverGame.refresh()]);
+  if (!ok) return { ok: false, message: L('친구 목록을 불러오지 못했어요', 'Could not load your friends'), tickets: 0, rows: [] };
+  return { ok: true, tickets: serverGame.state?.tickets ?? 0, rows: friendsCache };
+}
+
+async function friendsAct(run: (g: ServerGame) => Promise<{ ok: boolean; message: string }>): Promise<{ ok: boolean; message: string; view: FriendsView }> {
+  const game = serverGame;
+  if (!serverOn() || !game) return { ok: false, message: L('로그인하면 친구를 사귈 수 있어요', 'Log in to make friends'), view: await friendsData() };
+  const r = await run(game);
+  const view = await friendsData();
+  if (r.ok && game.state) {
+    collection = mirrorCollection(collection, game.state, Date.now());
+    saveCollectionSafe();
+    persist();
+    updateTray();
+    sendView();
+  }
+  return { ok: r.ok, message: r.message, view };
+}
+
+function friendReward(r: { granted: number; level: number; leveled_up?: boolean; tickets_each?: number; mutual?: boolean }, base: string): string {
+  const parts = [base];
+  if (r.mutual) parts.push(L('서로 인사해서 보너스!', 'Mutual wave bonus!'));
+  if (r.granted > 0) parts.push(L(`친밀도 +${r.granted}`, `Intimacy +${r.granted}`));
+  if (r.leveled_up) parts.push(L(`✨ 친밀도 Lv.${r.level}! 뽑기권 +${r.tickets_each ?? 0}`, `✨ Intimacy Lv.${r.level}! Tickets +${r.tickets_each ?? 0}`));
+  return parts.join(' ');
+}
+
+function openFriends(): void {
+  if (friendsWin && !friendsWin.isDestroyed()) {
+    friendsWin.show();
+    friendsWin.focus();
+    return;
+  }
+  const area = screen.getDisplayNearestPoint({ x: Math.round(behavior.x), y: Math.round(behavior.y) }).workArea;
+  const width = 500;
+  const height = Math.min(660, area.height - 40);
+  const w = new BrowserWindow({
+    x: area.x + Math.round((area.width - width) / 2),
+    y: area.y + Math.round((area.height - height) / 2),
+    width,
+    height,
+    resizable: false,
+    minimizable: false,
+    maximizable: false,
+    autoHideMenuBar: true,
+    title: L('친구', 'Friends'),
+    backgroundColor: '#fffdf5',
+    show: false,
+    webPreferences: {
+      preload: path.join(projectRoot, 'static', 'friends-preload.cjs'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  w.setMenu(null);
+  w.setAlwaysOnTop(true, 'screen-saver');
+  w.once('ready-to-show', () => w.show());
+  w.on('closed', () => {
+    if (friendsWin === w) friendsWin = null;
+  });
+  void w.loadFile(path.join(projectRoot, 'static', 'friends.html'));
+  friendsWin = w;
 }
 
 // ---- 경매장: 서버의 판매 목록을 보고 사고판다(로그인한 사용자만). 게임머니는 서버가 관리한다 ----
@@ -1600,6 +1708,7 @@ async function activateServer(): Promise<void> {
   say(L(`서버와 연결됐어요. 뽑기권 ${collection.tickets}장 · 어느 PC에서든 같은 계정이에요`, `Connected to the server. ${collection.tickets} ticket(s) · same account on any PC`));
   setTimeout(() => void syncGithubCommits(false), 8_000);
   setTimeout(() => void checkSales(), 20_000);
+  setTimeout(() => void refreshFriends(), 6_000);
   setTimeout(() => void pushCardExtras(), 12_000);
 }
 
@@ -1901,6 +2010,7 @@ function buildMenuModel(): MenuModel {
         label: L('온라인', 'Online'),
         icon: 'shop',
         items: [
+          { id: on('friends', () => openFriends()), label: L('친구…', 'Friends…'), icon: 'friends', enabled: logged, ...(pendingFriendRequests() > 0 ? { badge: String(pendingFriendRequests()) } : {}), ...(logged ? {} : { hint: needLogin }) },
           { id: on('market', () => openMarket()), label: L('경매장…', 'Auction house…'), icon: 'shop', enabled: logged, ...(logged ? {} : { hint: needLogin }) },
           { id: on('ranking', () => openRanking()), label: L('랭킹…', 'Rankings…'), icon: 'trophy', enabled: logged, ...(logged ? {} : { hint: needLogin }) },
           account,
@@ -2297,6 +2407,30 @@ function setupIpc(): void {
     if (rankingWin && !rankingWin.isDestroyed()) rankingWin.close();
   });
   ipcMain.handle('lang:get', () => currentLang());
+  const badFriendReq = async (): Promise<{ ok: false; message: string; view: FriendsView }> => ({ ok: false, message: L('잘못된 요청이에요', 'Invalid request'), view: await friendsData() });
+  ipcMain.handle('friends:get', () => friendsData());
+  ipcMain.handle('friends:request', (_e, login: unknown) => (typeof login === 'string' && login.length > 0 && login.length <= 40 ? friendsAct((g) => g.friendRequest(login)) : badFriendReq()));
+  ipcMain.handle('friends:respond', (_e, id: unknown, accept: unknown) => (isUuid(id) ? friendsAct((g) => g.friendRespond(id, accept === true)) : badFriendReq()));
+  ipcMain.handle('friends:remove', (_e, id: unknown) => (isUuid(id) ? friendsAct((g) => g.friendRemove(id)) : badFriendReq()));
+  ipcMain.handle('friends:wave', (_e, id: unknown) =>
+    isUuid(id)
+      ? friendsAct(async (g) => {
+          const r = await g.friendWave(id);
+          return r.ok && r.result ? { ok: true, message: friendReward(r.result, L('👋 인사했어요!', '👋 Waved!')) } : { ok: false, message: r.message };
+        })
+      : badFriendReq(),
+  );
+  ipcMain.handle('friends:gift', (_e, id: unknown) =>
+    isUuid(id)
+      ? friendsAct(async (g) => {
+          const r = await g.friendGift(id);
+          return r.ok && r.result ? { ok: true, message: friendReward(r.result, L('🎟️ 뽑기권을 선물했어요!', '🎟️ Ticket sent!')) } : { ok: false, message: r.message };
+        })
+      : badFriendReq(),
+  );
+  ipcMain.on('friends:close', () => {
+    if (friendsWin && !friendsWin.isDestroyed()) friendsWin.close();
+  });
   ipcMain.handle('market:get', () => marketData());
   ipcMain.handle('market:buy', (_event, id: unknown) => (isUuid(id) ? marketAct('buy_listing', { p_listing_id: id }, L('샀어요! 내 컬렉션에 들어왔어요', 'Bought! It is in your collection now')) : marketData().then((view) => ({ ok: false, message: L('잘못된 요청이에요', 'Invalid request'), view }))));
   ipcMain.handle('market:cancel', (_event, id: unknown) => (isUuid(id) ? marketAct('cancel_listing', { p_listing_id: id }, L('판매를 내렸어요', 'Listing removed')) : marketData().then((view) => ({ ok: false, message: L('잘못된 요청이에요', 'Invalid request'), view }))));
@@ -2412,6 +2546,7 @@ if (!app.requestSingleInstanceLock()) {
       }, 10 * 60_000);
       setInterval(() => void syncGithubCommits(false), 60 * 60_000);
       setInterval(() => void checkSales(), 5 * 60_000);
+      setInterval(() => void refreshFriends(true), 5 * 60_000);
       setInterval(() => void pushCardExtras(), 6 * 3_600_000); // 날짜가 바뀌면 다시 보낸다
     }
     void auth.restore();

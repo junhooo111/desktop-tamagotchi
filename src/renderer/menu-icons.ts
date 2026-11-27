@@ -325,6 +325,7 @@ export const ART: Record<MenuIcon, readonly string[]> = {
   info: info(),
   globe: globe(),
   bug: bug(),
+  friends: art(['........', '..kkkk..', '.kppppk.', '.kpkkpk.', '.kppppk.', '..kkkk..', '.kkbbkkk', 'kbbbbbbk', 'kbbbbbbk', 'kbbbbbbk', '.kkkkkk.', '........', '........', '........', '........', '........']),
 };
 
 /** 아이콘 모양(글자 줄). 시험·미리보기에서 쓴다. */

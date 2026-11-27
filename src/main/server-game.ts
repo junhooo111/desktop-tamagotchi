@@ -18,6 +18,33 @@ export interface ServerRpc {
   invoke?<T>(name: string): Promise<RpcResult<T>>;
 }
 
+/** 친구 목록 한 줄(friends_list). status: friend=친구, incoming=받은 요청, outgoing=보낸 요청 */
+export interface FriendRow {
+  friendship_id: string;
+  friend_id: string;
+  login: string;
+  avatar_url: string | null;
+  status: 'friend' | 'incoming' | 'outgoing';
+  xp: number;
+  level: number;
+  next_xp: number;
+  since: string;
+  waved_today: boolean;
+  they_waved_today: boolean;
+  species_id: string | null;
+  pet_xp: number | null;
+}
+
+/** 인사/선물 결과 */
+export interface FriendActionResult {
+  granted: number;
+  level: number;
+  leveled_up?: boolean;
+  tickets_each?: number;
+  mutual?: boolean;
+  tickets?: number;
+}
+
 /** 경매장에서 팔린 내 펫 한 건(my_sales) */
 export interface SaleRow {
   listing_id: string;
@@ -75,6 +102,14 @@ export function friendlyError(message: string): string {
   if (/own_listing/.test(message)) return '내가 올린 펫은 살 수 없어요';
   if (/invalid_price/.test(message)) return '가격은 1~1,000,000 사이의 정수로 써 주세요';
   if (/not_your_pet/.test(message)) return '내 펫이 아니에요';
+  if (/already_friends/.test(message)) return '이미 친구예요';
+  if (/already_requested/.test(message)) return '이미 친구 요청을 보냈어요';
+  if (/already_waved/.test(message)) return '오늘은 이미 인사했어요';
+  if (/already_gifted/.test(message)) return '오늘은 이 친구에게 이미 선물했어요';
+  if (/gift_limit/.test(message)) return '하루에 세 번까지만 선물할 수 있어요';
+  if (/too_many/.test(message)) return '친구 요청이 너무 많아요. 몇 개를 정리해 주세요';
+  if (/self/.test(message)) return '내 계정에는 요청할 수 없어요';
+  if (/not_found/.test(message)) return '그 GitHub 아이디의 사용자를 찾지 못했어요 (이 앱에 로그인한 적이 있어야 해요)';
   if (/not_authenticated/.test(message)) return '로그인이 끝나지 않았어요';
   if (/fetch failed|network|timeout|ENOTFOUND|ECONN|Failed to fetch/i.test(message)) return '서버에 연결하지 못했어요. 인터넷을 확인하고 다시 해 주세요';
   return '서버에서 처리하지 못했어요: ' + message.slice(0, 80);
@@ -230,6 +265,41 @@ export class ServerGame {
   async pushCardExtras(extras: Record<string, unknown>): Promise<boolean> {
     const r = await this.rpc.call<null>('set_card_extras', { p_extras: extras });
     return !r.error;
+  }
+
+  /** 친구 목록(친구·받은 요청·보낸 요청). 서버에 닿지 않으면 null. */
+  async friends(): Promise<FriendRow[] | null> {
+    const r = await this.rpc.call<FriendRow[]>('friends_list', {});
+    return r.error || !Array.isArray(r.data) ? null : r.data;
+  }
+
+  async friendRequest(login: string): Promise<{ ok: boolean; message: string; status?: string }> {
+    const r = await this.rpc.call<{ status: string }>('friend_request', { p_login: login.trim().replace(/^@/, '') });
+    if (r.error) return { ok: false, message: friendlyError(r.error.message) };
+    return { ok: true, message: r.data?.status === 'friend' ? '서로 요청해서 바로 친구가 되었어요!' : '친구 요청을 보냈어요', status: r.data?.status };
+  }
+
+  async friendRespond(id: string, accept: boolean): Promise<{ ok: boolean; message: string }> {
+    const r = await this.rpc.call<null>('friend_respond', { p_friendship: id, p_accept: accept });
+    return r.error ? { ok: false, message: friendlyError(r.error.message) } : { ok: true, message: accept ? '친구가 되었어요!' : '요청을 거절했어요' };
+  }
+
+  async friendRemove(id: string): Promise<{ ok: boolean; message: string }> {
+    const r = await this.rpc.call<null>('friend_remove', { p_friendship: id });
+    return r.error ? { ok: false, message: friendlyError(r.error.message) } : { ok: true, message: '친구 목록에서 지웠어요' };
+  }
+
+  async friendWave(id: string): Promise<{ ok: boolean; message: string; result?: FriendActionResult }> {
+    const r = await this.rpc.call<FriendActionResult>('friend_wave', { p_friendship: id });
+    if (r.error || !r.data) return { ok: false, message: friendlyError(r.error?.message ?? '') };
+    return { ok: true, message: '', result: r.data };
+  }
+
+  async friendGift(id: string): Promise<{ ok: boolean; message: string; result?: FriendActionResult }> {
+    const r = await this.rpc.call<FriendActionResult>('friend_gift_ticket', { p_friendship: id });
+    if (r.error || !r.data) return { ok: false, message: friendlyError(r.error?.message ?? '') };
+    if (this.state && typeof r.data.tickets === 'number') this.state = { ...this.state, tickets: r.data.tickets };
+    return { ok: true, message: '', result: r.data };
   }
 
   /** 내가 올렸다가 since 이후에 팔린 펫들(팔린 순). 서버에 닿지 않으면 null. */
