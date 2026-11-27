@@ -1,6 +1,17 @@
 {
   "items": [
     {
+      "id": "v0.12.5-pixel-menu",
+      "date": "2026-11-28",
+      "title": "우클릭 메뉴가 도트로 바뀌었어요",
+      "body": "펫을 우클릭하면 도트 스타일 메뉴가 떠요. 돌보기 버튼과 탭(내 펫·온라인·개발)으로 정리해서 훨씬 간단해졌어요.",
+      "en": {
+        "title": "The right-click menu is pixel-style now",
+        "body": "Right-click the pet to open a pixel-style menu. It is simpler, with care buttons and tabs (My pet, Online, Dev)."
+      },
+      "url": "https://github.com/junhooo111/desktop-tamagotchi/releases/tag/v0.12.5"
+    },
+    {
       "id": "v0.12.4-fewer-false-alarms",
       "date": "2026-11-27",
       "title": "검사 오탐을 줄였어요",

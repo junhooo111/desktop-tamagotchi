@@ -7,7 +7,7 @@ For developers there is a bonus: the pet looks at the `localhost` pages you are 
 
 ![Pets wandering the desktop: 14 common animals and the silhouettes of 6 hidden animals you can only meet through gacha](docs/images/hero.svg)
 
-> 🐣 **v0.12.4** · Windows 10/11 · macOS (preview) · Free (MIT) · [Get the latest version](https://github.com/junhooo111/desktop-tamagotchi/releases/latest)
+> 🐣 **v0.12.5** · Windows 10/11 · macOS (preview) · Free (MIT) · [Get the latest version](https://github.com/junhooo111/desktop-tamagotchi/releases/latest)
 
 ## Put your pet on your GitHub profile (1 minute)
 
