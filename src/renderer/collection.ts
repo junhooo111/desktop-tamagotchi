@@ -39,10 +39,15 @@ const setText = (id: string, value: string): void => {
 
 const STAGE_NAME = { egg: '알', baby: '새끼', adult: '성체', legend: '전설' } as const;
 /** 룰렛이 도는 시간과, 멈춘 뒤 결과를 보여 주는 시간(ms). "동작 줄이기" 설정이면 거의 바로 보여 준다. */
-const SPIN_MS = 2800;
+/** 룰렛: 약 3.8초 돌며 점점 느려지다가, 두 칸 사이에서 잠깐 멈칫한 뒤(약 0.45초) 한쪽으로 고른다(약 0.75초). 합쳐서 약 5초. */
+const SPIN_MS = 3800;
+const HOVER_MS = 450;
+const SETTLE_MS = 750;
 const REVEAL_MS = 700;
+/** 멈칫할 때 결과 칸의 중심에서 이웃 칸 쪽으로 얼마나 비껴 서는지(칸 폭 비율). 0.5 면 두 칸의 딱 경계다. */
+const TEASE = 0.46;
 const CELL = 76;
-const CELLS = 44;
+const CELLS = 56;
 const motionScale = (): number => (typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0.1 : 1);
 
 let data: CollectionView;
@@ -84,8 +89,10 @@ function speciesItem(e: { id: SpeciesId; hidden: boolean }): ReelItem {
  * 지나가는 칸은 "???" 가 아니라 살짝 어두운 동물 모습이라서, 히든이 있다는 것을 어렴풋이 알아볼 수 있다.
  * 가끔 결과 바로 옆에 히든을 놓아 "아깝다" 느낌을 준다(결과에는 영향 없음).
  */
-export function buildReel(result: PullResult & { ok: true }, entries: readonly CollectionEntry[], activeStyle?: { id: SpeciesId; stage: 'baby' | 'adult' | 'legend' }): { items: ReelItem[]; final: number } {
+export function buildReel(result: PullResult & { ok: true }, entries: readonly CollectionEntry[], activeStyle?: { id: SpeciesId; stage: 'baby' | 'adult' | 'legend' }): { items: ReelItem[]; final: number; side: 1 | -1 } {
   const final = CELLS - 8;
+  /** 멈칫할 때 결과와 함께 걸쳐 보이는 이웃 칸이 있는 쪽 */
+  const side: 1 | -1 = Math.random() < 0.5 ? -1 : 1;
   const items: ReelItem[] = [];
   if ('id' in result) {
     const commons = entries.filter((e) => !e.hidden);
@@ -93,7 +100,7 @@ export function buildReel(result: PullResult & { ok: true }, entries: readonly C
     for (let i = 0; i < CELLS; i++) items.push(speciesItem(hiddens.length > 0 && Math.random() < 0.2 ? pick(hiddens) : pick(commons.length > 0 ? commons : entries)));
     const mine = entries.find((e) => e.id === result.id) ?? { id: result.id, hidden: result.hidden };
     items[final] = speciesItem(mine);
-    if (!result.hidden && hiddens.length > 0 && Math.random() < 0.4) items[final + (Math.random() < 0.5 ? -1 : 1)] = speciesItem(pick(hiddens));
+    if (!result.hidden && hiddens.length > 0 && Math.random() < 0.4) items[final + side] = speciesItem(pick(hiddens));
   } else {
     const id = activeStyle?.id ?? 'cat';
     const stage = activeStyle?.stage ?? 'adult';
@@ -105,7 +112,7 @@ export function buildReel(result: PullResult & { ok: true }, entries: readonly C
     for (let i = 0; i < CELLS; i++) items.push(Math.random() < 0.7 ? styled('default', pick(accessories)) : styled(pick(VARIANTS), 'none'));
     items[final] = result.kind === 'accessory' ? styled('default', result.itemId as Accessory) : styled(result.itemId as Variant, 'none');
   }
-  return { items, final };
+  return { items, final, side };
 }
 
 /** 룰렛을 돌린다. 끝나면(가운데 칸을 밝히고 잠깐 보여 준 뒤) 풀린다. */
@@ -114,7 +121,7 @@ async function spinReel(result: PullResult & { ok: true }): Promise<void> {
   const strip = $('strip');
   const k = motionScale();
   const active = data.entries.find((e) => e.active);
-  const { items, final } = buildReel(result, data.entries, active ? { id: active.id, stage: active.stage === 'egg' ? 'baby' : active.stage } : undefined);
+  const { items, final, side } = buildReel(result, data.entries, active ? { id: active.id, stage: active.stage === 'egg' ? 'baby' : active.stage } : undefined);
   strip.textContent = '';
   items.forEach((it, i) => {
     const cell = document.createElement('div');
@@ -133,12 +140,22 @@ async function spinReel(result: PullResult & { ok: true }): Promise<void> {
   strip.style.transition = 'none';
   strip.style.transform = 'translateX(0)';
   void strip.offsetWidth; // 처음 자리를 먼저 적용한 다음에 움직이게 한다
-  strip.style.transition = `transform ${Math.round(SPIN_MS * k)}ms cubic-bezier(0.1, 0.75, 0.15, 1)`;
-  strip.style.transform = `translateX(${Math.round(half - (final * CELL + CELL / 2))}px)`;
-  await new Promise((r) => setTimeout(r, Math.round(SPIN_MS * k)));
+  const centerX = (cellOffset: number): number => Math.round(half - (final * CELL + CELL / 2 + cellOffset * CELL));
+  const wait = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, Math.round(ms * k)));
+  // 1) 빠르게 돌다가 점점 느려져서, 결과 칸과 이웃 칸의 경계 근처에서 멈춘다(어느 쪽이 될지 모르게)
+  const lean = side * TEASE;
+  strip.style.transition = `transform ${Math.round(SPIN_MS * k)}ms cubic-bezier(0.12, 0.6, 0.18, 1)`;
+  strip.style.transform = `translateX(${centerX(lean)}px)`;
+  await wait(SPIN_MS);
+  // 2) 잠시 멈칫
+  await wait(HOVER_MS);
+  // 3) 결과 칸 쪽으로 슬그머니 넘어가 고른다
+  strip.style.transition = `transform ${Math.round(SETTLE_MS * k)}ms ease-in-out`;
+  strip.style.transform = `translateX(${centerX(0)}px)`;
+  await wait(SETTLE_MS);
   strip.children[final]?.classList.add('reveal');
   reel.classList.add('stopped');
-  await new Promise((r) => setTimeout(r, Math.round(REVEAL_MS * k)));
+  await wait(REVEAL_MS);
   reel.hidden = true;
   $('result-canvas').hidden = false;
 }
