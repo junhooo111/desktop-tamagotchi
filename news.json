@@ -1,6 +1,17 @@
 {
   "items": [
     {
+      "id": "v0.13.1-roulette-aura",
+      "date": "2026-11-28",
+      "title": "뽑기 룰렛이 더 근사해졌어요",
+      "body": "히든은 어두운 실루엣과 ???에 무지개 빛이 돌며 지나가고, 전설은 주황빛 후광이 퍼져요. 높은 등급이 지나가면 바로 눈에 띄어요.",
+      "en": {
+        "title": "The gacha roulette got fancier",
+        "body": "Hidden animals pass by as dark ??? silhouettes with a spinning rainbow aura, and legendary ones get an orange halo. High grades now stand out at once."
+      },
+      "url": "https://github.com/junhooo111/desktop-tamagotchi/releases/tag/v0.13.1"
+    },
+    {
       "id": "v0.13.0-friends-animals-roulette",
       "date": "2026-11-28",
       "title": "친구, 새 동물 11종, 뽑기 룰렛",
