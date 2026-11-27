@@ -1542,7 +1542,7 @@ async function doPullSpecies() {
     const message = applied.isNew
       ? L(`${sp.name}(이)가 새로 왔어요!${applied.hidden ? ' ✨히든 동물!' : ''}`, `${nameEn(sp.name)} joined you!${applied.hidden ? ' ✨Hidden animal!' : ''}`)
       : L(`${sp.name}(이)가 또 나왔어요! (${applied.count}번째) 경험치 +${DUPLICATE_XP}`, `${nameEn(sp.name)} again! (#${applied.count}) XP +${DUPLICATE_XP}`);
-    return { ok: true as const, message, id: r.result.speciesId as Parameters<typeof getSpecies>[0], isNew: applied.isNew, hidden: applied.hidden, count: applied.count, view: collectionData() };
+    return { ok: true as const, message, id: r.result.speciesId as Parameters<typeof getSpecies>[0], isNew: applied.isNew, rarity: applied.rarity, hidden: applied.hidden, count: applied.count, view: collectionData() };
   }
   return doPullSpeciesLocal();
 }
@@ -1565,7 +1565,7 @@ function doPullSpeciesLocal() {
   const message = r.result.isNew
     ? L(`${sp.name}(이)가 새로 왔어요!${r.result.hidden ? ' ✨히든 동물!' : ''}`, `${nameEn(sp.name)} joined you!${r.result.hidden ? ' ✨Hidden animal!' : ''}`)
     : L(`${sp.name}(이)가 또 나왔어요! (${r.result.count}번째) 경험치 +${DUPLICATE_XP}`, `${nameEn(sp.name)} again! (#${r.result.count}) XP +${DUPLICATE_XP}`);
-  return { ok: true as const, message, id: r.result.id, isNew: r.result.isNew, hidden: r.result.hidden, count: r.result.count, view: collectionData() };
+  return { ok: true as const, message, id: r.result.id, isNew: r.result.isNew, rarity: r.result.rarity, hidden: r.result.hidden, count: r.result.count, view: collectionData() };
 }
 
 /** 꾸미기 뽑기: 로그인(서버 기준)이면 서버가 뽑는다. */

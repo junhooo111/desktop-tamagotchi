@@ -4,14 +4,17 @@
  * 규칙(확률·비용·보상)은 메인(shared/collection.ts)이 정하고 여기서는 보여 주기만 한다.
  */
 import type { Lang } from '../shared/i18n.js';
-import { startUiLocalization } from './dom-i18n.js';
-import type { CollectionEntry, CollectionView } from '../shared/collection.js';
+import { currentUiLang, startUiLocalization } from './dom-i18n.js';
+import { nameEn } from '../shared/en-text.js';
+import { RARITY_NAME, RARITY_NAME_EN, isRarity, type Rarity } from '../shared/rarity.js';
+import { DUPLICATE_XP, type CollectionEntry, type CollectionView } from '../shared/collection.js';
 import { levelTier } from '../shared/pet.js';
 import { ACCESSORIES, VARIANTS, spriteSet, type Accessory, type SpeciesId, type Variant } from '../shared/species.js';
 
+type SpeciesPullResult = { ok: true; message: string; view: CollectionView; id: SpeciesId; rarity?: Rarity; isNew: boolean; hidden: boolean; count: number };
 type PullResult =
   | { ok: false; message: string; view: CollectionView }
-  | { ok: true; message: string; view: CollectionView; id: SpeciesId; isNew: boolean; hidden: boolean; count: number }
+  | SpeciesPullResult
   | { ok: true; message: string; view: CollectionView; kind: 'accessory' | 'variant'; itemId: string };
 
 interface CollectionApi {
@@ -70,24 +73,40 @@ function drawSprite(canvas: HTMLCanvasElement, rows: readonly string[], palette:
   });
 }
 
-type Rarity = 'common' | 'hidden' | 'plain';
+/** 룰렛 칸의 빛깔: 동물은 등급, 꾸미기는 plain */
+type ReelRarity = Rarity | 'plain';
 interface ReelItem {
   rows: readonly string[];
   palette: Readonly<Record<string, string>>;
-  rarity: Rarity;
+  rarity: ReelRarity;
 }
+
+/** 룰렛에 지나가는 칸의 등급 비중(실제 확률이 아니라 "높은 등급도 어렴풋이 보이게" 부풀린 값) */
+const REEL_MIX: Array<[Rarity, number]> = [['common', 30], ['uncommon', 22], ['rare', 18], ['special', 14], ['legend', 9], ['hidden', 7]];
 
 const pick = <T,>(list: readonly T[]): T => list[Math.floor(Math.random() * list.length)]!;
 
-function speciesItem(e: { id: SpeciesId; hidden: boolean }): ReelItem {
+function speciesItem(e: { id: SpeciesId; rarity: Rarity }): ReelItem {
   const set = spriteSet(e.id, 'adult');
-  return { rows: set.frames.idleA, palette: set.palette, rarity: e.hidden ? 'hidden' : 'common' };
+  return { rows: set.frames.idleA, palette: set.palette, rarity: e.rarity };
+}
+
+/** 등급 비중대로 등급을 하나 고르고, 그 등급의 동물 중 하나를 고른다(그 등급에 동물이 없으면 건너뛴다). */
+function randomFiller(entries: readonly CollectionEntry[]): { id: SpeciesId; rarity: Rarity } {
+  const usable = REEL_MIX.filter(([r]) => entries.some((e) => e.rarity === r));
+  let roll = Math.random() * usable.reduce((n, [, w]) => n + w, 0);
+  for (const [r, w] of usable) {
+    roll -= w;
+    if (roll < 0) return pick(entries.filter((e) => e.rarity === r));
+  }
+  return pick(entries);
 }
 
 /**
  * 룰렛에 지나갈 칸들. 결과는 이미 서버(메인)가 확률대로 정했고, 여기서는 그 결과가 가운데에 멈추도록 꾸밀 뿐이다.
- * 지나가는 칸은 "???" 가 아니라 살짝 어두운 동물 모습이라서, 히든이 있다는 것을 어렴풋이 알아볼 수 있다.
- * 가끔 결과 바로 옆에 히든을 놓아 "아깝다" 느낌을 준다(결과에는 영향 없음).
+ * 각 칸은 등급 색으로 빛나서(일반 흰색 … 전설 주황, 히든 무지개) 높은 등급이 지나가는 것을 알아볼 수 있다.
+ * 지나가는 칸은 "???" 가 아니라 살짝 어두운 동물 모습이다.
+ * 가끔 결과 바로 옆에 전설·히든을 놓아 "아깝다" 느낌을 준다(결과에는 영향 없음).
  */
 export function buildReel(result: PullResult & { ok: true }, entries: readonly CollectionEntry[], activeStyle?: { id: SpeciesId; stage: 'baby' | 'adult' | 'legend' }): { items: ReelItem[]; final: number; side: 1 | -1 } {
   const final = CELLS - 8;
@@ -95,12 +114,12 @@ export function buildReel(result: PullResult & { ok: true }, entries: readonly C
   const side: 1 | -1 = Math.random() < 0.5 ? -1 : 1;
   const items: ReelItem[] = [];
   if ('id' in result) {
-    const commons = entries.filter((e) => !e.hidden);
-    const hiddens = entries.filter((e) => e.hidden);
-    for (let i = 0; i < CELLS; i++) items.push(speciesItem(hiddens.length > 0 && Math.random() < 0.2 ? pick(hiddens) : pick(commons.length > 0 ? commons : entries)));
-    const mine = entries.find((e) => e.id === result.id) ?? { id: result.id, hidden: result.hidden };
-    items[final] = speciesItem(mine);
-    if (!result.hidden && hiddens.length > 0 && Math.random() < 0.4) items[final + side] = speciesItem(pick(hiddens));
+    const rarityOfResult: Rarity = result.rarity ?? (result.hidden ? 'hidden' : 'common');
+    const tops = entries.filter((e) => e.rarity === 'legend' || e.rarity === 'hidden');
+    for (let i = 0; i < CELLS; i++) items.push(speciesItem(randomFiller(entries)));
+    items[final] = speciesItem({ id: result.id, rarity: rarityOfResult });
+    // 결과가 전설·히든이 아니면 가끔 바로 옆에 전설·히든을 놓아 "아깝다" 느낌을 준다(결과에는 영향 없음)
+    if (rarityOfResult !== 'legend' && rarityOfResult !== 'hidden' && tops.length > 0 && Math.random() < 0.4) items[final + side] = speciesItem(pick(tops));
   } else {
     const id = activeStyle?.id ?? 'cat';
     const stage = activeStyle?.stage ?? 'adult';
@@ -160,9 +179,28 @@ async function spinReel(result: PullResult & { ok: true }): Promise<void> {
   $('result-canvas').hidden = false;
 }
 
+/** 등급 이름(색이 입혀진다). 히든은 무지개로 흐른다. */
+function gradeName(r: Rarity): string {
+  return currentUiLang() === 'en' ? RARITY_NAME_EN[r] : RARITY_NAME[r];
+}
+function gradeSpan(r: Rarity, className = 'grade'): HTMLSpanElement {
+  const span = document.createElement('span');
+  span.className = `${className} grade-${r}`;
+  span.textContent = gradeName(r);
+  span.setAttribute('data-no-translate', '');
+  return span;
+}
+const gradeTag = (r: Rarity): HTMLSpanElement => gradeSpan(r, 'grade grade-tag');
+
+/** 받침이 있으면 "이", 없으면 "가" */
+const iga = (word: string): string => {
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+  return code >= 0 && code <= 11171 && code % 28 !== 0 ? '이' : '가';
+};
+
 function petCard(e: CollectionEntry): HTMLElement {
   const box = document.createElement('div');
-  box.className = 'pet' + (e.hidden ? ' hidden-pet' : '') + (e.owned ? '' : ' empty') + (e.active ? ' active' : '');
+  box.className = 'pet' + (e.hidden ? ' hidden-pet' : '') + (e.owned ? '' : ' empty') + (e.active ? ' active' : '') + ` rarity-${e.rarity}`;
   box.dataset['id'] = e.id;
 
   const canvas = document.createElement('canvas');
@@ -188,7 +226,7 @@ function petCard(e: CollectionEntry): HTMLElement {
     lv.className = 'lvc';
     lv.textContent = `Lv.${e.level}`;
     lv.style.setProperty('color', tier.color);
-    meta.append(nick, lv, ` ${tier.name} · ${STAGE_NAME[e.stage]}${e.count > 1 ? ` ×${e.count}` : ''}`);
+    meta.append(nick, lv, ` ${tier.name} · ${STAGE_NAME[e.stage]}${e.count > 1 ? ` ×${e.count}` : ''} `, gradeTag(e.rarity));
   } else {
     meta.textContent = e.hidden ? '히든 동물' : '아직 없어요';
   }
@@ -229,14 +267,34 @@ function renderGacha(): void {
   const cosmetic = $<HTMLButtonElement>('pull-cosmetic');
   cosmetic.textContent = data.cosmeticLeft > 0 ? `꾸미기 뽑기 (${data.cost.cosmetic}장 · 남은 ${data.cosmeticLeft}종)` : '꾸미기를 모두 모았어요';
   cosmetic.disabled = busy || data.tickets < data.cost.cosmetic || data.cosmeticLeft === 0;
-  const c = data.chances;
-  $('chances').textContent = `확률: 일반 동물 ${data.entries.filter((e) => !e.hidden).length}종 각 ${c.commonEach.toFixed(1)}% · 히든 동물 ${data.entries.filter((e) => e.hidden).length}종 각 ${c.hiddenEach}% (합쳐서 ${c.hiddenTotal}%). 이미 가진 동물이 나오면 그 동물이 경험치를 받아요.`;
-  $('pity').textContent = `히든이 안 나오면 ${data.untilPity}번 안에 반드시 나와요 (지금까지 ${data.pulls}번 뽑음)`;
+  const en = currentUiLang() === 'en';
+  const pct = (n: number): string => (Number.isInteger(n) ? String(n) : n.toFixed(n < 1 ? 2 : 1));
+  const chances = $('chances');
+  chances.textContent = '';
+  chances.append(en ? 'Odds: ' : '확률: ');
+  data.chances.forEach((c, i) => {
+    if (i > 0) chances.append(' · ');
+    chances.append(gradeSpan(c.rarity, 'grade grade-dark'), en ? ` ${c.count} each ${pct(c.each)}%` : ` ${c.count}종 각 ${pct(c.each)}%`);
+  });
+  chances.append(en ? '. A duplicate animal gains XP.' : '. 이미 가진 동물이 나오면 그 동물이 경험치를 받아요.');
+  $('pity').textContent = en
+    ? `Legendary is guaranteed within ${data.untilPity} pulls (${data.pulls} pulled so far). Hidden animals have no guarantee and only come out at a very low rate.`
+    : `전설이 안 나오면 ${data.untilPity}번 안에 반드시 나와요 (지금까지 ${data.pulls}번 뽑음). 히든은 천장 없이 아주 낮은 확률로만 나와요.`;
+}
+
+/** "여우가 나왔어요! (일반)" — 등급에 색이 입혀진다. 이미 가진 동물이면 횟수와 경험치도 알려 준다. */
+function describePull(text: HTMLElement, r: SpeciesPullResult, rarity: Rarity): void {
+  const ko = data.entries.find((e) => e.id === r.id)?.speciesName ?? r.id;
+  const en = currentUiLang() === 'en';
+  text.textContent = '';
+  text.append(en ? `${nameEn(ko)} appeared! (` : `${ko}${iga(ko)} 나왔어요! (`, gradeSpan(rarity), ')');
+  if (r.isNew) text.append(en ? ' ✨ New!' : ' ✨ 새로 왔어요!');
+  else text.append(en ? ` · #${r.count} · XP +${DUPLICATE_XP}` : ` · ${r.count}번째 · 경험치 +${DUPLICATE_XP}`);
 }
 
 function showResult(result: PullResult): void {
   const box = $('result');
-  box.classList.remove('shaking', 'win-hidden');
+  box.classList.remove('shaking', 'win-hidden', 'win-legend', 'win-special');
   const canvas = $<HTMLCanvasElement>('result-canvas');
   const text = $('result-text');
   text.textContent = result.message;
@@ -245,7 +303,11 @@ function showResult(result: PullResult): void {
     return;
   }
   if ('id' in result) {
-    if (result.hidden) box.classList.add('win-hidden');
+    const rarity: Rarity = result.rarity && isRarity(result.rarity) ? result.rarity : result.hidden ? 'hidden' : 'common';
+    if (rarity === 'hidden') box.classList.add('win-hidden');
+    else if (rarity === 'legend') box.classList.add('win-legend');
+    else if (rarity === 'special') box.classList.add('win-special');
+    describePull(text, result, rarity);
     const set = spriteSet(result.id, 'baby');
     drawSprite(canvas, set.frames.idleA, set.palette, 4);
   } else {
@@ -266,7 +328,7 @@ async function pull(kind: 'species' | 'cosmetic'): Promise<void> {
   render();
   const box = $('result');
   box.hidden = false;
-  box.classList.remove('win-hidden');
+  box.classList.remove('win-hidden', 'win-legend', 'win-special');
   box.classList.add('shaking');
   $('result-text').textContent = '뽑는 중…';
   const egg = spriteSet('rabbit', 'egg');

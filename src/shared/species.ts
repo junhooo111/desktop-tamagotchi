@@ -21,6 +21,7 @@ import { type QuadSpec } from './art/quadruped.js';
 import { AZURE, BEAR, CAT, DOG, DRAGON, FOX, HAMSTER, PANDA, PIG, QILIN, RABBIT, SHEEP, TORTOISE, TURTLE, WHITETIGER } from './art/quad-species.js';
 import { paletteOf, type Look } from './art/types.js';
 import { SIZE } from './pixel.js';
+import { hasLegendFormRarity, type Rarity } from './rarity.js';
 
 export { FRAME_NAMES, type FrameName, type Frames } from './art/frames.js';
 export { ACCESSORIES, type Accessory } from './art/accessory.js';
@@ -63,8 +64,8 @@ export interface SpriteSet {
 export interface Species {
   readonly id: SpeciesId;
   readonly name: string;
-  /** 히든 동물(뽑기 확률이 아주 낮고 전설 단계까지 자란다) */
-  readonly hidden?: boolean;
+  /** 등급(일반·고급·희귀·특별·전설·히든). 뽑기 확률이 등급마다 다르고, 전설·히든은 전설 단계까지 자란다. */
+  readonly rarity: Rarity;
 }
 
 type Design =
@@ -94,33 +95,42 @@ const DESIGNS: Record<SpeciesId, Design> = {
   qilin: { kind: 'quad', spec: QILIN, gait: 'trot', skin: 'f' },
 };
 
+const R = (id: SpeciesId, name: string, rarity: Rarity): Species => ({ id, name, rarity });
+
 export const SPECIES: readonly Species[] = [
-  { id: 'rabbit', name: '토끼' },
-  { id: 'cat', name: '고양이' },
-  { id: 'dog', name: '강아지' },
-  { id: 'turtle', name: '거북이' },
-  { id: 'chick', name: '병아리' },
-  { id: 'duck', name: '오리' },
-  { id: 'fox', name: '여우' },
-  { id: 'hamster', name: '햄스터' },
-  { id: 'penguin', name: '펭귄' },
-  { id: 'panda', name: '판다' },
-  { id: 'bear', name: '곰' },
-  { id: 'pig', name: '돼지' },
-  { id: 'sheep', name: '양' },
-  { id: 'owl', name: '부엉이' },
-  { id: 'dragon', name: '용', hidden: true },
-  { id: 'azure', name: '청룡', hidden: true },
-  { id: 'whitetiger', name: '백호', hidden: true },
-  { id: 'tortoise', name: '현무', hidden: true },
-  { id: 'phoenix', name: '주작', hidden: true },
-  { id: 'qilin', name: '기린', hidden: true },
+  R('rabbit', '토끼', 'common'),
+  R('cat', '고양이', 'common'),
+  R('dog', '강아지', 'common'),
+  R('turtle', '거북이', 'common'),
+  R('chick', '병아리', 'common'),
+  R('duck', '오리', 'common'),
+  R('fox', '여우', 'common'),
+  R('hamster', '햄스터', 'uncommon'),
+  R('bear', '곰', 'uncommon'),
+  R('pig', '돼지', 'uncommon'),
+  R('owl', '부엉이', 'rare'),
+  R('sheep', '양', 'rare'),
+  R('panda', '판다', 'special'),
+  R('penguin', '펭귄', 'special'),
+  R('dragon', '용', 'legend'),
+  R('azure', '청룡', 'hidden'),
+  R('whitetiger', '백호', 'hidden'),
+  R('tortoise', '현무', 'hidden'),
+  R('phoenix', '주작', 'hidden'),
+  R('qilin', '기린', 'hidden'),
 ];
 
-/** 처음부터 뽑을 수 있는 동물과, 히든 동물 */
-export const COMMON_SPECIES: readonly Species[] = SPECIES.filter((s) => !s.hidden);
-export const HIDDEN_SPECIES: readonly Species[] = SPECIES.filter((s) => s.hidden);
-export const isHiddenSpecies = (id: SpeciesId): boolean => HIDDEN_SPECIES.some((s) => s.id === id);
+/** 등급별 동물 목록 */
+export const speciesOf = (rarity: Rarity): readonly Species[] => SPECIES.filter((s) => s.rarity === rarity);
+export const COMMON_SPECIES: readonly Species[] = speciesOf('common');
+export const LEGEND_SPECIES: readonly Species[] = speciesOf('legend');
+export const HIDDEN_SPECIES: readonly Species[] = speciesOf('hidden');
+
+export const rarityOf = (id: SpeciesId): Rarity => SPECIES.find((s) => s.id === id)?.rarity ?? 'common';
+/** 진짜 히든(이름과 모습을 숨겨 두는 비밀 동물) */
+export const isHiddenSpecies = (id: SpeciesId): boolean => rarityOf(id) === 'hidden';
+/** 전설 단계(금빛 날개·불꽃 갈기)까지 자라는 동물: 전설과 히든 */
+export const hasLegendForm = (id: SpeciesId): boolean => hasLegendFormRarity(rarityOf(id));
 
 /** 전설 단계: 몸에 금빛 날개가 돋고 불꽃 갈기가 난다(히든 동물만). */
 function legendDesign(d: Design): Design {
@@ -137,14 +147,14 @@ const cache = new Map<string, SpriteSet>();
 
 /** 종·단계·스타일에 맞는 스프라이트. 알 단계는 종·스타일과 상관없이 같은 알이다. */
 export function spriteSet(id: SpeciesId, stage: SpriteStage, style: PetStyle = DEFAULT_STYLE): SpriteSet {
-  const key = stage === 'egg' ? 'egg' : [id, stage === 'legend' && !isHiddenSpecies(id) ? 'adult' : stage, style.variant, style.accessory].join('/');
+  const key = stage === 'egg' ? 'egg' : [id, stage === 'legend' && !hasLegendForm(id) ? 'adult' : stage, style.variant, style.accessory].join('/');
   const cached = cache.get(key);
   if (cached) return cached;
   let made: SpriteSet;
   if (stage === 'egg') {
     made = { palette: paletteOf(EGG_LOOK), frames: chunkAll(eggFrames()), skin: '' };
   } else {
-    const legend = stage === 'legend' && isHiddenSpecies(id);
+    const legend = stage === 'legend' && hasLegendForm(id);
     const d = legend ? legendDesign(DESIGNS[id]) : DESIGNS[id];
     const artStage = stage === 'baby' ? 'baby' : 'adult';
     const look = tintLook(d.spec.look, style.variant);

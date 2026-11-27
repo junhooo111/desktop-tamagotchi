@@ -193,7 +193,7 @@ export const UI_EN: Record<string, string> = {
 };
 
 const UNIT_EN: Record<string, string> = { 종: 'species', 마리: 'pets', 레벨: 'levels', 회: 'pulls', 개: 'items' };
-const RARITY_EN: Record<string, string> = { 일반: 'Common', 히든: 'Hidden' };
+const RARITY_EN: Record<string, string> = { 일반: 'Common', 고급: 'Uncommon', 희귀: 'Rare', 특별: 'Special', 전설: 'Legendary', 히든: 'Hidden' };
 
 /** 숫자가 들어 있는 문장 규칙 */
 export const UI_RULES: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
@@ -237,7 +237,7 @@ export const UI_RULES: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^(\d+)(종|마리|레벨|회|개)$/, (m) => `${m[1]} ${UNIT_EN[m[2] ?? ''] ?? ''}`],
   [/^내 기록: (\d+)(종|마리|레벨|회|개)(?: \(랭킹에서 숨김\))?$/, (m) => `My record: ${m[1]} ${UNIT_EN[m[2] ?? ''] ?? ''}${m[0].includes('숨김') ? ' (hidden from rankings)' : ''}`],
   [/^내 기록: (\d+)(종|마리|레벨|회|개) · (\d+)위$/, (m) => `My record: ${m[1]} ${UNIT_EN[m[2] ?? ''] ?? ''} · #${m[3]}`],
-  [/^(일반|히든)$/, (m) => RARITY_EN[m[1] ?? ''] ?? (m[1] ?? '')],
+  [/^(일반|고급|희귀|특별|전설|히든)$/, (m) => RARITY_EN[m[1] ?? ''] ?? (m[1] ?? '')],
 ];
 
 for (const [ko, en] of Object.entries(NAMES_EN)) if (!(ko in UI_EN)) UI_EN[ko] = en;

@@ -4,6 +4,9 @@ import {
   COMMON_SPECIES,
   FRAME_NAMES,
   HIDDEN_SPECIES,
+  LEGEND_SPECIES,
+  hasLegendForm,
+  rarityOf,
   SPECIES,
   frameToRgba,
   getSpecies,
@@ -22,16 +25,22 @@ const cases: [string, SpeciesId, SpriteStage][] = IDS.flatMap((id) =>
 const all: [string, SpeciesId, SpriteStage][] = [...cases, ['egg', 'cat', 'egg']];
 
 describe('종 목록', () => {
-  it('일반 동물 14종과 히든 동물 6종이 모두 있다', () => {
-    expect(SPECIES.map((s) => s.name)).toEqual(['토끼', '고양이', '강아지', '거북이', '병아리', '오리', '여우', '햄스터', '펭귄', '판다', '곰', '돼지', '양', '부엉이', '용', '청룡', '백호', '현무', '주작', '기린']);
-    expect(COMMON_SPECIES).toHaveLength(14);
-    expect(HIDDEN_SPECIES.map((s) => s.id)).toEqual(['dragon', 'azure', 'whitetiger', 'tortoise', 'phoenix', 'qilin']);
-    expect(isHiddenSpecies('dragon')).toBe(true);
+  it('동물 20종이 등급별로 나뉘어 있다(일반 7·고급 3·희귀 2·특별 2·전설 1·히든 5)', () => {
+    expect(SPECIES.map((s) => s.name)).toEqual(['토끼', '고양이', '강아지', '거북이', '병아리', '오리', '여우', '햄스터', '곰', '돼지', '부엉이', '양', '판다', '펭귄', '용', '청룡', '백호', '현무', '주작', '기린']);
+    expect(COMMON_SPECIES).toHaveLength(7);
+    expect(HIDDEN_SPECIES.map((s) => s.id)).toEqual(['azure', 'whitetiger', 'tortoise', 'phoenix', 'qilin']);
+    expect(isHiddenSpecies('azure')).toBe(true);
+    expect(isHiddenSpecies('dragon')).toBe(false); // 용은 전설
     expect(isHiddenSpecies('cat')).toBe(false);
+    expect(rarityOf('dragon')).toBe('legend');
+    expect(rarityOf('panda')).toBe('special');
+    expect(hasLegendForm('dragon')).toBe(true);
+    expect(hasLegendForm('azure')).toBe(true);
+    expect(hasLegendForm('owl')).toBe(false);
   });
 
-  it('히든 동물만 전설 그림이 따로 있고(몸에 금빛 날개), 일반 동물에게 전설을 요청하면 성체 그림이다', () => {
-    for (const s of HIDDEN_SPECIES) {
+  it('전설·히든 동물만 전설 그림이 따로 있고(몸에 금빛 날개), 그 밖의 동물에게 전설을 요청하면 성체 그림이다', () => {
+    for (const s of [...LEGEND_SPECIES, ...HIDDEN_SPECIES]) {
       const adult = spriteSet(s.id, 'adult');
       const legend = spriteSet(s.id, 'legend');
       expect(legend.frames.idleA, s.id).not.toEqual(adult.frames.idleA);

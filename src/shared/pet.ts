@@ -2,7 +2,7 @@
  * 펫의 상태와 성장 규칙(순수 로직, 화면·파일과 무관).
  * 모든 함수는 새 객체를 돌려주고 원본을 바꾸지 않는다.
  */
-import { getSpecies, isHiddenSpecies, type SpeciesId } from './species.js';
+import { getSpecies, hasLegendForm, type SpeciesId } from './species.js';
 
 export type Stage = 'egg' | 'baby' | 'adult' | 'legend';
 export type Mood = 'happy' | 'normal' | 'hungry' | 'sad';
@@ -54,7 +54,7 @@ export function levelOf(xp: number): number {
 export function stageOf(pet: PetState): Stage {
   if (pet.xp < HATCH_XP) return 'egg';
   const level = levelOf(pet.xp);
-  if (level >= LEGEND_LEVEL && isHiddenSpecies(pet.speciesId)) return 'legend';
+  if (level >= LEGEND_LEVEL && hasLegendForm(pet.speciesId)) return 'legend';
   return level >= ADULT_LEVEL ? 'adult' : 'baby';
 }
 
@@ -137,7 +137,7 @@ export function gainXp(pet: PetState, amount: number): { pet: PetState; note: st
   }
   const lv = levelOf(after);
   if (lv > levelOf(before)) {
-    const evolved = lv === LEGEND_LEVEL && isHiddenSpecies(pet.speciesId) ? ` ${getSpecies(pet.speciesId).name}(이)가 전설의 모습으로 진화했어요!` : '';
+    const evolved = lv === LEGEND_LEVEL && hasLegendForm(pet.speciesId) ? ` ${getSpecies(pet.speciesId).name}(이)가 전설의 모습으로 진화했어요!` : '';
     const tier = tierIndexOf(lv) > tierIndexOf(levelOf(before)) ? ` ✨ '${levelTier(lv).name}' 등급이 되었어요!` : '';
     return { pet: next, note: ` 레벨 ${lv}이 되었어요!${tier}${evolved}` };
   }

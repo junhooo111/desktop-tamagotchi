@@ -4,6 +4,7 @@
  */
 import type { Lang } from '../shared/i18n.js';
 import { initUiLang, localize } from './dom-i18n.js';
+import { RARITY_NAME } from '../shared/rarity.js';
 
 export interface Listing {
   listing_id: string;
@@ -56,7 +57,7 @@ const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) 
 let tab: 'buy' | 'mine' = 'buy';
 let view: MarketView | null = null;
 
-const RARITY: Record<string, string> = { common: '일반', hidden: '히든' };
+const RARITY: Record<string, string> = RARITY_NAME;
 const money = (n: number): string => `${n.toLocaleString('ko-KR')} 게임머니`;
 
 function row(main: string, sub: string, right: HTMLElement[]): HTMLLIElement {

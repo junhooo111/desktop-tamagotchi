@@ -5,7 +5,7 @@
 바탕화면 위를 돌아다니는 **픽셀 펫**을 키우는 앱입니다. 밥을 주고, 놀아 주고, 씻기고, 산책을 시키면서 키우고, 뽑기로 새 친구를 모으고, 모자와 장식으로 꾸밀 수 있어요.
 개발자라면 보너스가 하나 더 있습니다: 내가 만들고 있는 `localhost` 페이지에서 **놓친 기본기**(이미지 설명, 버튼 이름, 글자 대비 …)를 펫이 찾아 말풍선으로 알려 줘요.
 
-![바탕화면을 돌아다니는 펫들: 일반 동물 14종과, 뽑기에서만 만날 수 있는 히든 동물 6종의 실루엣](docs/images/hero.svg)
+![바탕화면을 돌아다니는 펫들: 일반 동물과, 뽑기에서만 만날 수 있는 히든 동물의 실루엣](docs/images/hero.svg)
 
 > 🐣 **v0.12.5** · Windows 10/11 · macOS 시험판 · 무료(MIT) · [최신 버전 받기](https://github.com/junhooo111/desktop-tamagotchi/releases/latest)
 
@@ -48,7 +48,7 @@ GitHub 계정으로 로그인하면 **내가 키우는 펫이 GitHub 프로필�
 | | |
 |---|---|
 | 이런 앱이에요 | 화면을 돌아다니고, 마우스에 매달리고, 벽을 타는 펫을 키웁니다. 알에서 시작해 새끼 → 성체로 자랍니다 |
-| 모으는 재미 | 뽑기로 동물 20종을 모읍니다. 어떤 동물이 나올지는 뽑아 봐야 알아요(히든 6종은 이름도 비밀) |
+| 모으는 재미 | 뽑기로 동물 20종을 모읍니다. 어떤 동물이 나올지는 뽑아 봐야 알아요(히든 5종은 이름도 비밀) |
 | 꾸미는 재미 | 모자·안경·날개 등 장식 18종과 색 3종. 업적으로 받거나 뽑기로 얻습니다 |
 | 지원 환경 | **Windows 10/11 (64비트)**, macOS(시험판) |
 | 필요한 것 | 설치만 하면 됩니다(관리자 권한·Node.js 불필요) |
@@ -146,7 +146,7 @@ xattr -cr "/Applications/Desktop Tamagotchi.app"
 | 🥚 알 | 경험치 20 미만. 통통 튀고, 쓰다듬기만 할 수 있어요 |
 | 🐣 새끼 | 경험치 20 이상 ~ 레벨 5 미만. 머리가 큰 아기 모습 |
 | 🐾 성체 | 레벨 5 이상(경험치 160) |
-| ✨ 전설 | **히든 동물만** 레벨 10에서 한 번 더 진화해요. 몸 둘레에 금빛 반짝임이 돌아요 |
+| ✨ 전설 | **전설·히든 등급 동물만** 레벨 10에서 한 번 더 진화해요. 몸 둘레에 금빛 반짝임이 돌아요 |
 
 뽑기로 얻은 동물은 알이 아니라 **새끼**로 바로 나와요. 경험치는 돌볼수록, 그리고 아래 일을 할수록 쌓입니다: 쓰다듬기·밥·놀기·씻기·산책, 업적 달성, 문제 고치기(개발자용), FE 지식 읽기.
 
@@ -169,33 +169,19 @@ xattr -cr "/Applications/Desktop Tamagotchi.app"
 
 ### 등장 확률
 
-일반 동물 14종은 **똑같은 확률**, 히든 동물 6종은 **아주 드문 확률**입니다. 히든 동물은 뽑기 전에는 모습도 이름도 비밀이에요(??? 로 보여요).
+동물은 **등급**이 있고, 등급마다 확률이 달라요. 같은 등급 안에서는 똑같은 확률입니다. 히든 동물은 뽑기 전에는 모습도 이름도 비밀이에요(??? 로 보여요). 뽑는 룰렛에서도 등급 색으로 빛나요.
 
-| 모습 | 이름 | 등장 확률 |
-|---|---|---|
-| <img src="docs/images/animals/rabbit.svg" width="64" alt=""> | 토끼 | 6.7% |
-| <img src="docs/images/animals/cat.svg" width="64" alt=""> | 고양이 | 6.7% |
-| <img src="docs/images/animals/dog.svg" width="64" alt=""> | 강아지 | 6.7% |
-| <img src="docs/images/animals/turtle.svg" width="64" alt=""> | 거북이 | 6.7% |
-| <img src="docs/images/animals/chick.svg" width="64" alt=""> | 병아리 | 6.7% |
-| <img src="docs/images/animals/duck.svg" width="64" alt=""> | 오리 | 6.7% |
-| <img src="docs/images/animals/fox.svg" width="64" alt=""> | 여우 | 6.7% |
-| <img src="docs/images/animals/hamster.svg" width="64" alt=""> | 햄스터 | 6.7% |
-| <img src="docs/images/animals/penguin.svg" width="64" alt=""> | 펭귄 | 6.7% |
-| <img src="docs/images/animals/panda.svg" width="64" alt=""> | 판다 | 6.7% |
-| <img src="docs/images/animals/bear.svg" width="64" alt=""> | 곰 | 6.7% |
-| <img src="docs/images/animals/pig.svg" width="64" alt=""> | 돼지 | 6.7% |
-| <img src="docs/images/animals/sheep.svg" width="64" alt=""> | 양 | 6.7% |
-| <img src="docs/images/animals/owl.svg" width="64" alt=""> | 부엉이 | 6.7% |
-| <img src="docs/images/animals/hidden-1.svg" width="64" alt=""> | ??? | 1% |
-| <img src="docs/images/animals/hidden-2.svg" width="64" alt=""> | ??? | 1% |
-| <img src="docs/images/animals/hidden-3.svg" width="64" alt=""> | ??? | 1% |
-| <img src="docs/images/animals/hidden-4.svg" width="64" alt=""> | ??? | 1% |
-| <img src="docs/images/animals/hidden-5.svg" width="64" alt=""> | ??? | 1% |
-| <img src="docs/images/animals/hidden-6.svg" width="64" alt=""> | ??? | 1% |
+| 등급 (색) | 동물 | 종당 확률 | 등급 합계 |
+|---|---|---|---|
+| 일반 (흰색) | 토끼 · 고양이 · 강아지 · 거북이 · 병아리 · 오리 · 여우 | 약 7.1% | 50% |
+| 고급 (초록) | 햄스터 · 곰 · 돼지 | 8% | 24% |
+| 희귀 (파랑) | 부엉이 · 양 | 7.5% | 15% |
+| 특별 (보라) | 판다 · 펭귄 | 3.5% | 7% |
+| 전설 (주황) | <img src="docs/images/animals/hidden-1.svg" width="48" alt=""> 용 | 3% | 3% |
+| 히든 (무지개) | ??? × 5종 | 0.2% | 1% |
 
-- **히든 합계 6%**, 일반 합계 94%예요.
-- **천장**: 히든이 계속 안 나오면 40번째 뽑기에서 반드시 히든이 나와요. 컬렉션 창에 남은 횟수가 보여요.
+- **천장**: 전설이 계속 안 나오면 50번째 뽑기에서 반드시 **전설**이 나와요(히든은 천장 없이 낮은 확률로만 나와요). 전설이나 히든이 나오면 다시 0부터 세요. 뽑기 창에 남은 횟수가 보여요.
+- 동물을 새로 추가해도 등급 합계는 그대로고, 그 등급의 종당 확률만 나뉘어요.
 - **같은 동물이 또 나오면?** 그 동물의 중복 횟수가 늘고 경험치 +30을 받아요.
 - 동물 뽑기는 **뽑기권 3장**, 꾸미기 뽑기는 **2장**이에요.
 

@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { COST, DAILY_TICKETS, HIDDEN_PITY, HIDDEN_PERCENT_EACH, WELCOME_TICKETS, hiddenPercent } from '../../src/shared/collection.js';
-import { HIDDEN_SPECIES, SPECIES } from '../../src/shared/species.js';
+import { COST, DAILY_TICKETS, LEGEND_PITY, WELCOME_TICKETS, percentEach } from '../../src/shared/collection.js';
+import { GRADE_PERCENT, RARITIES } from '../../src/shared/rarity.js';
+import { SPECIES } from '../../src/shared/species.js';
 import { admin, as, coinsOf, createDb, errorOf, givePet, ledgerMismatches, setTickets, signUp, ticketMismatches, ticketsOf, type Db } from './helpers.js';
 
 let db: Db;
@@ -101,6 +102,10 @@ describe('학습 이벤트 보고 (report_learning)', () => {
 });
 
 describe('동물 뽑기 (gacha_pull) — 앱 규칙(src/shared/collection.ts)과 같은 값', () => {
+  /** 0015 의 원래 가중치로 되돌린다 */
+  const restoreWeights = () =>
+    admin(db, "update public.species set gacha_weight = case rarity when 'common' then 1500 when 'uncommon' then 1680 when 'rare' then 1575 when 'special' then 735 when 'legend' then 630 else 42 end");
+
   const pull = async (user: string) =>
     as(db, user, async () => (await db.query<{ r: { pet_id: string; species_id: string; rarity: string; tickets: number } }>(
       'select public.gacha_pull() as r')).rows[0]!.r);
@@ -108,11 +113,12 @@ describe('동물 뽑기 (gacha_pull) — 앱 규칙(src/shared/collection.ts)과
   it('서버의 동물 20종과 가입 선물·확률이 앱의 값과 같다', async () => {
     const rows = (await db.query<{ id: string; rarity: string; gacha_weight: number }>('select id, rarity, gacha_weight from public.species order by id')).rows;
     expect(rows.map((r) => r.id).sort()).toEqual(SPECIES.map((s) => s.id).sort());
-    for (const s of SPECIES) expect(rows.find((r) => r.id === s.id)?.rarity, s.id).toBe(s.hidden ? 'hidden' : 'common');
+    for (const s of SPECIES) expect(rows.find((r) => r.id === s.id)?.rarity, s.id).toBe(s.rarity);
     const total = rows.reduce((n, r) => n + r.gacha_weight, 0);
-    const hidden = rows.filter((r) => r.rarity === 'hidden');
-    expect(hidden).toHaveLength(HIDDEN_SPECIES.length);
-    for (const h of hidden) expect((h.gacha_weight / total) * 100, h.id).toBeCloseTo(HIDDEN_PERCENT_EACH, 5);
+    // 종마다 확률이 앱의 표(등급 합계를 종이 똑같이 나눔)와 같다
+    for (const s of SPECIES) expect(((rows.find((r) => r.id === s.id)?.gacha_weight ?? 0) / total) * 100, s.id).toBeCloseTo(percentEach(s.rarity), 5);
+    // 등급 합계는 앱의 GRADE_PERCENT 와 같다
+    for (const g of RARITIES) expect(rows.filter((r) => r.rarity === g).reduce((n, r) => n + (r.gacha_weight / total) * 100, 0), g).toBeCloseTo(GRADE_PERCENT[g], 5);
     const u = await signUp(db, 'rules');
     expect(await ticketsOf(db, u)).toBe(WELCOME_TICKETS);
   });
@@ -162,35 +168,43 @@ describe('동물 뽑기 (gacha_pull) — 앱 규칙(src/shared/collection.ts)과
       for (let i = 0; i < 3; i++) expect((await pull(u)).species_id).toBe('duck');
       expect((await db.query('select id from public.pets where owner_id = $1 and species_id = $2', [u, 'duck'])).rows).toHaveLength(3);
     } finally {
-      await admin(db, "update public.species set gacha_weight = case rarity when 'hidden' then 7 else 47 end");
+      await restoreWeights();
     }
   });
 
-  it(`히든이 안 나온 채 ${HIDDEN_PITY}번 뽑으면 다음은 히든이 확정이고, 히든이 나오면 카운트가 0 으로 돌아간다`, async () => {
+  it(`전설이 안 나온 채 ${LEGEND_PITY}번 뽑으면 다음은 전설이 확정이고(히든이 아니라), 전설이 나오면 카운트가 0 으로 돌아간다`, async () => {
     const u = await signUp(db, 'pity');
     await setTickets(db, u, COST.species * 12);
     for (let i = 0; i < 10; i++) {
-      await admin(db, 'update public.profiles set pity = $2 where user_id = $1', [u, HIDDEN_PITY]);
+      await admin(db, 'update public.profiles set pity = $2 where user_id = $1', [u, LEGEND_PITY]);
       const r = await pull(u);
-      expect(r.rarity, `${i}번째`).toBe('hidden');
+      expect(r.rarity, `${i}번째`).toBe('legend');
       expect((await db.query<{ pity: number }>('select pity from public.profiles where user_id = $1', [u])).rows[0]!.pity).toBe(0);
     }
   });
 
-  it('천장 직전(39)까지는 히든이 확정이 아니다', async () => {
-    const u = await signUp(db, 'pity39');
-    await setTickets(db, u, COST.species * 4);
-    await admin(db, "update public.species set gacha_weight = 0 where rarity = 'hidden'");
+  it('천장 직전(49)까지는 전설이 확정이 아니고, 히든이 나와도 카운트가 0 으로 돌아가며, 히든은 천장으로는 나오지 않는다', async () => {
+    const u = await signUp(db, 'pity49');
+    await setTickets(db, u, COST.species * 6);
+    await admin(db, "update public.species set gacha_weight = 0 where rarity = 'legend'");
     try {
-      await admin(db, 'update public.profiles set pity = $2 where user_id = $1', [u, HIDDEN_PITY - 1]);
-      expect((await pull(u)).rarity).toBe('common');
-      expect((await db.query<{ pity: number }>('select pity from public.profiles where user_id = $1', [u])).rows[0]!.pity).toBe(HIDDEN_PITY);
+      await admin(db, 'update public.profiles set pity = $2 where user_id = $1', [u, LEGEND_PITY - 1]);
+      const r = await pull(u);
+      expect(r.rarity).not.toBe('legend');
+      if (r.rarity !== 'hidden') expect((await db.query<{ pity: number }>('select pity from public.profiles where user_id = $1', [u])).rows[0]!.pity).toBe(LEGEND_PITY);
+      // 전설도 히든도 가중치를 줘 놓고 천장에 닿게 하면, 전설만 나온다(히든 가중치가 아주 커도)
+      await admin(db, "update public.species set gacha_weight = 630 where rarity = 'legend'");
+      await admin(db, "update public.species set gacha_weight = 100000 where rarity = 'hidden'");
+      for (let i = 0; i < 4; i++) {
+        await admin(db, 'update public.profiles set pity = $2 where user_id = $1', [u, LEGEND_PITY]);
+        expect((await pull(u)).rarity, `${i}번째`).toBe('legend');
+      }
     } finally {
-      await admin(db, "update public.species set gacha_weight = 7 where rarity = 'hidden'");
+      await restoreWeights();
     }
   });
 
-  it('확률: 히든은 합쳐서 6% 안팎이다 (천장 영향 제외)', async () => {
+  it('확률: 등급별 비율이 표(일반 50 · 고급 24 · 희귀 15 · 특별 7 · 전설 3 · 히든 1)와 크게 다르지 않다 (천장 영향 제외)', async () => {
     const u = await signUp(db, 'stats');
     const N = 600;
     await setTickets(db, u, N * COST.species);
@@ -201,10 +215,13 @@ describe('동물 뽑기 (gacha_pull) — 앱 규칙(src/shared/collection.ts)과
     const rows = (await db.query<{ rarity: string; n: number }>(
       `select s.rarity, count(*)::int as n from public.pets p join public.species s on s.id = p.species_id where p.owner_id = $1 group by s.rarity`, [u])).rows;
     const share = Object.fromEntries(rows.map((r) => [r.rarity, r.n / N]));
-    const hiddenExpected = hiddenPercent() / 100;
-    // 표본 600 에서 6% 의 표준편차는 약 1%. 넓은 허용 범위로 우연한 실패를 피한다.
-    expect(share['hidden'] ?? 0).toBeGreaterThan(hiddenExpected - 0.04);
-    expect(share['hidden'] ?? 0).toBeLessThan(hiddenExpected + 0.05);
+    // 표본 600 에서 표준편차는 큰 등급이 약 2%, 작은 등급이 1% 안팎이다. 넓은 허용 범위로 우연한 실패를 피한다.
+    for (const g of RARITIES) {
+      const expected = GRADE_PERCENT[g] / 100;
+      const tol = expected >= 0.15 ? 0.09 : 0.05;
+      expect(share[g] ?? 0, g).toBeGreaterThan(expected - tol);
+      expect(share[g] ?? 0, g).toBeLessThan(expected + tol);
+    }
   }, 180_000);
 });
 

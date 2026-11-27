@@ -6,7 +6,7 @@
 import { ACHIEVEMENTS, type Growth } from './growth.js';
 import { sanitizePetName } from './settings.js';
 import { isDisplayStage, reachedStages, type DisplayStage, type Stage } from './pet.js';
-import { ACCESSORIES, SPECIES, isHiddenSpecies, type Accessory, type SpeciesId, type Variant } from './species.js';
+import { ACCESSORIES, SPECIES, hasLegendForm, type Accessory, type SpeciesId, type Variant } from './species.js';
 
 export const VARIANT_UNLOCK: Partial<Record<Variant, string>> = {
   pastel: 'first-fix',
@@ -125,14 +125,14 @@ export function buildWardrobe(
 ): WardrobeView {
   const entry = <T extends string>(id: T, name: string, unlocked: boolean, hint: string): WardrobeEntry<T> => ({ id, name, unlocked, hint: unlocked ? '' : hint });
   const reached = reachedStages(extra.stage ?? 'adult');
-  const stageList: DisplayStage[] = ['auto', 'baby', 'adult', ...(isHiddenSpecies(current.speciesId) ? (['legend'] as const) : [])];
+  const stageList: DisplayStage[] = ['auto', 'baby', 'adult', ...(hasLegendForm(current.speciesId) ? (['legend'] as const) : [])];
   return {
     current: { name: '', cardSpecies: 'current', displayStage: 'auto', ...current },
     stages: stageList.map((st) => entry(st, STAGE_NAMES[st], st === 'auto' || (reached as string[]).includes(st), '아직 지나오지 않은 단계예요')),
     // 아직 못 뽑은 히든 동물은 이름을 숨긴다(뽑는 재미를 위해 ???로 보인다).
     species: SPECIES.map((s) => {
       const owned = extra.species.includes(s.id);
-      return entry(s.id, s.hidden && !owned ? '???' : s.name, owned, '뽑기로 얻을 수 있어요');
+      return entry(s.id, s.rarity === 'hidden' && !owned ? '???' : s.name, owned, '뽑기로 얻을 수 있어요');
     }),
     variants: (Object.keys(VARIANT_NAMES) as Variant[]).map((v) => entry(v, VARIANT_NAMES[v], variantUnlocked(g, v, extra), hintOf(VARIANT_UNLOCK[v]))),
     accessories: (Object.keys(ACCESSORY_NAMES) as Accessory[]).map((a) => entry(a, ACCESSORY_NAMES[a], accessoryUnlocked(g, a, extra), accessoryHint(a))),

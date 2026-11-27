@@ -16,7 +16,7 @@ beforeAll(async () => {
   await givePet(db, a, 'cat', 1000); // 레벨 11
   await givePet(db, a, 'cat', 0);
   await givePet(db, a, 'dog', 0);
-  await givePet(db, a, 'dragon', 0);
+  await givePet(db, a, 'azure', 0);
   await givePet(db, b, 'duck', 40); // 레벨 3
   await givePet(db, b, 'chick', 0);
   for (const sp of ['rabbit', 'fox', 'owl', 'panda', 'pig']) await givePet(db, d, sp, 0);

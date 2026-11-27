@@ -11,7 +11,7 @@ import { ACHIEVEMENTS, buildCodex, emptyGrowth, localDay, type CodexView } from 
 import { RULE_IDS } from './lessons.js';
 import { createPet, type Stage } from './pet.js';
 import { sanitizePetName } from './settings.js';
-import { DEFAULT_STYLE, isHiddenSpecies, isSpeciesId, type PetStyle } from './species.js';
+import { DEFAULT_STYLE, hasLegendForm, isSpeciesId, type PetStyle } from './species.js';
 import { isAccessory, isVariant } from './art/style.js';
 
 /** public_card_data() 가 돌려주는 모양. */
@@ -54,7 +54,7 @@ export function readExtras(raw: unknown, speciesId: string | null, now: number):
     accessory: isAccessory(e['accessory']) ? e['accessory'] : DEFAULT_STYLE.accessory,
   };
   const name = sanitizePetName(e['name']);
-  const stage = e['stage'] === 'baby' || e['stage'] === 'adult' || (e['stage'] === 'legend' && speciesId !== null && isSpeciesId(speciesId) && isHiddenSpecies(speciesId)) ? (e['stage'] as Stage) : undefined;
+  const stage = e['stage'] === 'baby' || e['stage'] === 'adult' || (e['stage'] === 'legend' && speciesId !== null && isSpeciesId(speciesId) && hasLegendForm(speciesId)) ? (e['stage'] as Stage) : undefined;
 
   // 연속일: 보낸 날이 오늘·어제가 아니면 이어지지 않는 것으로 본다(앱을 오래 안 켰으면 0)
   const day = typeof e['day'] === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(e['day']) ? Date.parse(e['day'] + 'T00:00:00Z') : NaN;

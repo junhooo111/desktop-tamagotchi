@@ -317,3 +317,70 @@ footer button {
     animation: none;
   }
 }
+
+/* ---- 등급 색: 일반 흰색 · 고급 초록 · 희귀 파랑 · 특별 보라 · 전설 주황 · 히든 무지개 ---- */
+.grade {
+  font-weight: 800;
+}
+.grade-common { color: #ffffff; }
+.grade-uncommon { color: #5fd16a; }
+.grade-rare { color: #4a9bff; }
+.grade-special { color: #b36bff; }
+.grade-legend { color: #ff9b2e; }
+.grade-hidden {
+  color: transparent;
+  background: linear-gradient(90deg, #ff5f5f, #ffb84a, #fff24a, #5fe06a, #4ab8ff, #a06bff, #ff5f5f);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: rainbow-text 2s linear infinite;
+}
+@keyframes rainbow-text {
+  to { background-position: -200% 0; }
+}
+
+/* 밝은 바탕(안내 문구)에서도 읽히게: 흰색은 회색으로, 나머지는 조금 어둡게 */
+.grade-dark.grade-common { color: #8a7d6a; }
+.grade-dark.grade-uncommon { color: #2f9a3b; }
+.grade-dark.grade-rare { color: #2a6fd0; }
+.grade-dark.grade-special { color: #8a3fe0; }
+.grade-dark.grade-legend { color: #d9700a; }
+
+/* 동물 카드의 등급 이름표: 어두운 알약 위에 등급 색 */
+.grade-tag {
+  display: inline-block;
+  padding: 0 7px;
+  background: #2b2f4d;
+  border-radius: 999px;
+  font-size: 11px;
+}
+
+/* 결과 칸 배경: 높은 등급일수록 화려하게 */
+.result.win-special { background: linear-gradient(135deg, #2c1a52, #5a2d9a); box-shadow: 0 0 10px #b36bff; }
+.result.win-legend { background: linear-gradient(135deg, #4a2305, #c4610a); box-shadow: 0 0 14px #ff9b2e; }
+
+/* 룰렛 칸의 빛: 등급마다 빛깔과 세기가 다르다(--glow, --g1, --g2) */
+.cell.common { --glow: #ffffff; --g1: 3px; --g2: 0px; }
+.cell.uncommon { --glow: #5fd16a; --g1: 4px; --g2: 6px; }
+.cell.rare { --glow: #4a9bff; --g1: 5px; --g2: 8px; }
+.cell.special { --glow: #b36bff; --g1: 6px; --g2: 11px; }
+.cell.legend { --glow: #ff9b2e; --g1: 7px; --g2: 14px; }
+.cell.common canvas,
+.cell.uncommon canvas,
+.cell.rare canvas,
+.cell.special canvas,
+.cell.legend canvas {
+  animation: glow-grade 1s ease-in-out infinite;
+}
+@keyframes glow-grade {
+  0%, 100% { filter: brightness(0.55) saturate(0.8) drop-shadow(0 0 var(--g1) var(--glow)); }
+  50% { filter: brightness(0.8) saturate(1) drop-shadow(0 0 var(--g1) var(--glow)) drop-shadow(0 0 var(--g2) var(--glow)); }
+}
+.cell.final.reveal.common canvas,
+.cell.final.reveal.uncommon canvas,
+.cell.final.reveal.rare canvas,
+.cell.final.reveal.special canvas,
+.cell.final.reveal.legend canvas {
+  animation: pop 0.5s ease-out forwards;
+  filter: brightness(1) drop-shadow(0 0 6px var(--glow));
+}

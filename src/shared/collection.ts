@@ -7,7 +7,8 @@
  * 순수 함수라서 시계·파일·난수를 밖에서 받아 테스트한다. 저장은 main/collection-store.ts 가 맡는다.
  */
 import type { Accessory, SpeciesId, Variant } from './species.js';
-import { COMMON_SPECIES, HIDDEN_SPECIES, SPECIES, isSpeciesId } from './species.js';
+import { GRADE_PERCENT, PITY_RESETS_ON, RARITIES, type Rarity } from './rarity.js';
+import { LEGEND_SPECIES, SPECIES, isSpeciesId, speciesOf } from './species.js';
 import { HATCH_XP, createPet, levelOf, stageOf, type PetState, type Stage } from './pet.js';
 import { sanitizePetName } from './settings.js';
 import { VERSION_PATTERN, isNewerVersion } from './version.js';
@@ -31,15 +32,18 @@ export const UPDATE_GIFT_TICKETS = 2;
 export const CARE_PER_TICKET = 25;
 /** 이미 가진 동물이 또 나오면 그 동물이 받는 경험치 */
 export const DUPLICATE_XP = 30;
-/** 히든 동물 한 종이 나올 확률(%). 6종이라 합쳐서 6%이고, 나머지 94%를 일반 동물이 똑같이 나눠 갖는다(일반 동물 수는 SPECIES 에서 세므로 종류가 늘어도 확률·화면 문구가 저절로 맞춰진다). */
-export const HIDDEN_PERCENT_EACH = 1;
-/** 히든이 안 나온 채로 이만큼 뽑으면 다음 뽑기는 히든이 나온다(천장) */
-export const HIDDEN_PITY = 40;
+/** 전설이 안 나온 채로 이만큼 뽑으면 다음 뽑기는 전설이 나온다(천장). 히든은 천장 없이 낮은 확률로만 나온다. */
+export const LEGEND_PITY = 50;
 /** 뽑아서 얻은 동물이 처음 가지는 경험치(바로 새끼로 나온다) */
 export const PULLED_START_XP = HATCH_XP;
 
-export const hiddenPercent = (): number => HIDDEN_PERCENT_EACH * HIDDEN_SPECIES.length;
-export const commonPercentEach = (): number => (100 - hiddenPercent()) / COMMON_SPECIES.length;
+/** 그 등급의 동물 한 종이 나올 확률(%). 등급 합계를 종이 똑같이 나눈다. 그 등급에 동물이 없으면 0. */
+export const percentEach = (rarity: Rarity): number => {
+  const n = speciesOf(rarity).length;
+  return n === 0 ? 0 : GRADE_PERCENT[rarity] / n;
+};
+/** 동물이 있는 등급의 합계(%). 비어 있는 등급이 없으면 100. */
+const totalPercent = (): number => RARITIES.reduce((sum, r) => sum + (speciesOf(r).length > 0 ? GRADE_PERCENT[r] : 0), 0);
 
 // ---- 자료형 ----
 
@@ -153,36 +157,44 @@ export function switchActive(c: Collection, id: SpeciesId, current: PetState, cu
 
 // ---- 동물 뽑기 ----
 
-/** 어떤 동물이 나올지 정한다. rng 는 0 이상 1 미만. 천장에 닿으면 히든이 나온다. */
-export function rollSpecies(rng: () => number, sinceHidden: number): { id: SpeciesId; hidden: boolean } {
-  const hidden = HIDDEN_SPECIES;
-  const common = COMMON_SPECIES;
-  const pity = sinceHidden + 1 >= HIDDEN_PITY;
-  const r = rng() * 100;
-  if (pity || r < hiddenPercent()) {
-    // 천장이면 히든 안에서 다시 고르고, 아니면 r 이 곧 어느 히든인지(각 1%)다.
-    const i = pity ? Math.floor(rng() * hidden.length) : Math.floor(r / HIDDEN_PERCENT_EACH);
-    return { id: (hidden[Math.min(hidden.length - 1, i)] ?? hidden[0]!).id, hidden: true };
+/**
+ * 어떤 동물이 나올지 정한다. rng 는 0 이상 1 미만.
+ * sinceTop 은 마지막 전설·히든 이후 뽑은 횟수. 천장에 닿으면 전설 중에서 나온다(히든은 천장이 없다).
+ */
+export function rollSpecies(rng: () => number, sinceTop: number): { id: SpeciesId; rarity: Rarity; hidden: boolean } {
+  const pick = (id: SpeciesId, rarity: Rarity) => ({ id, rarity, hidden: rarity === 'hidden' });
+  if (sinceTop + 1 >= LEGEND_PITY && LEGEND_SPECIES.length > 0) {
+    const l = LEGEND_SPECIES[Math.min(LEGEND_SPECIES.length - 1, Math.floor(rng() * LEGEND_SPECIES.length))]!;
+    return pick(l.id, 'legend');
   }
-  const i = Math.floor((r - hiddenPercent()) / commonPercentEach());
-  return { id: (common[Math.min(common.length - 1, i)] ?? common[0]!).id, hidden: false };
+  const r = rng() * totalPercent();
+  let acc = 0;
+  for (const rarity of RARITIES) {
+    const each = percentEach(rarity);
+    for (const sp of speciesOf(rarity)) {
+      acc += each;
+      if (r < acc) return pick(sp.id, rarity);
+    }
+  }
+  const last = SPECIES[SPECIES.length - 1]!;
+  return pick(last.id, last.rarity);
 }
 
 export type SpeciesPull =
   | { ok: false; reason: string }
-  | { ok: true; id: SpeciesId; hidden: boolean; isNew: boolean; count: number; xpBonus: number };
+  | { ok: true; id: SpeciesId; rarity: Rarity; hidden: boolean; isNew: boolean; count: number; xpBonus: number };
 
 export function pullSpecies(c: Collection, now: number, rng: () => number): { collection: Collection; result: SpeciesPull } {
   if (c.tickets < COST.species) return { collection: c, result: { ok: false, reason: `뽑기권이 모자라요 (${COST.species}장 필요)` } };
   const roll = rollSpecies(rng, c.sinceHidden);
-  const base: Collection = { ...c, tickets: c.tickets - COST.species, pulls: c.pulls + 1, sinceHidden: roll.hidden ? 0 : c.sinceHidden + 1 };
+  const base: Collection = { ...c, tickets: c.tickets - COST.species, pulls: c.pulls + 1, sinceHidden: PITY_RESETS_ON.includes(roll.rarity) ? 0 : c.sinceHidden + 1 };
   const have = base.owned[roll.id];
   if (!have) {
-    return { collection: { ...base, owned: { ...base.owned, [roll.id]: newOwned(roll.id, now) } }, result: { ok: true, id: roll.id, hidden: roll.hidden, isNew: true, count: 1, xpBonus: 0 } };
+    return { collection: { ...base, owned: { ...base.owned, [roll.id]: newOwned(roll.id, now) } }, result: { ok: true, id: roll.id, rarity: roll.rarity, hidden: roll.hidden, isNew: true, count: 1, xpBonus: 0 } };
   }
   // 이미 가진 동물: 횟수가 늘고 그 동물이 경험치를 받는다(꺼내 둔 동물이면 지금 상태에 더한다).
   const grown: OwnedPet = { ...have, count: have.count + 1, pet: { ...have.pet, xp: have.pet.xp + DUPLICATE_XP } };
-  return { collection: { ...base, owned: { ...base.owned, [roll.id]: grown } }, result: { ok: true, id: roll.id, hidden: roll.hidden, isNew: false, count: grown.count, xpBonus: DUPLICATE_XP } };
+  return { collection: { ...base, owned: { ...base.owned, [roll.id]: grown } }, result: { ok: true, id: roll.id, rarity: roll.rarity, hidden: roll.hidden, isNew: false, count: grown.count, xpBonus: DUPLICATE_XP } };
 }
 
 // ---- 꾸미기 뽑기 ----
@@ -284,7 +296,9 @@ export interface CollectionEntry {
   id: SpeciesId;
   /** 동물 이름(종) */
   speciesName: string;
+  /** 진짜 히든 여부(이름과 모습을 숨긴다) */
   hidden: boolean;
+  rarity: Rarity;
   owned: boolean;
   /** 지어 준 이름 */
   name: string;
@@ -307,7 +321,8 @@ export interface CollectionView {
   total: number;
   /** 꾸미기 뽑기로 아직 얻을 수 있는 개수 */
   cosmeticLeft: number;
-  chances: { commonEach: number; hiddenEach: number; hiddenTotal: number };
+  /** 등급별 확률: 동물이 있는 등급만, 낮은 등급부터 */
+  chances: Array<{ rarity: Rarity; count: number; each: number; total: number }>;
 }
 
 export function buildCollectionView(c: Collection, cosmeticLeft: number): CollectionView {
@@ -316,7 +331,8 @@ export function buildCollectionView(c: Collection, cosmeticLeft: number): Collec
     return {
       id: s.id,
       speciesName: s.name,
-      hidden: s.hidden === true,
+      hidden: s.rarity === 'hidden',
+      rarity: s.rarity,
       owned: o !== undefined,
       name: o?.name ?? '',
       level: o ? levelOf(o.pet.xp) : 0,
@@ -330,13 +346,13 @@ export function buildCollectionView(c: Collection, cosmeticLeft: number): Collec
     tickets: c.tickets,
     cost: COST,
     pulls: c.pulls,
-    untilPity: Math.max(0, HIDDEN_PITY - c.sinceHidden),
+    untilPity: Math.max(0, LEGEND_PITY - c.sinceHidden),
     active: c.active,
     entries,
     ownedCount: entries.filter((e) => e.owned).length,
     total: entries.length,
     cosmeticLeft,
-    chances: { commonEach: commonPercentEach(), hiddenEach: HIDDEN_PERCENT_EACH, hiddenTotal: hiddenPercent() },
+    chances: RARITIES.filter((r) => speciesOf(r).length > 0).map((rarity) => ({ rarity, count: speciesOf(rarity).length, each: percentEach(rarity), total: GRADE_PERCENT[rarity] })),
   };
 }
 

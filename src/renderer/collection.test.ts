@@ -71,9 +71,12 @@ describe('뽑기·컬렉션 창', () => {
     expect(el('owned-count').textContent).toContain('1/20');
     expect(el('pull-species').textContent).toContain('3장');
     expect(el('pull-cosmetic').textContent).toContain('2장');
-    expect(el('chances').textContent).toContain('14종');
-    expect(el('chances').textContent).toContain('1%');
-    expect(el('pity').textContent).toContain('40번');
+    expect(el('chances').textContent).toContain('일반 7종 각 7.1%');
+    expect(el('chances').textContent).toContain('고급 3종 각 8%');
+    expect(el('chances').textContent).toContain('히든 5종 각 0.20%');
+    expect(el('chances').querySelectorAll('.grade')).toHaveLength(6);
+    expect(el('pity').textContent).toContain('전설');
+    expect(el('pity').textContent).toContain('50번');
   });
 
   it('내 펫 목록에는 가진 동물만 보여 주고, 키우는 동물이 정보와 함께 나온다(못 만난 동물은 도감에서 본다)', async () => {
@@ -108,7 +111,7 @@ describe('뽑기·컬렉션 창', () => {
   });
 
   it('동물 뽑기: 누르면 연출을 하고, 결과(새 동물)와 늘어난 목록을 보여 준다', async () => {
-    const after = pullSpecies(base(3), 2, () => 0.99).collection;
+    const after = pullSpecies(base(3), 2, () => 0.8).collection;
     const { api } = await open(view(base(3)));
     // 서버 응답이 오기 전까지는 알이 흔들리며 "뽑는 중"이 보인다
     api.pullSpecies.mockImplementation(() => new Promise((r) => setTimeout(() => r({ ok: true, message: '부엉이(이)가 새로 왔어요!', id: 'owl', isNew: true, hidden: false, count: 1, view: view(after) }), 50)));
@@ -128,16 +131,16 @@ describe('뽑기·컬렉션 창', () => {
 
   it('뽑고 나면 뽑기권·가진 수·천장·뽑은 횟수 문구가 새 값으로 바뀐다', async () => {
     const before = base(7);
-    const after = pullSpecies(before, 2, () => 0.99).collection; // 부엉이
+    const after = pullSpecies(before, 2, () => 0.8).collection; // 부엉이
     const { api } = await open(view(before));
-    expect(el('pity').textContent).toContain('40번 안에');
+    expect(el('pity').textContent).toContain('50번 안에');
     expect(el('pity').textContent).toContain('지금까지 0번');
     expect(el('tickets').textContent).toContain('7장');
     expect(el('owned-count').textContent).toContain('1/20');
     api.pullSpecies.mockResolvedValue({ ok: true, message: '부엉이(이)가 새로 왔어요!', id: 'owl', isNew: true, hidden: false, count: 1, view: view(after) });
     el('pull-species').click();
     await settle();
-    expect(el('pity').textContent).toContain('39번 안에');
+    expect(el('pity').textContent).toContain('49번 안에');
     expect(el('pity').textContent).toContain('지금까지 1번');
     expect(el('tickets').textContent).toContain('4장');
     expect(el('owned-count').textContent).toContain('2/20');
@@ -145,7 +148,7 @@ describe('뽑기·컬렉션 창', () => {
 
   it('뽑는 중에 새로고침 신호가 와도 연출이 끝난 뒤 최신 값으로 다시 맞춘다', async () => {
     const before = base(7);
-    const after = pullSpecies(before, 2, () => 0.99).collection;
+    const after = pullSpecies(before, 2, () => 0.8).collection;
     const newer: Collection = { ...after, tickets: after.tickets + 2 }; // 뽑는 사이에 레벨 보상으로 뽑기권이 늘었다
     const { api, refresh, set } = await open(view(before));
     api.pullSpecies.mockResolvedValue({ ok: true, message: '부엉이(이)가 새로 왔어요!', id: 'owl', isNew: true, hidden: false, count: 1, view: view(after) });
@@ -158,14 +161,33 @@ describe('뽑기·컬렉션 창', () => {
     expect(el('tickets').textContent).toContain('6장');
   });
 
-  it('히든이 나오면 특별한 모습으로 보여 준다', async () => {
-    const after = pullSpecies(base(3), 2, () => 0).collection;
+  it('히든이 나오면 특별한 모습으로 보여 주고, 등급 이름이 무지개로 흐른다', async () => {
+    const after = pullSpecies(base(3), 2, () => 0.995).collection; // 현무
     const { api } = await open(view(base(3)));
-    api.pullSpecies.mockResolvedValue({ ok: true, message: '용(이)가 새로 왔어요! ✨히든 동물!', id: 'dragon', isNew: true, hidden: true, count: 1, view: view(after) });
+    api.pullSpecies.mockResolvedValue({ ok: true, message: '', id: 'tortoise', rarity: 'hidden', isNew: true, hidden: true, count: 1, view: view(after) });
     el('pull-species').click();
     await settle();
     expect(el('result').classList.contains('win-hidden')).toBe(true);
-    expect(pet('dragon').textContent).toContain('용');
+    expect(pet('tortoise').textContent).toContain('현무');
+    expect(el('result-text').textContent).toBe('현무가 나왔어요! (히든) ✨ 새로 왔어요!');
+    expect(el('result-text').querySelector('.grade-hidden')!.textContent).toBe('히든');
+  });
+
+  it('결과 문구는 "~가 나왔어요! (등급)" 이고 등급마다 색 클래스가 붙으며, 받침에 따라 이/가가 바뀐다', async () => {
+    const cases: Array<[string, string, string, string]> = [['rabbit', 'common', '토끼가', 'common'], ['bear', 'uncommon', '곰이', 'uncommon'], ['owl', 'rare', '부엉이가', 'rare'], ['panda', 'special', '판다가', 'special'], ['dragon', 'legend', '용이', 'legend']];
+    // 한 화면에서 여러 번 뽑으면 앞 결과가 남아 있으니, 케이스마다 새로 연다
+    for (const [id, rarity, who, cls] of cases) {
+      document.body.innerHTML = body;
+      const after = base(3);
+      const { api } = await open(view(base(3)));
+      api.pullSpecies.mockResolvedValue({ ok: true, message: '', id, rarity, isNew: false, hidden: false, count: 2, view: view(after) });
+      el('pull-species').click();
+      await settle();
+      expect(el('result-text').textContent, id).toContain(`${who} 나왔어요!`);
+      expect(el('result-text').querySelector(`.grade-${cls}`), id).not.toBeNull();
+      expect(el('result-text').textContent, id).toContain('2번째');
+    }
+    expect(el('result').classList.contains('win-legend')).toBe(true);
   });
 
   it('실패하면(예: 뽑기권 부족) 이유만 보여 주고 목록은 그대로다', async () => {
@@ -177,7 +199,7 @@ describe('뽑기·컬렉션 창', () => {
   });
 
   it('꺼내기를 누르면 그 동물만 메인에 보내고, 돌려받은 상태(키우는 중 표시)로 다시 그린다', async () => {
-    const two = pullSpecies(base(3), 2, () => 0.99).collection;
+    const two = pullSpecies(base(3), 2, () => 0.8).collection;
     const { api } = await open(view(two));
     const switched: Collection = { ...two, active: 'owl' };
     api.switchTo.mockResolvedValue({ ok: true, message: '펭귄(을)를 꺼냈어요', view: view(switched) });
@@ -223,7 +245,7 @@ describe('뽑기 룰렛', () => {
   });
 
   it('동물 뽑기를 하면 룰렛이 칸을 만들고 끝나면 결과 그림이 다시 보인다', async () => {
-    const after = pullSpecies(base(3), 2, () => 0.99).collection;
+    const after = pullSpecies(base(3), 2, () => 0.8).collection;
     const { api } = await open(view(base(3)));
     api.pullSpecies.mockResolvedValue({ ok: true, message: '부엉이(이)가 새로 왔어요!', id: 'owl', isNew: true, hidden: false, count: 1, view: view(after) });
     el('pull-species').click();

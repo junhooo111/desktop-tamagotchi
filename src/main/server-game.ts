@@ -9,7 +9,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { RpcResult } from './account-sync.js';
 import { DUPLICATE_XP, newOwned, type Collection } from '../shared/collection.js';
-import { isAccessory, isSpeciesId, isVariant } from '../shared/species.js';
+import { isAccessory, isSpeciesId, isVariant, rarityOf } from '../shared/species.js';
+import { PITY_RESETS_ON, isRarity, type Rarity } from '../shared/rarity.js';
 
 export interface ServerRpc {
   call<T>(fn: string, args?: Record<string, unknown>): Promise<RpcResult<T>>;
@@ -197,7 +198,7 @@ export class ServerGame {
     const r = await this.rpc.call<{ species_id: string; rarity: string; tickets: number }>('gacha_pull');
     if (r.error || !r.data) return { ok: false, message: friendlyError(r.error?.message ?? '') };
     if (this.state) {
-      this.state = { ...this.state, tickets: r.data.tickets, pity: r.data.rarity === 'hidden' ? 0 : this.state.pity + 1, species: { ...this.state.species, [r.data.species_id]: this.state.species[r.data.species_id] ?? 0 } };
+      this.state = { ...this.state, tickets: r.data.tickets, pity: isRarity(r.data.rarity) && PITY_RESETS_ON.includes(r.data.rarity) ? 0 : this.state.pity + 1, species: { ...this.state.species, [r.data.species_id]: this.state.species[r.data.species_id] ?? 0 } };
     }
     return { ok: true, result: { speciesId: r.data.species_id, rarity: r.data.rarity, tickets: r.data.tickets } };
   }
@@ -367,14 +368,15 @@ export function mirrorCollection(c: Collection, s: ServerState, now: number): Co
 }
 
 /** 서버 뽑기 결과를 앱의 컬렉션에 반영한다(앱의 pullSpecies 와 같은 화면 규칙: 처음이면 새로, 중복이면 횟수와 경험치). */
-export function applyServerPull(c: Collection, r: PullResult, now: number): { collection: Collection; isNew: boolean; count: number; hidden: boolean } | null {
+export function applyServerPull(c: Collection, r: PullResult, now: number): { collection: Collection; isNew: boolean; count: number; hidden: boolean; rarity: Rarity } | null {
   if (!isSpeciesId(r.speciesId)) return null;
-  const hidden = r.rarity === 'hidden';
-  const base: Collection = { ...c, tickets: r.tickets, pulls: c.pulls + 1, sinceHidden: hidden ? 0 : c.sinceHidden + 1 };
+  const rarity: Rarity = isRarity(r.rarity) ? r.rarity : rarityOf(r.speciesId);
+  const hidden = rarity === 'hidden';
+  const base: Collection = { ...c, tickets: r.tickets, pulls: c.pulls + 1, sinceHidden: PITY_RESETS_ON.includes(rarity) ? 0 : c.sinceHidden + 1 };
   const have = base.owned[r.speciesId];
   if (!have) {
-    return { collection: { ...base, owned: { ...base.owned, [r.speciesId]: newOwned(r.speciesId, now) } }, isNew: true, count: 1, hidden };
+    return { collection: { ...base, owned: { ...base.owned, [r.speciesId]: newOwned(r.speciesId, now) } }, isNew: true, count: 1, hidden, rarity };
   }
   const grown = { ...have, count: have.count + 1, pet: { ...have.pet, xp: have.pet.xp + DUPLICATE_XP } };
-  return { collection: { ...base, owned: { ...base.owned, [r.speciesId]: grown } }, isNew: false, count: grown.count, hidden };
+  return { collection: { ...base, owned: { ...base.owned, [r.speciesId]: grown } }, isNew: false, count: grown.count, hidden, rarity };
 }

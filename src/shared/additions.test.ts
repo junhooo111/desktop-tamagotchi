@@ -10,11 +10,11 @@ const NEW_ANIMALS = ['panda', 'bear', 'pig', 'sheep', 'owl'] as const;
 const NEW_ACCESSORIES = ['cap', 'witch', 'chef', 'santa', 'headband', 'antenna', 'bunnyears', 'eyepatch', 'monocle', 'star'] as const;
 
 describe('동물 5종 추가', () => {
-  it('판다·곰·돼지·양·부엉이가 일반 동물로 들어와 일반 동물이 14종, 전체가 20종이다', () => {
+  it('판다·곰·돼지·양·부엉이는 일반보다 높은 등급으로 들어와 있고, 전체는 20종이다', () => {
     expect(SPECIES).toHaveLength(20);
-    expect(COMMON_SPECIES).toHaveLength(14);
-    expect(HIDDEN_SPECIES).toHaveLength(6);
-    expect(COMMON_SPECIES.slice(-5).map((s) => s.name)).toEqual(['판다', '곰', '돼지', '양', '부엉이']);
+    expect(COMMON_SPECIES).toHaveLength(7);
+    expect(HIDDEN_SPECIES).toHaveLength(5);
+    for (const id of ['panda', 'bear', 'pig', 'sheep', 'owl']) expect(SPECIES.some((s) => s.id === id && s.rarity !== 'common' && s.rarity !== 'hidden'), id).toBe(true);
   });
 
   it('새 동물은 서로·기존 동물과 모습이 다르다(새끼·성체)', () => {
