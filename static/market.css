@@ -81,3 +81,30 @@ footer {
   margin-top: 10px;
   text-align: right;
 }
+.preview {
+  width: 48px;
+  height: 48px;
+  image-rendering: pixelated;
+  background: #f6efdc;
+  border-radius: 8px;
+  flex: none;
+}
+.grade-tag {
+  display: inline-block;
+  margin-left: 4px;
+  padding: 0 7px;
+  border-radius: 999px;
+  background: #3b2f2f;
+  font-size: 10px;
+  font-weight: 700;
+  color: #fff;
+}
+.grade-common { color: #cfd6e6; }
+.grade-uncommon { color: #7ee08a; }
+.grade-rare { color: #6bb5ff; }
+.grade-special { color: #d59cff; }
+.grade-legend { color: #ffd34a; }
+.grade-hidden { color: #ff8bd0; }
+#filter-box { margin-left: auto; }
+#filter-box select { border: 1px solid #d9c9a8; border-radius: 6px; padding: 2px 4px; background: #fff; }
+#filter-box[hidden] { display: none; }

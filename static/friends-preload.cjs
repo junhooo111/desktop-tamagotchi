@@ -9,5 +9,7 @@ contextBridge.exposeInMainWorld('friendsApi', {
   remove: (id) => ipcRenderer.invoke('friends:remove', id),
   wave: (id) => ipcRenderer.invoke('friends:wave', id),
   gift: (id) => ipcRenderer.invoke('friends:gift', id),
+  cosmetics: () => ipcRenderer.invoke('friends:cosmetics'),
+  giftCosmetic: (id, kind, item) => ipcRenderer.invoke('friends:gift-cosmetic', id, kind, item),
   close: () => ipcRenderer.send('friends:close'),
 });

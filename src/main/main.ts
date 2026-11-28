@@ -60,6 +60,8 @@ import {
   GACHA_ACCESSORIES,
   VARIANT_NAMES,
   accessoryUnlocked,
+  neckUnlocked,
+  effectUnlocked,
   allowedPatch,
   buildWardrobe,
   cardSpeciesOf,
@@ -1044,7 +1046,9 @@ async function friendsAct(run: (g: ServerGame) => Promise<{ ok: boolean; message
   const view = await friendsData();
   if (r.ok && game.state) {
     collection = mirrorCollection(collection, game.state, Date.now());
+    dropLostCosmetics();
     saveCollectionSafe();
+    refreshWardrobe();
     persist();
     updateTray();
     sendView();
@@ -1103,16 +1107,38 @@ let marketWin: BrowserWindow | null = null;
 
 async function marketData() {
   const rpc = auth?.serverRpc;
-  if (!rpc || !serverOn() || !serverGame) return { ok: false, message: L('로그인하면 경매장을 쓸 수 있어요', 'Log in to use the auction house'), coins: 0, listings: [], pets: [] };
-  const [list, mine, st] = await Promise.all([rpc.call<unknown[]>('market_listings', { p_limit: 50 }), rpc.call<unknown[]>('my_pets'), serverGame.refresh()]);
-  if (list.error || mine.error) return { ok: false, message: friendlyError((list.error ?? mine.error)?.message ?? ''), coins: 0, listings: [], pets: [] };
-  return { ok: st.ok, coins: serverGame.state?.coins ?? 0, listings: list.data ?? [], pets: mine.data ?? [] };
+  const empty = { coins: 0, listings: [], pets: [], cosmeticListings: [], myCosmetics: [], me: null };
+  if (!rpc || !serverOn() || !serverGame) return { ok: false, message: L('로그인하면 경매장을 쓸 수 있어요', 'Log in to use the auction house'), ...empty };
+  const [list, mine, cosList, cosMine, st] = await Promise.all([
+    rpc.call<unknown[]>('market_listings', { p_limit: 50 }),
+    rpc.call<unknown[]>('my_pets'),
+    rpc.call<unknown[]>('cosmetic_listings_active', { p_limit: 60 }),
+    rpc.call<unknown[]>('my_cosmetics'),
+    serverGame.refresh(),
+  ]);
+  const bad = list.error ?? mine.error ?? cosList.error ?? cosMine.error;
+  if (bad) return { ok: false, message: friendlyError(bad.message), ...empty };
+  // 꾸미기 미리보기는 지금 키우는 펫에게 입혀 보여 준다
+  const me = { speciesId: pet.speciesId, stage: ((s) => (s === 'egg' ? 'baby' : s))(effectiveStage(stageOf(pet), settings.displayStage)) };
+  return { ok: st.ok, coins: serverGame.state?.coins ?? 0, listings: list.data ?? [], pets: mine.data ?? [], cosmeticListings: cosList.data ?? [], myCosmetics: cosMine.data ?? [], me };
+}
+
+/** 거래·선물로 넘겨준 꾸미기를 아직 입고 있으면 벗긴다(더는 가진 것이 아니다). */
+function dropLostCosmetics(): void {
+  const extra = wardrobeExtra();
+  const patch: Partial<Settings> = {};
+  if (!accessoryUnlocked(growth, settings.accessory, extra)) patch.accessory = 'none';
+  if (!variantUnlocked(growth, settings.variant, extra)) patch.variant = 'default';
+  if (!neckUnlocked(settings.neck, extra)) patch.neck = 'none';
+  if (!effectUnlocked(settings.effect, extra)) patch.effect = 'none';
+  if (Object.keys(patch).length > 0) applySettings(patch);
 }
 
 /** 사고팔고 난 뒤: 서버 상태를 다시 읽어 앱의 컬렉션에 반영한다(판 펫은 사라지고 산 펫이 생긴다). */
 async function marketAfter(ok: boolean, message: string) {
   if (ok && serverGame?.state) {
     collection = mirrorCollection(collection, serverGame.state, Date.now());
+    dropLostCosmetics();
     saveCollectionSafe();
     persist();
     updateTray();
@@ -1750,6 +1776,7 @@ async function activateServer(): Promise<void> {
   say(L(`서버와 연결됐어요. 뽑기권 ${collection.tickets}장 · 어느 PC에서든 같은 계정이에요`, `Connected to the server. ${collection.tickets} ticket(s) · same account on any PC`));
   setTimeout(() => void syncGithubCommits(false), 8_000);
   setTimeout(() => void checkSales(), 20_000);
+  setTimeout(() => void checkCosmeticTrades(), 26_000);
   setTimeout(() => void refreshFriends(), 6_000);
   setTimeout(() => void pushCardExtras(), 12_000);
 }
@@ -1839,6 +1866,72 @@ async function checkSales(): Promise<void> {
         )
       : L(`💰 경매장에서 펫 ${rows.length}마리가 팔렸어요! 게임머니 +${total}`, `💰 ${rows.length} pets sold in the auction house! Game money +${total}`),
   );
+}
+
+/**
+ * 내 꾸미기가 팔렸는지, 친구가 꾸미기를 선물했는지 서버에 물어서 펫이 말해 준다(5분마다).
+ * 어디까지 알렸는지는 펫 판매와 같은 market-seen.json 에 열쇠(<사용자>:cos, <사용자>:gift)로 적는다. 처음에는 지금부터 시작한다.
+ */
+async function checkCosmeticTrades(): Promise<void> {
+  const game = serverGame;
+  const user = auth?.user;
+  if (!serverOn() || !game || !user) return;
+  const file = path.join(app.getPath('userData'), 'market-seen.json');
+  const readSeen = (): Record<string, string> => {
+    try {
+      return JSON.parse(fs.readFileSync(file, 'utf8')) as Record<string, string>;
+    } catch {
+      return {};
+    }
+  };
+  // 다른 확인(펫 판매)이 쓴 열쇠를 덮지 않게, 저장할 때마다 파일을 새로 읽어서 합친다.
+  const mark = (key: string, iso: string): void => {
+    try {
+      fs.writeFileSync(file, JSON.stringify({ ...readSeen(), [key]: iso }));
+    } catch (error) {
+      console.error('꾸미기 알림 기록 저장 실패', error);
+    }
+  };
+  const salesKey = `${user.id}:cos`;
+  const giftKey = `${user.id}:gift`;
+  const seen = readSeen();
+  const now = new Date().toISOString();
+  if (!seen[salesKey]) mark(salesKey, now);
+  if (!seen[giftKey]) mark(giftKey, now);
+  const sales = seen[salesKey] ? await game.cosmeticSales(seen[salesKey]) : null;
+  const gifts = seen[giftKey] ? await game.cosmeticGifts(seen[giftKey]) : null;
+  const changed = (sales?.length ?? 0) > 0 || (gifts?.length ?? 0) > 0;
+  if (sales && sales.length > 0) mark(salesKey, sales[sales.length - 1]!.sold_at);
+  if (gifts && gifts.length > 0) mark(giftKey, gifts[gifts.length - 1]!.created_at);
+  if (!changed) return;
+  await game.refresh();
+  if (game.state) {
+    collection = mirrorCollection(collection, game.state, Date.now());
+    dropLostCosmetics();
+    saveCollectionSafe();
+    persist();
+    updateTray();
+    sendView();
+    refreshWardrobe();
+  }
+  if (sales && sales.length > 0) {
+    const first = sales[0]!;
+    const name = cosmeticName(first.kind, first.item_id);
+    say(
+      sales.length === 1
+        ? L(`💰 ${first.buyer_login} 님이 ${name}${/[가-힣]/.test(name) ? '(을)를' : ''} ${first.price} 게임머니에 샀어요!`, `💰 ${first.buyer_login} bought your ${nameEn(name)} for ${first.price} game money!`)
+        : L(`💰 경매장에서 꾸미기 ${sales.length}개가 팔렸어요! 게임머니 +${sales.reduce((n, r) => n + r.price, 0)}`, `💰 ${sales.length} cosmetics sold! Game money +${sales.reduce((n, r) => n + r.price, 0)}`),
+    );
+  }
+  if (gifts && gifts.length > 0) {
+    const g = gifts[0]!;
+    const name = cosmeticName(g.kind, g.item_id);
+    say(
+      gifts.length === 1
+        ? L(`🎁 ${g.from_login} 님이 ${name}${/[가-힣]/.test(name) ? '(을)를' : ''} 선물했어요!`, `🎁 ${g.from_login} gifted you ${nameEn(name)}!`)
+        : L(`🎁 친구가 꾸미기 ${gifts.length}개를 선물했어요!`, `🎁 Friends gifted you ${gifts.length} cosmetics!`),
+    );
+  }
 }
 
 /** GitHub 기여를 게임머니로 바꾼다(서버가 읽는다). 로그인 직후와 1시간마다. */
@@ -2476,6 +2569,27 @@ function setupIpc(): void {
   ipcMain.on('friends:close', () => {
     if (friendsWin && !friendsWin.isDestroyed()) friendsWin.close();
   });
+  const badMarket = () => marketData().then((view) => ({ ok: false, message: L('잘못된 요청이에요', 'Invalid request'), view }));
+  const kinds = ['accessory', 'variant', 'neck', 'effect'];
+  ipcMain.handle('market:buy-cosmetic', (_e, id: unknown) => (isUuid(id) ? marketAct('buy_cosmetic_listing', { p_listing_id: id }, L('샀어요! 내 꾸미기에 들어왔어요', 'Bought! It is in your wardrobe now')) : badMarket()));
+  ipcMain.handle('market:cancel-cosmetic', (_e, id: unknown) => (isUuid(id) ? marketAct('cancel_cosmetic_listing', { p_listing_id: id }, L('판매를 내렸어요', 'Listing removed')) : badMarket()));
+  ipcMain.handle('market:sell-cosmetic', (_e, kind: unknown, item: unknown, price: unknown) =>
+    typeof kind === 'string' && kinds.includes(kind) && typeof item === 'string' && /^[a-z]{2,20}$/.test(item) && typeof price === 'number' && Number.isInteger(price)
+      ? marketAct('create_cosmetic_listing', { p_kind: kind, p_item: item, p_price: price }, L('경매장에 올렸어요. 팔리면 게임머니가 들어와요', 'Listed! You get game money when it sells'))
+      : badMarket(),
+  );
+  ipcMain.handle('friends:cosmetics', async () => {
+    const r = await auth?.serverRpc?.call<Array<{ kind: string; item_id: string; tradable: boolean; listing_id: string | null }>>('my_cosmetics');
+    return (r?.data ?? []).filter((c) => c.tradable && !c.listing_id).map((c) => ({ kind: c.kind, item: c.item_id, name: cosmeticName(c.kind as CosmeticKind, c.item_id), rarity: cosmeticRarity(c.kind as CosmeticKind, c.item_id) }));
+  });
+  ipcMain.handle('friends:gift-cosmetic', (_e, id: unknown, kind: unknown, item: unknown) =>
+    isUuid(id) && typeof kind === 'string' && kinds.includes(kind) && typeof item === 'string' && /^[a-z]{2,20}$/.test(item)
+      ? friendsAct(async (g) => {
+          const r = await g.friendGiftCosmetic(id, kind, item);
+          return r.ok && r.result ? { ok: true, message: friendReward(r.result, L('🎀 꾸미기를 선물했어요!', '🎀 Cosmetic sent!')) } : { ok: false, message: r.message };
+        })
+      : badFriendReq(),
+  );
   ipcMain.handle('market:get', () => marketData());
   ipcMain.handle('market:buy', (_event, id: unknown) => (isUuid(id) ? marketAct('buy_listing', { p_listing_id: id }, L('샀어요! 내 컬렉션에 들어왔어요', 'Bought! It is in your collection now')) : marketData().then((view) => ({ ok: false, message: L('잘못된 요청이에요', 'Invalid request'), view }))));
   ipcMain.handle('market:cancel', (_event, id: unknown) => (isUuid(id) ? marketAct('cancel_listing', { p_listing_id: id }, L('판매를 내렸어요', 'Listing removed')) : marketData().then((view) => ({ ok: false, message: L('잘못된 요청이에요', 'Invalid request'), view }))));
@@ -2599,6 +2713,7 @@ if (!app.requestSingleInstanceLock()) {
       }, 10 * 60_000);
       setInterval(() => void syncGithubCommits(false), 60 * 60_000);
       setInterval(() => void checkSales(), 5 * 60_000);
+      setInterval(() => void checkCosmeticTrades(), 5 * 60_000);
       setInterval(() => void refreshFriends(true), 5 * 60_000);
       setInterval(() => void pushCardExtras(), 6 * 3_600_000); // 날짜가 바뀌면 다시 보낸다
     }

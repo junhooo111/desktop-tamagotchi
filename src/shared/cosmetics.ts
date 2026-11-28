@@ -78,6 +78,12 @@ export const COSMETIC_ITEMS: readonly CosmeticItem[] = [
 /** 전설이 안 나온 채 이만큼 꾸미기를 뽑으면 다음은 전설이 나온다(전설이 남아 있을 때) */
 export const COSMETIC_PITY = 25;
 
+/** 업적으로도 열 수 있는 꾸미기(장식 8종 + 색 3종): 업적으로 열어 둔 사람이 팔고도 계속 쓸 수 있어서 거래·선물을 막는다(서버 cosmetic_items.tradable 과 같다) */
+const ACHIEVEMENT_UNLOCKABLE: ReadonlySet<string> = new Set(['ribbon', 'glasses', 'crown', 'wings', 'sprout', 'flower', 'partyhat', 'halo', 'pastel', 'deep', 'mono']);
+
+/** 팔거나 선물할 수 있는 꾸미기: 뽑기로만 얻는 25종 */
+export const cosmeticTradable = (kind: CosmeticKind, id: string): boolean => COSMETIC_ITEMS.some((i) => i.kind === kind && i.id === id && i.gacha) && !ACHIEVEMENT_UNLOCKABLE.has(id);
+
 export const cosmeticItem = (kind: CosmeticKind, id: string): CosmeticItem | undefined => COSMETIC_ITEMS.find((i) => i.kind === kind && i.id === id);
 export const cosmeticRarity = (kind: CosmeticKind, id: string): Rarity => cosmeticItem(kind, id)?.rarity ?? 'common';
 export const resetsCosmeticPity = (r: Rarity): boolean => PITY_RESETS_ON.includes(r);

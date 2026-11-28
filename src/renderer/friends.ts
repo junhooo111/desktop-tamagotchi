@@ -26,6 +26,12 @@ export interface FriendsView {
   tickets: number;
   rows: FriendRow[];
 }
+export interface GiftableCosmetic {
+  kind: string;
+  item: string;
+  name: string;
+  rarity: string;
+}
 export interface ActionResult {
   ok: boolean;
   message: string;
@@ -39,6 +45,8 @@ interface FriendsApi {
   remove(id: string): Promise<ActionResult>;
   wave(id: string): Promise<ActionResult>;
   gift(id: string): Promise<ActionResult>;
+  cosmetics?(): Promise<GiftableCosmetic[]>;
+  giftCosmetic?(id: string, kind: string, item: string): Promise<ActionResult>;
   close(): void;
   lang?(): Promise<Lang>;
 }
@@ -123,12 +131,41 @@ function friendItem(f: FriendRow, tickets: number): HTMLLIElement {
   actions.append(
     button(f.waved_today ? '인사 완료' : '👋 인사하기', () => void act(window.friendsApi.wave(f.friendship_id)), f.waved_today),
     button('🎟️ 뽑기권 선물', () => void act(window.friendsApi.gift(f.friendship_id)), tickets < 1),
+    button('🎀 꾸미기 선물', () => void openGift(f, actions)),
     button('친구 끊기', () => {
       if (window.confirm(`${f.login} 님과 친구를 끊을까요? 친밀도도 사라져요.`)) void act(window.friendsApi.remove(f.friendship_id));
     }),
   );
   li.append(top, bar, text('div', 'sub', progress), actions);
   return li;
+}
+
+/** 선물할 꾸미기를 고르는 줄을 펼친다(내 꾸미기 중 팔 수 있는 것만 나온다). */
+async function openGift(f: FriendRow, actions: HTMLElement): Promise<void> {
+  const list = (await window.friendsApi.cosmetics?.()) ?? [];
+  const row = document.createElement('div');
+  row.className = 'actions';
+  if (list.length === 0) {
+    row.append(text('span', 'sub', '선물할 수 있는 꾸미기가 없어요(뽑기로 얻은 꾸미기만 선물할 수 있어요)'));
+  } else {
+    const select = document.createElement('select');
+    select.setAttribute('aria-label', '선물할 꾸미기');
+    for (const c of list) {
+      const o = document.createElement('option');
+      o.value = `${c.kind}:${c.item}`;
+      o.textContent = c.name;
+      select.append(o);
+    }
+    row.append(
+      select,
+      button('보내기', () => {
+        const [kind = '', item = ''] = select.value.split(':');
+        void act(window.friendsApi.giftCosmetic?.(f.friendship_id, kind, item) ?? Promise.reject(new Error('no gift')));
+      }),
+    );
+  }
+  actions.after(row);
+  localize(row);
 }
 
 function simpleItem(f: FriendRow, buttons: HTMLButtonElement[]): HTMLLIElement {

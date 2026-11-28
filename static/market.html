@@ -10,9 +10,14 @@
     <main>
       <h1>경매장</h1>
       <p class="hint" id="wallet"></p>
-      <div class="tabs" id="tabs" role="tablist">
-        <button type="button" role="tab" data-tab="buy" aria-selected="true">사기</button>
-        <button type="button" role="tab" data-tab="mine" aria-selected="false">내 펫 팔기</button>
+      <div class="tabs" id="cats" role="tablist">
+        <button type="button" role="tab" data-cat="pets" aria-selected="true">동물</button>
+        <button type="button" role="tab" data-cat="cosmetics" aria-selected="false">꾸미기</button>
+      </div>
+      <div class="tabs" id="modes" role="tablist">
+        <button type="button" role="tab" data-mode="buy" aria-selected="true">사기</button>
+        <button type="button" role="tab" data-mode="sell" aria-selected="false">팔기</button>
+        <span id="filter-box"><select id="grade-filter" aria-label="등급"><option value="all">모든 등급</option></select></span>
       </div>
       <ul class="list" id="list"></ul>
       <p class="hint" id="note"></p>

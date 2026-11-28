@@ -11,6 +11,7 @@ import type { RpcResult } from './account-sync.js';
 import { DUPLICATE_XP, newOwned, type Collection } from '../shared/collection.js';
 import { isAccessory, isEffect, isNeck, isSpeciesId, isVariant, rarityOf } from '../shared/species.js';
 import { PITY_RESETS_ON, isRarity, type Rarity } from '../shared/rarity.js';
+import { cosmeticTradable } from '../shared/cosmetics.js';
 
 export interface ServerRpc {
   call<T>(fn: string, args?: Record<string, unknown>): Promise<RpcResult<T>>;
@@ -44,6 +45,23 @@ export interface FriendActionResult {
   tickets_each?: number;
   mutual?: boolean;
   tickets?: number;
+}
+
+/** 경매장에서 팔린 내 꾸미기 한 건(my_cosmetic_sales) */
+export interface CosmeticSaleRow {
+  listing_id: string;
+  price: number;
+  kind: 'accessory' | 'variant' | 'neck' | 'effect';
+  item_id: string;
+  buyer_login: string;
+  sold_at: string;
+}
+/** 친구에게 받은 꾸미기 선물 한 건(cosmetic_gifts_received) */
+export interface CosmeticGiftRow {
+  kind: 'accessory' | 'variant' | 'neck' | 'effect';
+  item_id: string;
+  from_login: string;
+  created_at: string;
 }
 
 /** 경매장에서 팔린 내 펫 한 건(my_sales) */
@@ -117,6 +135,9 @@ export function friendlyError(message: string): string {
   if (/too_many/.test(message)) return '친구 요청이 너무 많아요. 몇 개를 정리해 주세요';
   if (/self/.test(message)) return '내 계정에는 요청할 수 없어요';
   if (/not_found/.test(message)) return '그 GitHub 아이디의 사용자를 찾지 못했어요 (이 앱에 로그인한 적이 있어야 해요)';
+  if (/not_tradable/.test(message)) return '업적으로도 열 수 있는 꾸미기는 팔거나 선물할 수 없어요';
+  if (/not_yours/.test(message)) return '내가 가진 꾸미기가 아니에요';
+  if (/already_owned/.test(message)) return '이미 가진 꾸미기예요';
   if (/not_authenticated/.test(message)) return '로그인이 끝나지 않았어요';
   if (/fetch failed|network|timeout|ENOTFOUND|ECONN|Failed to fetch/i.test(message)) return '서버에 연결하지 못했어요. 인터넷을 확인하고 다시 해 주세요';
   return '서버에서 처리하지 못했어요: ' + message.slice(0, 80);
@@ -321,6 +342,22 @@ export class ServerGame {
     return r.error || !Array.isArray(r.data) ? null : r.data;
   }
 
+  async cosmeticSales(since: string): Promise<CosmeticSaleRow[] | null> {
+    const r = await this.rpc.call<CosmeticSaleRow[]>('my_cosmetic_sales', { p_since: since });
+    return r.error || !Array.isArray(r.data) ? null : r.data;
+  }
+
+  async cosmeticGifts(since: string): Promise<CosmeticGiftRow[] | null> {
+    const r = await this.rpc.call<CosmeticGiftRow[]>('cosmetic_gifts_received', { p_since: since });
+    return r.error || !Array.isArray(r.data) ? null : r.data;
+  }
+
+  async friendGiftCosmetic(id: string, kind: string, item: string): Promise<{ ok: boolean; message: string; result?: FriendActionResult }> {
+    const r = await this.rpc.call<FriendActionResult>('friend_gift_cosmetic', { p_friendship: id, p_kind: kind, p_item: item });
+    if (r.error || !r.data) return { ok: false, message: friendlyError(r.error?.message ?? '') };
+    return { ok: true, message: '', result: r.data };
+  }
+
   /** 학습 이벤트(배움 카드 확인·고침·지식 읽기)를 서버에 보고한다. 게임머니는 서버가 정한 양만큼 받는다. */
   async reportLearning(events: Array<{ id: string; kind: 'confirm' | 'quiz_bonus' | 'fixed' | 'tip' }>): Promise<{ granted: number; coins: number } | null> {
     if (events.length === 0) return null;
@@ -374,10 +411,13 @@ export function mirrorCollection(c: Collection, s: ServerState, now: number): Co
       if (next) active = next;
     }
   }
-  const accessories = [...new Set([...c.accessories, ...s.accessories.filter(isAccessory)])];
-  const variants = [...new Set([...c.variants, ...s.variants.filter(isVariant)])];
-  const necks = [...new Set([...c.necks, ...(s.necks ?? []).filter(isNeck)])];
-  const effects = [...new Set([...c.effects, ...(s.effects ?? []).filter(isEffect)])];
+  // 거래·선물로 넘겨준 꾸미기(팔 수 있는 25종)는 서버에 없으면 지운다. 업적으로 연 것은 앱이 따로 알아서 남긴다.
+  const kept = <T extends string>(kind: 'accessory' | 'variant' | 'neck' | 'effect', local: readonly T[], server: readonly string[]): T[] =>
+    s.imported ? local.filter((id) => !cosmeticTradable(kind, id) || server.includes(id)) : [...local];
+  const accessories = [...new Set([...kept('accessory', c.accessories, s.accessories), ...s.accessories.filter(isAccessory)])];
+  const variants = [...new Set([...kept('variant', c.variants, s.variants), ...s.variants.filter(isVariant)])];
+  const necks = [...new Set([...kept('neck', c.necks, s.necks ?? []), ...(s.necks ?? []).filter(isNeck)])];
+  const effects = [...new Set([...kept('effect', c.effects, s.effects ?? []), ...(s.effects ?? []).filter(isEffect)])];
   return { ...c, owned, active, tickets: s.tickets, sinceHidden: s.pity, accessories, variants, necks, effects };
 }
 

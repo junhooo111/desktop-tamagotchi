@@ -47,7 +47,7 @@ describe('경매장 화면', () => {
 
   it('마지막 한 마리는 팔기 버튼이 꺼진다', async () => {
     await mount({ ok: true, coins: 0, listings: [], pets: [pet()] });
-    (document.querySelector('[data-tab="mine"]') as HTMLButtonElement).click();
+    (document.querySelector('[data-mode="sell"]') as HTMLButtonElement).click();
     expect((document.querySelector('#list button') as HTMLButtonElement).disabled).toBe(true);
   });
 
@@ -55,7 +55,7 @@ describe('경매장 화면', () => {
     const both = [pet(), pet({ pet_id: 'p2' })];
     const sell = vi.fn().mockResolvedValue({ ok: true, message: '올렸어요', view: { ok: true, coins: 0, listings: [], pets: both } });
     await mount({ ok: true, coins: 0, listings: [], pets: both }, { sell });
-    (document.querySelector('[data-tab="mine"]') as HTMLButtonElement).click();
+    (document.querySelector('[data-mode="sell"]') as HTMLButtonElement).click();
     (document.querySelector('#list input') as HTMLInputElement).value = '250';
     (document.querySelector('#list button') as HTMLButtonElement).click();
     await tick();
@@ -65,11 +65,27 @@ describe('경매장 화면', () => {
   it('판매 중인 펫은 내리기 버튼으로 내린다', async () => {
     const cancel = vi.fn().mockResolvedValue({ ok: true, message: '내렸어요', view: { ok: true, coins: 0, listings: [], pets: [] } });
     await mount({ ok: true, coins: 0, listings: [], pets: [pet(), pet({ pet_id: 'p2', listing_id: 'l9', price: 77 })] }, { cancel });
-    (document.querySelector('[data-tab="mine"]') as HTMLButtonElement).click();
+    (document.querySelector('[data-mode="sell"]') as HTMLButtonElement).click();
     const buttons = [...document.querySelectorAll('#list button')] as HTMLButtonElement[];
     buttons.find((b) => b.textContent === '내리기')!.click();
     await tick();
     expect(cancel).toHaveBeenCalledWith('l9');
+  });
+
+  it('꾸미기 탭: 미리보기 그림과 등급표가 나오고, 이미 가진 꾸미기는 못 사며, 팔기는 가격과 함께 부른다', async () => {
+    const cl = { listing_id: 'c1', kind: 'neck', item_id: 'goldchain', rarity: 'legend', price: 300, seller_login: 'kim', is_mine: false };
+    const mine = [{ kind: 'effect', item_id: 'snow', rarity: 'rare', tradable: true, listing_id: null, price: null }];
+    const sellCosmetic = vi.fn().mockResolvedValue({ ok: true, message: '올렸어요', view: { ok: true, coins: 500, listings: [], pets: [], cosmeticListings: [cl], myCosmetics: mine } });
+    await mount({ ok: true, coins: 500, listings: [], pets: [], cosmeticListings: [cl], myCosmetics: mine, me: { speciesId: 'cat', stage: 'adult' } }, { sellCosmetic });
+    (document.querySelector('[data-cat="cosmetics"]') as HTMLButtonElement).click();
+    expect(document.querySelectorAll('#list canvas.preview')).toHaveLength(1);
+    expect(document.querySelector('#list .grade-tag')!.textContent).toBe('전설');
+    expect((document.querySelector('#list button') as HTMLButtonElement).disabled).toBe(false);
+    (document.querySelector('[data-mode="sell"]') as HTMLButtonElement).click();
+    (document.querySelector('#list input') as HTMLInputElement).value = '40';
+    (document.querySelector('#list button') as HTMLButtonElement).click();
+    await tick();
+    expect(sellCosmetic).toHaveBeenCalledWith('effect', 'snow', 40);
   });
 
   it('서버에 닿지 않으면 안내만 보여 준다', async () => {

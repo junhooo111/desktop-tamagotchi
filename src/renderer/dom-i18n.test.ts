@@ -47,10 +47,10 @@ describe('창 화면 영어 전환', () => {
     await tick();
     await tick();
     expect(document.getElementById('wallet')?.textContent).toBe('Game money: 500');
-    expect(document.getElementById('list')?.textContent).toContain('Hidden · seller kim');
+    expect(document.getElementById('list')?.textContent).toContain('seller kim');
     expect(document.getElementById('list')?.textContent).toContain('120 game money');
     expect(document.getElementById('list')?.textContent).toContain('Cat Lv.3');
-    expect(document.querySelector('#tabs button')?.textContent).toBe('Buy');
+    expect(document.querySelector('#modes button')?.textContent).toBe('Buy');
     setUiLang('ko');
   });
 });

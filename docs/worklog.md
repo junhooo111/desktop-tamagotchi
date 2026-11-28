@@ -496,3 +496,8 @@
 - **최소 버전 검사**(`0022_min_client_version.sql`, 운영 적용): 뽑기 함수가 앱 버전을 받고 `app_config.min_client_version` 보다 낮으면 `client_outdated` 로 **뽑기권을 쓰기 전에** 거절한다. 기본값 `0.0.0` 은 검사 끔. 새 앱이 퍼진 뒤 `update public.app_config set value = '0.14.0' where key = 'min_client_version';` 로 올린다(버전을 안 보내는 예전 앱은 0.0.0 으로 보여 거절된다). 앱은 `ServerGame` 세 번째 인자로 버전을 보낸다.
 - **safeStorage 비동기**: 사용 중단된 동기 함수 대신 `encryptStringAsync`/`decryptStringAsync`/`isAsyncEncryptionAvailable`. 예전 동기 암호화 파일은 비동기 복호화가 못 읽으면 동기 함수로 한 번 읽고(로그아웃되지 않게) 다음 저장 때 비동기 방식으로 다시 쓴다. `EncryptedFileStorage` 는 async 가 되었고 쓰기를 한 줄로 세운다.
 - **꾸미기 도감·업적**: 도감·기록 창에 "꾸미기 수집"(등급별 가진 수/전체와 막대, 업적으로 연 것 포함). 업적 4개 추가(옷장 채우기 5개 · 패셔니스타 15개 · 전설의 옷장 · 옷장 완성) → 32개. `cosmeticCollection()` 이 현황을 계산한다.
+
+## 2026-11-28 — 꾸미기 거래·선물, 경매장 개편
+
+- 서버 `0023_cosmetic_market.sql`(운영 적용): `cosmetic_items.tradable`(뽑기 전용 25종만 true, 업적으로도 열리는 11종은 false), `cosmetic_listings`, `create/cancel/buy_cosmetic_listing`, `cosmetic_listings_active`, `my_cosmetics`, `my_cosmetic_sales`, `friend_gift_cosmetic`(하루 3번, +5), `cosmetic_gifts_received`. 친구끼리 거래 +10. 수수료 없음. 테스트 `supabase/tests/cosmetic-market.test.ts`.
+- 앱: 경매장을 동물/꾸미기 × 사기/팔기 + 등급 필터로 개편하고 줄마다 미리보기 캔버스. 꾸미기 판매 알림·받은 선물 알림(5분마다), 친구 창 꾸미기 선물. 클라이언트 `cosmeticTradable()` 은 서버 `tradable` 과 같아야 한다(양쪽 목록 동기화 필요).

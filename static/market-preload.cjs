@@ -8,5 +8,8 @@ contextBridge.exposeInMainWorld('marketApi', {
   buy: (listingId) => ipcRenderer.invoke('market:buy', listingId),
   sell: (petId, price) => ipcRenderer.invoke('market:sell', petId, price),
   cancel: (listingId) => ipcRenderer.invoke('market:cancel', listingId),
+  buyCosmetic: (listingId) => ipcRenderer.invoke('market:buy-cosmetic', listingId),
+  sellCosmetic: (kind, item, price) => ipcRenderer.invoke('market:sell-cosmetic', kind, item, price),
+  cancelCosmetic: (listingId) => ipcRenderer.invoke('market:cancel-cosmetic', listingId),
   close: () => ipcRenderer.send('market:close'),
 });
