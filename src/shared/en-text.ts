@@ -13,7 +13,7 @@ export const NAMES_EN: Record<string, string> = {
   // 장식
   리본: 'Ribbon', 선글라스: 'Sunglasses', 왕관: 'Crown', 날개: 'Wings', 새싹: 'Sprout', 꽃: 'Flower', '파티 모자': 'Party hat',
   '천사 고리': 'Halo', 야구모자: 'Cap', '마법사 모자': 'Witch hat', '요리사 모자': 'Chef hat', '산타 모자': 'Santa hat',
-  '별 머리띠': 'Star headband', '하트 더듬이': 'Heart antennae', '토끼 귀': 'Bunny ears', 안대: 'Eyepatch', '외알 안경': 'Monocle', '반짝 별': 'Twinkle star', '방울 목줄': 'Bell collar', 스카프: 'Scarf', 나비넥타이: 'Bow tie', '진주 목걸이': 'Pearl necklace', '별 목걸이': 'Star necklace', '황금 목걸이': 'Gold chain', 반짝이: 'Sparkles', 하트: 'Hearts', 음표: 'Music notes', 눈송이: 'Snowflakes', '불꽃 오라': 'Flame aura', '베레모': 'Beret', '비니': 'Beanie', '두건': 'Bandana', '카우보이 모자': 'Cowboy hat', '헤드폰': 'Headphones', '해적 모자': 'Pirate hat', '기사 투구': 'Knight helmet', '악마 뿔': 'Devil horns', '유니콘 뿔': 'Unicorn horn', '불꽃 왕관': 'Flame crown',
+  '별 머리띠': 'Star headband', '하트 더듬이': 'Heart antennae', '토끼 귀': 'Bunny ears', 안대: 'Eyepatch', '외알 안경': 'Monocle', '반짝 별': 'Twinkle star', '방울 목줄': 'Bell collar', 스카프: 'Scarf', 나비넥타이: 'Bow tie', '진주 목걸이': 'Pearl necklace', '별 목걸이': 'Star necklace', '황금 목걸이': 'Gold chain', 반짝이: 'Sparkles', 하트: 'Hearts', 음표: 'Music notes', 눈송이: 'Snowflakes', '불꽃 오라': 'Flame aura', 공: 'Ball', 뼈다귀: 'Bone', 생선: 'Fish', 풍선: 'Balloon', '꽃 화분': 'Flower pot', 나비: 'Butterfly', 등불: 'Lantern', '용의 알': 'Dragon egg', '베레모': 'Beret', '비니': 'Beanie', '두건': 'Bandana', '카우보이 모자': 'Cowboy hat', '헤드폰': 'Headphones', '해적 모자': 'Pirate hat', '기사 투구': 'Knight helmet', '악마 뿔': 'Devil horns', '유니콘 뿔': 'Unicorn horn', '불꽃 왕관': 'Flame crown',
   // 색
   기본: 'Default', 파스텔: 'Pastel', 진하게: 'Deep', 흑백: 'Mono',
   // 업적

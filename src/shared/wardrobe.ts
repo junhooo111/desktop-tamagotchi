@@ -8,7 +8,7 @@ import { sanitizePetName } from './settings.js';
 import { isDisplayStage, reachedStages, type DisplayStage, type Stage } from './pet.js';
 import { COSMETIC_ITEMS, type CosmeticKind } from './cosmetics.js';
 import type { Rarity } from './rarity.js';
-import { ACCESSORIES, SPECIES, hasLegendForm, type Accessory, type Effect, type Neck, type SpeciesId, type Variant } from './species.js';
+import { ACCESSORIES, SPECIES, hasLegendForm, type Accessory, type Effect, type Neck, type Prop, type SpeciesId, type Variant } from './species.js';
 
 export const VARIANT_UNLOCK: Partial<Record<Variant, string>> = {
   pastel: 'first-fix',
@@ -44,6 +44,8 @@ export const GACHA_ACCESSORIES: readonly Accessory[] = ACCESSORIES.filter((a) =>
 
 export const NECK_NAMES: Record<Neck, string> = { none: '없음', bell: '방울 목줄', scarf: '스카프', bowtie: '나비넥타이', pearl: '진주 목걸이', starpendant: '별 목걸이', goldchain: '황금 목걸이' };
 export const EFFECT_NAMES: Record<Effect, string> = { none: '없음', sparkles: '반짝이', hearts: '하트', notes: '음표', snow: '눈송이', flameaura: '불꽃 오라' };
+
+export const PROP_NAMES: Record<Prop, string> = { none: '없음', ball: '공', bone: '뼈다귀', fish: '생선', balloon: '풍선', pot: '꽃 화분', butterfly: '나비', lantern: '등불', dragonegg: '용의 알' };
 
 export const VARIANT_NAMES: Record<Variant, string> = { default: '기본', pastel: '파스텔', deep: '진하게', mono: '흑백' };
 export const ACCESSORY_NAMES: Record<Accessory, string> = {
@@ -85,6 +87,7 @@ export interface Extra {
   /** 뽑기로 얻은 목 장식과 효과(업적으로는 열리지 않는다) */
   necks?: readonly Neck[];
   effects?: readonly Effect[];
+  props?: readonly Prop[];
   /** 가진 동물(프로필 카드에 보여 줄 수 있는 동물) */
   species: readonly SpeciesId[];
   /** 지금 키우는 동물의 진짜 성장 단계(지나온 단계만 모습으로 고를 수 있다). 없으면 성체로 본다. */
@@ -135,13 +138,17 @@ export function cosmeticCollection(g: Growth, extra: Extra = NO_EXTRA): Cosmetic
           ? variantUnlocked(g, i.id as Variant, extra)
           : i.kind === 'neck'
             ? neckUnlocked(i.id as Neck, extra)
-            : effectUnlocked(i.id as Effect, extra),
+            : i.kind === 'effect'
+              ? effectUnlocked(i.id as Effect, extra)
+              : propUnlocked(i.id as Prop, extra),
   }));
 }
 
 /** 목 장식과 효과는 뽑아야만 열린다("없음"은 늘 쓴다) */
 export const neckUnlocked = (n: Neck, extra: Extra = NO_EXTRA): boolean => n === 'none' || (extra.necks ?? []).includes(n);
 export const effectUnlocked = (e: Effect, extra: Extra = NO_EXTRA): boolean => e === 'none' || (extra.effects ?? []).includes(e);
+
+export const propUnlocked = (q: Prop, extra: Extra = NO_EXTRA): boolean => q === 'none' || (extra.props ?? []).includes(q);
 
 export interface WardrobeEntry<T extends string> {
   id: T;
@@ -154,7 +161,7 @@ export interface WardrobeEntry<T extends string> {
 export const STAGE_NAMES: Record<DisplayStage, string> = { auto: '자동(지금 단계)', baby: '새끼', adult: '성체', legend: '전설' };
 
 export interface WardrobeView {
-  current: { speciesId: SpeciesId; variant: Variant; accessory: Accessory; neck: Neck; effect: Effect; name: string; cardSpecies: SpeciesId | 'current'; displayStage: DisplayStage };
+  current: { speciesId: SpeciesId; variant: Variant; accessory: Accessory; neck: Neck; effect: Effect; prop: Prop; name: string; cardSpecies: SpeciesId | 'current'; displayStage: DisplayStage };
   /** 보여 줄 모습: 자동 + 이미 지나온 단계만 열려 있다(알은 고를 수 없다) */
   stages: WardrobeEntry<DisplayStage>[];
   /** 프로필 카드에 보여 줄 동물 후보: 가진 동물은 열려 있고, 못 가진 동물은 뽑기로 얻어야 한다 */
@@ -163,6 +170,7 @@ export interface WardrobeView {
   accessories: WardrobeEntry<Accessory>[];
   necks: WardrobeEntry<Neck>[];
   effects: WardrobeEntry<Effect>[];
+  props: WardrobeEntry<Prop>[];
 }
 
 export function buildWardrobe(
@@ -174,7 +182,7 @@ export function buildWardrobe(
   const reached = reachedStages(extra.stage ?? 'adult');
   const stageList: DisplayStage[] = ['auto', 'baby', 'adult', ...(hasLegendForm(current.speciesId) ? (['legend'] as const) : [])];
   return {
-    current: { name: '', cardSpecies: 'current', displayStage: 'auto', neck: 'none', effect: 'none', ...current },
+    current: { name: '', cardSpecies: 'current', displayStage: 'auto', neck: 'none', effect: 'none', prop: 'none', ...current },
     stages: stageList.map((st) => entry(st, STAGE_NAMES[st], st === 'auto' || (reached as string[]).includes(st), '아직 지나오지 않은 단계예요')),
     // 아직 못 뽑은 히든 동물은 이름을 숨긴다(뽑는 재미를 위해 ???로 보인다).
     species: SPECIES.map((s) => {
@@ -185,6 +193,7 @@ export function buildWardrobe(
     accessories: (Object.keys(ACCESSORY_NAMES) as Accessory[]).map((a) => entry(a, ACCESSORY_NAMES[a], accessoryUnlocked(g, a, extra), accessoryHint(a))),
     necks: (Object.keys(NECK_NAMES) as Neck[]).map((n) => entry(n, NECK_NAMES[n], neckUnlocked(n, extra), '꾸미기 뽑기로만 얻을 수 있어요')),
     effects: (Object.keys(EFFECT_NAMES) as Effect[]).map((e) => entry(e, EFFECT_NAMES[e], effectUnlocked(e, extra), '꾸미기 뽑기로만 얻을 수 있어요')),
+    props: (Object.keys(PROP_NAMES) as Prop[]).map((q) => entry(q, PROP_NAMES[q], propUnlocked(q, extra), '꾸미기 뽑기로만 얻을 수 있어요')),
   };
 }
 
@@ -193,6 +202,7 @@ export interface WardrobePatch {
   accessory?: Accessory;
   neck?: Neck;
   effect?: Effect;
+  prop?: Prop;
   /** 펫 이름(다듬어서 저장) */
   name?: string;
   /** 프로필 카드에 보여 줄 동물 */
@@ -208,6 +218,7 @@ export function allowedPatch(g: Growth, patch: WardrobePatch, extra: Extra = NO_
   if (patch.accessory !== undefined && accessoryUnlocked(g, patch.accessory, extra)) out.accessory = patch.accessory;
   if (patch.neck !== undefined && neckUnlocked(patch.neck, extra)) out.neck = patch.neck;
   if (patch.effect !== undefined && effectUnlocked(patch.effect, extra)) out.effect = patch.effect;
+  if (patch.prop !== undefined && propUnlocked(patch.prop, extra)) out.prop = patch.prop;
   if (patch.displayStage !== undefined && isDisplayStage(patch.displayStage)) {
     // 지나오지 않은 단계(와 알)로는 돌릴 수 없다. 자동은 늘 된다.
     if (patch.displayStage === 'auto' || (reachedStages(extra.stage ?? 'adult') as string[]).includes(patch.displayStage)) out.displayStage = patch.displayStage;

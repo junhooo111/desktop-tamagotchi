@@ -62,6 +62,7 @@ import {
   VARIANT_NAMES,
   accessoryUnlocked,
   neckUnlocked,
+  propUnlocked,
   effectUnlocked,
   allowedPatch,
   buildWardrobe,
@@ -94,6 +95,7 @@ import { cosmeticCollection } from '../shared/wardrobe.js';
 import { COSMETIC_ITEMS, cosmeticRarity, type CosmeticKind } from '../shared/cosmetics.js';
 import { cosmeticName } from '../shared/cosmetic-names.js';
 import { isEffect, isNeck } from '../shared/art/extras.js';
+import { isProp } from '../shared/art/props.js';
 import { loadCollection, saveCollection } from './collection-store.js';
 import type { PetView, TipBubble } from '../shared/view.js';
 import { debugProfileDir, findBrowser, launchArgs, type BrowserEnv } from './browser.js';
@@ -280,6 +282,7 @@ function currentView(): PetView {
     accessory: settings.accessory,
     neck: settings.neck,
     effect: settings.effect,
+    prop: settings.prop,
     dirty: isDirty(pet),
     ...(companion && settings.showCompanion && serverOn() && isSpeciesId(companion.species_id)
       ? { companion: { speciesId: companion.species_id, stage: companionStage(companion.species_id, companion.pet_xp) } }
@@ -676,7 +679,7 @@ function applySettings(patch: unknown): Settings {
     console.error('설정 저장 실패', error);
   }
   if (settings.language !== before.language && win && !win.isDestroyed()) win.webContents.send('pet:lang', currentLang());
-  if (settings.variant !== before.variant || settings.accessory !== before.accessory || settings.neck !== before.neck || settings.effect !== before.effect || settings.petName !== before.petName || settings.displayStage !== before.displayStage || settings.cardSpecies !== before.cardSpecies) scheduleCardPush();
+  if (settings.variant !== before.variant || settings.accessory !== before.accessory || settings.neck !== before.neck || settings.effect !== before.effect || settings.prop !== before.prop || settings.petName !== before.petName || settings.displayStage !== before.displayStage || settings.cardSpecies !== before.cardSpecies) scheduleCardPush();
   if (settings.showCompanion !== before.showCompanion) void refreshCompanion();
   if (settings.scanSeconds !== before.scanSeconds) scheduleScan();
   queue = visibleFindings(queue, settings);
@@ -825,14 +828,14 @@ const isKey = (v: unknown): v is string => typeof v === 'string' && v !== '' && 
 
 /** 뽑기로 얻은 꾸미기와 가진 동물(업적으로 연 것과 합쳐서 쓴다) */
 function wardrobeExtra(): Extra {
-  return { accessories: collection.accessories, variants: collection.variants, necks: collection.necks, effects: collection.effects, species: ownedIds(collection), stage: stageOf(pet) };
+  return { accessories: collection.accessories, variants: collection.variants, necks: collection.necks, effects: collection.effects, props: collection.props, species: ownedIds(collection), stage: stageOf(pet) };
 }
 
 /** 꾸미기 창에 보여 줄 값. 알이면 새끼 모습으로 미리 보여 준다. */
 function wardrobeData() {
   const stage = effectiveStage(stageOf(pet), settings.displayStage);
   return {
-    ...buildWardrobe(growth, { speciesId: pet.speciesId, variant: settings.variant, accessory: settings.accessory, neck: settings.neck, effect: settings.effect, name: settings.petName, cardSpecies: settings.cardSpecies, displayStage: settings.displayStage }, wardrobeExtra()),
+    ...buildWardrobe(growth, { speciesId: pet.speciesId, variant: settings.variant, accessory: settings.accessory, neck: settings.neck, effect: settings.effect, prop: settings.prop, name: settings.petName, cardSpecies: settings.cardSpecies, displayStage: settings.displayStage }, wardrobeExtra()),
     stage: (stage === 'egg' ? 'baby' : stage) as 'baby' | 'adult' | 'legend',
   };
 }
@@ -845,6 +848,7 @@ function applyWardrobe(raw: unknown) {
   if (isAccessory(r['accessory'])) wanted.accessory = r['accessory'];
   if (isNeck(r['neck'])) wanted.neck = r['neck'];
   if (isEffect(r['effect'])) wanted.effect = r['effect'];
+  if (isProp(r['prop'])) wanted.prop = r['prop'];
   if (typeof r['name'] === 'string') wanted.name = r['name'];
   if (isDisplayStage(r['displayStage'])) wanted.displayStage = r['displayStage'];
   if (r['cardSpecies'] === 'current' || isSpeciesId(r['cardSpecies'])) wanted.cardSpecies = r['cardSpecies'];
@@ -854,6 +858,7 @@ function applyWardrobe(raw: unknown) {
     ...(ok.accessory !== undefined ? { accessory: ok.accessory } : {}),
     ...(ok.neck !== undefined ? { neck: ok.neck } : {}),
     ...(ok.effect !== undefined ? { effect: ok.effect } : {}),
+    ...(ok.prop !== undefined ? { prop: ok.prop } : {}),
     ...(ok.name !== undefined ? { petName: ok.name } : {}),
     ...(ok.displayStage !== undefined ? { displayStage: ok.displayStage } : {}),
     ...(ok.cardSpecies !== undefined ? { cardSpecies: ok.cardSpecies } : {}),
@@ -1171,6 +1176,7 @@ function dropLostCosmetics(): void {
   if (!variantUnlocked(growth, settings.variant, extra)) patch.variant = 'default';
   if (!neckUnlocked(settings.neck, extra)) patch.neck = 'none';
   if (!effectUnlocked(settings.effect, extra)) patch.effect = 'none';
+  if (!propUnlocked(settings.prop, extra)) patch.prop = 'none';
   if (Object.keys(patch).length > 0) applySettings(patch);
 }
 
@@ -1604,7 +1610,8 @@ function cosmeticLeft(): number {
   const v = VARIANTS.filter((x) => x !== 'default' && !variantUnlocked(growth, x, wardrobeExtra())).length;
   const n = COSMETIC_ITEMS.filter((i) => i.gacha && i.kind === 'neck' && !collection.necks.includes(i.id as never)).length;
   const e = COSMETIC_ITEMS.filter((i) => i.gacha && i.kind === 'effect' && !collection.effects.includes(i.id as never)).length;
-  return a + v + n + e;
+  const q = COSMETIC_ITEMS.filter((i) => i.gacha && i.kind === 'prop' && !collection.props.includes(i.id as never)).length;
+  return a + v + n + e + q;
 }
 
 function collectionData() {
@@ -1671,6 +1678,7 @@ async function doPullCosmetic() {
       variants: kind === 'variant' && !collection.variants.includes(itemId as never) ? [...collection.variants, itemId as never] : collection.variants,
       necks: kind === 'neck' && !collection.necks.includes(itemId as never) ? [...collection.necks, itemId as never] : collection.necks,
       effects: kind === 'effect' && !collection.effects.includes(itemId as never) ? [...collection.effects, itemId as never] : collection.effects,
+      props: kind === 'prop' && !collection.props.includes(itemId as never) ? [...collection.props, itemId as never] : collection.props,
     };
     saveCollectionSafe();
     refreshWardrobe();
@@ -2623,7 +2631,7 @@ function setupIpc(): void {
     if (friendsWin && !friendsWin.isDestroyed()) friendsWin.close();
   });
   const badMarket = () => marketData().then((view) => ({ ok: false, message: L('잘못된 요청이에요', 'Invalid request'), view }));
-  const kinds = ['accessory', 'variant', 'neck', 'effect'];
+  const kinds = ['accessory', 'variant', 'neck', 'effect', 'prop'];
   ipcMain.handle('market:buy-cosmetic', (_e, id: unknown) => (isUuid(id) ? marketAct('buy_cosmetic_listing', { p_listing_id: id }, L('샀어요! 내 꾸미기에 들어왔어요', 'Bought! It is in your wardrobe now')) : badMarket()));
   ipcMain.handle('market:cancel-cosmetic', (_e, id: unknown) => (isUuid(id) ? marketAct('cancel_cosmetic_listing', { p_listing_id: id }, L('판매를 내렸어요', 'Listing removed')) : badMarket()));
   ipcMain.handle('market:sell-cosmetic', (_e, kind: unknown, item: unknown, price: unknown) =>

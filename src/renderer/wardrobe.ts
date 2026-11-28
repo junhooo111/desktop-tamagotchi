@@ -6,7 +6,8 @@
 import type { Lang } from '../shared/i18n.js';
 import { startUiLocalization } from './dom-i18n.js';
 import type { DisplayStage } from '../shared/pet.js';
-import { spriteSet, type Accessory, type Effect, type Neck, type SpeciesId, type Variant } from '../shared/species.js';
+import { spriteSet, type Accessory, type Effect, type Neck, type Prop, type SpeciesId, type Variant } from '../shared/species.js';
+import { drawProp, paintProp, propSize } from './prop-draw.js';
 import type { WardrobeEntry, WardrobePatch, WardrobeView } from '../shared/wardrobe.js';
 import { cosmeticItem } from '../shared/cosmetics.js';
 
@@ -39,10 +40,11 @@ interface Outfit {
   accessory: Accessory;
   neck: Neck;
   effect: Effect;
+  prop?: Prop;
 }
 
 /** 지금 입고 있는 것. 칸 그림은 여기서 한 칸만 바꿔서 그린다(전체 차림새를 보면서 고르게). */
-const current = (): Outfit => ({ variant: data.current.variant, accessory: data.current.accessory, neck: data.current.neck ?? 'none', effect: data.current.effect ?? 'none' });
+const current = (): Outfit => ({ variant: data.current.variant, accessory: data.current.accessory, neck: data.current.neck ?? 'none', effect: data.current.effect ?? 'none', prop: data.current.prop ?? 'none' });
 
 function paint(canvas: HTMLCanvasElement, outfit: Outfit): void {
   const ctx = canvas.getContext('2d');
@@ -58,6 +60,11 @@ function paint(canvas: HTMLCanvasElement, outfit: Outfit): void {
       ctx.fillRect(x * scale, y * scale, scale, scale);
     });
   });
+  // 소품은 펫 오른쪽 아래에 겹쳐 그린다
+  if (outfit.prop && outfit.prop !== 'none') {
+    const { w, h } = propSize(outfit.prop);
+    drawProp(ctx, outfit.prop, canvas.width - (w + 1) * scale, canvas.height - (h + 1) * scale, scale);
+  }
 }
 
 function drawPreview(): void {
@@ -65,7 +72,7 @@ function drawPreview(): void {
 }
 
 /** thumb 이 있으면 그 칸을 입었을 때의 모습을 작은 그림으로 함께 보여 준다(옷장처럼). */
-function group<T extends string>(boxId: string, entries: readonly WardrobeEntry<T>[], selected: T, patchOf: (id: T) => WardrobePatch, thumb?: (id: T) => Outfit, kind?: 'accessory' | 'variant' | 'neck' | 'effect'): void {
+function group<T extends string>(boxId: string, entries: readonly WardrobeEntry<T>[], selected: T, patchOf: (id: T) => WardrobePatch, thumb?: (id: T) => Outfit, kind?: 'accessory' | 'variant' | 'neck' | 'effect' | 'prop'): void {
   const box = $(boxId);
   box.textContent = '';
   for (const e of entries) {
@@ -78,7 +85,8 @@ function group<T extends string>(boxId: string, entries: readonly WardrobeEntry<
       c.height = 64;
       c.setAttribute('aria-hidden', 'true');
       const t = thumb(e.id);
-      paint(c, t);
+      if (kind === 'prop') paintProp(c, e.id as Prop);
+      else paint(c, t);
       const span = document.createElement('span');
       span.className = 'label';
       span.textContent = label;
@@ -109,6 +117,7 @@ function render(): void {
   group<Accessory>('accessories', data.accessories, data.current.accessory, (id) => ({ accessory: id }), (id) => ({ ...current(), accessory: id }), 'accessory');
   group<Neck>('necks', data.necks ?? [], data.current.neck ?? 'none', (id) => ({ neck: id }), (id) => ({ ...current(), neck: id }), 'neck');
   group<Effect>('effects', data.effects ?? [], data.current.effect ?? 'none', (id) => ({ effect: id }), (id) => ({ ...current(), effect: id }), 'effect');
+  group<Prop>('props', data.props ?? [], data.current.prop ?? 'none', (id) => ({ prop: id }), (id) => ({ ...current(), prop: id }), 'prop');
   const cardEntries: WardrobeEntry<SpeciesId | 'current'>[] = [{ id: 'current', name: '지금 키우는 펫', unlocked: true, hint: '' }, ...data.species];
   group<SpeciesId | 'current'>('card-species', cardEntries, data.current.cardSpecies, (id) => ({ cardSpecies: id }));
   // 입력 중인 글자를 새로고침이 덮어쓰지 않게, 입력칸에 포커스가 없을 때만 값을 맞춘다.

@@ -11,6 +11,8 @@ import { hasLegendForm, spriteSet, type Accessory, type Effect, type Neck, type 
 import { cosmeticName } from '../shared/cosmetic-names.js';
 import type { CosmeticKind } from '../shared/cosmetics.js';
 import { nameEn } from '../shared/en-text.js';
+import type { Prop } from '../shared/art/props.js';
+import { paintProp } from './prop-draw.js';
 
 export interface Listing {
   listing_id: string;
@@ -130,12 +132,21 @@ function preview(id: string, stage: 'baby' | 'adult' | 'legend', style: { varian
 
 /** 꾸미기 하나를 지금 키우는 펫에게 입힌 미리보기 */
 function cosmeticPreview(kind: CosmeticKind, item: string): HTMLCanvasElement {
+  if (kind === 'prop') {
+    const c = document.createElement('canvas');
+    c.width = 64;
+    c.height = 64;
+    c.className = 'preview';
+    c.setAttribute('aria-hidden', 'true');
+    paintProp(c, item as Prop);
+    return c;
+  }
   const me = view?.me ?? { speciesId: 'cat' as SpeciesId, stage: 'adult' as const };
   const style: { variant?: Variant; accessory?: Accessory; neck?: Neck; effect?: Effect } = {};
   if (kind === 'accessory') style.accessory = item as Accessory;
   else if (kind === 'variant') style.variant = item as Variant;
   else if (kind === 'neck') style.neck = item as Neck;
-  else style.effect = item as Effect;
+  else if (kind === 'effect') style.effect = item as Effect;
   return preview(me.speciesId, me.stage, style);
 }
 

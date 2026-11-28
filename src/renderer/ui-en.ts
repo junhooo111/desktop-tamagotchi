@@ -120,6 +120,8 @@ export const UI_EN: Record<string, string> = {
   '꾸미기 수집 도감': 'Cosmetics collection',
   '꾸미기 뽑기에 나오는 것을 얼마나 모았는지 등급별로 보여 줘요(업적으로 연 것도 포함).': 'How many of the gacha cosmetics you have, by grade (including ones unlocked by achievements).',
   '목 장식 고르기': 'Choose neck accessory',
+  소품: 'Props',
+  '소품 고르기': 'Choose a prop',
   효과: 'Effects',
   '효과 고르기': 'Choose effect',
   '프로필 카드에 보여 줄 펫': 'Pet shown on the profile card',

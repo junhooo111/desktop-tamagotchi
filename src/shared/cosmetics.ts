@@ -7,7 +7,7 @@
  */
 import { PITY_RESETS_ON, type Rarity } from './rarity.js';
 
-export type CosmeticKind = 'accessory' | 'variant' | 'neck' | 'effect';
+export type CosmeticKind = 'accessory' | 'variant' | 'neck' | 'effect' | 'prop';
 
 export interface CosmeticItem {
   kind: CosmeticKind;
@@ -21,6 +21,8 @@ const A = (id: string, rarity: Rarity, gacha = true): CosmeticItem => ({ kind: '
 const V = (id: string, rarity: Rarity): CosmeticItem => ({ kind: 'variant', id, rarity, gacha: true });
 const N = (id: string, rarity: Rarity): CosmeticItem => ({ kind: 'neck', id, rarity, gacha: true });
 const E = (id: string, rarity: Rarity): CosmeticItem => ({ kind: 'effect', id, rarity, gacha: true });
+
+const P = (id: string, rarity: Rarity): CosmeticItem => ({ kind: 'prop', id, rarity, gacha: true });
 
 export const COSMETIC_ITEMS: readonly CosmeticItem[] = [
   // 일반
@@ -66,6 +68,15 @@ export const COSMETIC_ITEMS: readonly CosmeticItem[] = [
   N('starpendant', 'special'),
   N('goldchain', 'legend'),
   E('flameaura', 'legend'),
+  // 소품(4단계): 펫 곁을 따라다니는 물건(모두 꾸미기 뽑기 전용)
+  P('ball', 'common'),
+  P('bone', 'common'),
+  P('fish', 'uncommon'),
+  P('balloon', 'uncommon'),
+  P('pot', 'rare'),
+  P('butterfly', 'rare'),
+  P('lantern', 'special'),
+  P('dragonegg', 'legend'),
   // 업적 전용(뽑기에는 나오지 않는다)
   A('headband', 'rare', false),
   A('antenna', 'rare', false),
@@ -81,7 +92,7 @@ export const COSMETIC_PITY = 25;
 /** 업적으로도 열 수 있는 꾸미기(장식 8종 + 색 3종): 업적으로 열어 둔 사람이 팔고도 계속 쓸 수 있어서 거래·선물을 막는다(서버 cosmetic_items.tradable 과 같다) */
 const ACHIEVEMENT_UNLOCKABLE: ReadonlySet<string> = new Set(['ribbon', 'glasses', 'crown', 'wings', 'sprout', 'flower', 'partyhat', 'halo', 'pastel', 'deep', 'mono']);
 
-/** 팔거나 선물할 수 있는 꾸미기: 뽑기로만 얻는 25종 */
+/** 팔거나 선물할 수 있는 꾸미기: 뽑기로만 얻는 33종 */
 export const cosmeticTradable = (kind: CosmeticKind, id: string): boolean => COSMETIC_ITEMS.some((i) => i.kind === kind && i.id === id && i.gacha) && !ACHIEVEMENT_UNLOCKABLE.has(id);
 
 export const cosmeticItem = (kind: CosmeticKind, id: string): CosmeticItem | undefined => COSMETIC_ITEMS.find((i) => i.kind === kind && i.id === id);

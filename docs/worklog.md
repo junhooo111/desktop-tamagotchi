@@ -507,3 +507,8 @@
 - 서버 `0024_companion.sql`(운영 적용): `profiles.companion_friend`, `set_companion`·`companion_current`·`companion_tick`(시간대 1번, 하루 6번, 친밀도 +3, 내 펫 +6, 친구 몫 +6 은 `companion_pending` 에 쌓음)·`companion_claim`. 시험 `supabase/tests/companion.test.ts`.
 - 앱: 친구 카드 `🐾 데리고 다니기`, 설정 `showCompanion`(기본 켜짐). `PetView.companion` → 렌더러가 절반 크기(2x2 블록에서 먼저 보이는 색)로 내 펫 뒤에 따라온다. 메인 `companionLoop` 가 10분마다 서버 틱·몫 가져오기를 한다(서버가 시간대 중복을 거른다).
 - 한계: 친구 펫의 꾸미기(장식 등)는 보이지 않는다(종류·레벨만).
+
+## 2026-11-28 — 소품(펫 곁 물건)
+
+- 서버 `0025_props.sql`(운영 적용): 꾸미기 종류 `prop` 추가, 8종(공·뼈다귀 일반 / 생선·풍선 고급 / 화분·나비 희귀 / 등불 특별 / 용의 알 전설), 모두 뽑기 전용·거래 가능(뽑기 36→44종, 거래 가능 25→33종).
+- 앱: `art/props.ts`(32 칸 그리드에 그려 윤곽선 두르고 잘라 낸 문자 그림), `prop-draw.ts`(펫 창·옷장·뽑기·경매장 공용). 렌더러가 펫 앞 바닥에서 튀거나(ground) 머리 높이에서 떠 있게(float) 그린다. 설정 `prop`, 옷장 `소품` 구역. 프로필 카드에는 아직 안 나온다(Edge Function 변경 없음).

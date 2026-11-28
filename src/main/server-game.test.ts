@@ -41,7 +41,7 @@ describe('ServerGame.refresh / activate', () => {
     const { rpc } = fakeRpc({}, profileTables);
     const g = new ServerGame(rpc, tmpDir());
     expect((await g.refresh()).ok).toBe(true);
-    expect(g.state).toEqual({ tickets: 15, coins: 230, imported: true, pity: 7, equippedSpecies: 'dragon', species: { cat: 250, dragon: 40 }, accessories: ['crown'], variants: ['pastel'], necks: [], effects: [] });
+    expect(g.state).toEqual({ tickets: 15, coins: 230, imported: true, pity: 7, equippedSpecies: 'dragon', species: { cat: 250, dragon: 40 }, accessories: ['crown'], variants: ['pastel'], necks: [], effects: [], props: [] });
   });
 
   it('activate 는 기존 진행 가져오기를 부른 뒤 서버 상태를 읽는다', async () => {

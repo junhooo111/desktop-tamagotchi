@@ -28,6 +28,7 @@ export { FRAME_NAMES, type FrameName, type Frames } from './art/frames.js';
 export { ACCESSORIES, type Accessory } from './art/accessory.js';
 export { DEFAULT_STYLE, VARIANTS, isAccessory, isVariant, type PetStyle, type Variant } from './art/style.js';
 export { EFFECTS, NECKS, isEffect, isNeck, type Effect, type Neck } from './art/extras.js';
+export { PROPS, isProp, type Prop } from './art/props.js';
 export { SIZE as SPRITE_SIZE };
 
 export type SpeciesId =

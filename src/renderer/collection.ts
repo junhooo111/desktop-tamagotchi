@@ -9,6 +9,21 @@ import { nameEn } from '../shared/en-text.js';
 import { COSMETIC_ITEMS, cosmeticRarity, type CosmeticKind } from '../shared/cosmetics.js';
 import { cosmeticName } from '../shared/cosmetic-names.js';
 import type { Effect, Neck } from '../shared/art/extras.js';
+import type { Prop } from '../shared/art/props.js';
+import { paintProp } from './prop-draw.js';
+import { PROP_COLORS, propRows } from '../shared/art/props.js';
+
+/** 소품 그림을 32x32 칸 가운데(바닥 쪽)에 놓는다(룰렛 칸은 펫과 같은 크기의 그림을 쓴다). */
+function centeredProp(prop: Prop): string[] {
+  const rows = propRows(prop);
+  const w = rows[0]?.length ?? 0;
+  const x0 = Math.floor((32 - w) / 2);
+  const y0 = Math.floor((32 - rows.length) / 2);
+  return Array.from({ length: 32 }, (_, y) => {
+    const r = rows[y - y0];
+    return r ? '.'.repeat(x0) + r + '.'.repeat(32 - x0 - w) : '.'.repeat(32);
+  });
+}
 import { RARITY_NAME, RARITY_NAME_EN, isRarity, type Rarity } from '../shared/rarity.js';
 import { DUPLICATE_XP, type CollectionEntry, type CollectionView } from '../shared/collection.js';
 import { levelTier } from '../shared/pet.js';
@@ -132,7 +147,8 @@ export function buildReel(result: PullResult & { ok: true }, entries: readonly C
       if (kind === 'accessory') style.accessory = item as Accessory;
       else if (kind === 'variant') style.variant = item as Variant;
       else if (kind === 'neck') style.neck = item as Neck;
-      else style.effect = item as Effect;
+      else if (kind === 'effect') style.effect = item as Effect;
+      if (kind === 'prop') return { rows: centeredProp(item as Prop), palette: PROP_COLORS[item as Exclude<Prop, 'none'>], rarity: 'plain' };
       const set = spriteSet(id, stage, style);
       return { rows: set.frames.idleA, palette: set.palette, rarity: 'plain' };
     };
@@ -368,9 +384,12 @@ function showResult(result: PullResult): void {
       if (result.kind === 'accessory') style.accessory = result.itemId as Accessory;
       else if (result.kind === 'variant') style.variant = result.itemId as Variant;
       else if (result.kind === 'neck') style.neck = result.itemId as Neck;
-      else style.effect = result.itemId as Effect;
-      const set = spriteSet(active.id, stage, style);
-      drawSprite(canvas, set.frames.idleA, set.palette, 4);
+      else if (result.kind === 'effect') style.effect = result.itemId as Effect;
+      if (result.kind === 'prop') paintProp(canvas, result.itemId as Prop);
+      else {
+        const set = spriteSet(active.id, stage, style);
+        drawSprite(canvas, set.frames.idleA, set.palette, 4);
+      }
     }
   }
 }

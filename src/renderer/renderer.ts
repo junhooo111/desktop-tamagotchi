@@ -7,6 +7,8 @@ import { spriteSet, type FrameName, type SpriteSet } from '../shared/species.js'
 import type { StatusBubble } from '../shared/status.js';
 import type { NoticeBubble, NoticeMessage, PetView, TipBubble } from '../shared/view.js';
 import { localize, setUiLang, startUiLocalization } from './dom-i18n.js';
+import { PROP_MOTION } from '../shared/art/props.js';
+import { drawProp, propSize } from './prop-draw.js';
 
 interface PetApi {
   getView(): Promise<PetView>;
@@ -235,6 +237,7 @@ function draw(now: number): void {
   if (pose.hearts) drawHearts(centerX, top, now, scale);
   if (pose.dizzy) drawDizzy(centerX, top, now, scale);
   drawCompanion(view, pose, rect, scale, now);
+  drawPropNear(view, pose, rect, scale, now);
   if (view.stage === 'legend') drawAura({ x: offsetX, y: offsetY, size: rect.size }, now);
   if (pose.bubbles) drawBubbles({ x: offsetX, y: offsetY, size: rect.size }, now, centerX, top, scale);
   if (view.dirty && !pose.bubbles) drawStink(centerX, top, now);
@@ -287,6 +290,27 @@ function drawCompanion(v: PetView, pose: ReturnType<typeof resolvePose>, rect: {
       ctx.fillRect(x0 + px * cell, y0 + y * cell, cell, cell);
     }
   }
+}
+
+// ---- 소품: 펫 앞에서 통통 튀거나(공·뼈다귀…) 머리 높이에서 둥실 떠 있다(풍선·나비…) ----
+function drawPropNear(v: PetView, pose: ReturnType<typeof resolvePose>, rect: { x: number; size: number }, scale: number, now: number): void {
+  const prop = v.prop;
+  if (!prop || prop === 'none' || v.surface !== 'floor' || v.mode === 'hang') return;
+  const { w, h } = propSize(prop);
+  const frontSign = pose.orientation.flip ? -1 : 1;
+  const centerX = rect.x + rect.size / 2;
+  const motion = PROP_MOTION[prop];
+  let x: number;
+  let y: number;
+  if (motion === 'ground') {
+    const bounce = v.mode === 'walk' ? Math.abs(Math.sin(now / 160)) * 4 * scale : Math.abs(Math.sin(now / 700)) * 2 * scale;
+    x = centerX + frontSign * (rect.size * 0.5 + 2 * scale) - (frontSign < 0 ? w * scale : 0);
+    y = WINDOW.height - h * scale - bounce;
+  } else {
+    x = centerX + frontSign * (rect.size * 0.42) - (w * scale) / 2;
+    y = figureTop(v) - h * scale * 0.4 + Math.sin(now / 450) * 3 * scale;
+  }
+  drawProp(ctx, prop, x, y, scale);
 }
 
 const statusEl = document.getElementById('status') as HTMLElement;

@@ -3,6 +3,7 @@ import type { Dir, Mode, PlayKind, Surface } from './motion.js';
 import type { Mood, Stage } from './pet.js';
 import type { Accessory, SpeciesId, Variant } from './species.js';
 import type { Effect, Neck } from './art/extras.js';
+import type { Prop } from './art/props.js';
 
 export interface PetView {
   speciesId: SpeciesId;
@@ -24,6 +25,8 @@ export interface PetView {
   accessory: Accessory;
   neck?: Neck;
   effect?: Effect;
+  /** 펫 곁을 따라다니는 소품 */
+  prop?: Prop;
   /** 더러워서 냄새가 난다(청결이 낮다) */
   dirty?: boolean;
   /** 내 펫 옆을 따라다니는 친구의 펫(절반 크기). 없으면 그리지 않는다. */

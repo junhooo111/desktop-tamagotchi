@@ -1,6 +1,6 @@
 /** 꾸미기 이름(한국어). 색은 "~ 색" 으로 부른다. */
 import type { CosmeticKind } from './cosmetics.js';
-import { ACCESSORY_NAMES, EFFECT_NAMES, NECK_NAMES, VARIANT_NAMES } from './wardrobe.js';
+import { ACCESSORY_NAMES, EFFECT_NAMES, NECK_NAMES, PROP_NAMES, VARIANT_NAMES } from './wardrobe.js';
 
 export function cosmeticName(kind: CosmeticKind, id: string): string {
   switch (kind) {
@@ -12,5 +12,7 @@ export function cosmeticName(kind: CosmeticKind, id: string): string {
       return (NECK_NAMES as Record<string, string>)[id] ?? id;
     case 'effect':
       return (EFFECT_NAMES as Record<string, string>)[id] ?? id;
+    case 'prop':
+      return (PROP_NAMES as Record<string, string>)[id] ?? id;
   }
 }
