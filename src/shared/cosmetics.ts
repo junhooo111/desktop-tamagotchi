@@ -7,7 +7,7 @@
  */
 import { PITY_RESETS_ON, type Rarity } from './rarity.js';
 
-export type CosmeticKind = 'accessory' | 'variant';
+export type CosmeticKind = 'accessory' | 'variant' | 'neck' | 'effect';
 
 export interface CosmeticItem {
   kind: CosmeticKind;
@@ -19,6 +19,8 @@ export interface CosmeticItem {
 
 const A = (id: string, rarity: Rarity, gacha = true): CosmeticItem => ({ kind: 'accessory', id, rarity, gacha });
 const V = (id: string, rarity: Rarity): CosmeticItem => ({ kind: 'variant', id, rarity, gacha: true });
+const N = (id: string, rarity: Rarity): CosmeticItem => ({ kind: 'neck', id, rarity, gacha: true });
+const E = (id: string, rarity: Rarity): CosmeticItem => ({ kind: 'effect', id, rarity, gacha: true });
 
 export const COSMETIC_ITEMS: readonly CosmeticItem[] = [
   // 일반
@@ -52,6 +54,18 @@ export const COSMETIC_ITEMS: readonly CosmeticItem[] = [
   A('devil', 'special'),
   A('unicornhorn', 'special'),
   A('flamecrown', 'legend'),
+  // 새 종류(3단계): 목 장식과 효과(모두 꾸미기 뽑기 전용)
+  N('bell', 'common'),
+  N('scarf', 'common'),
+  N('bowtie', 'uncommon'),
+  E('sparkles', 'uncommon'),
+  E('hearts', 'uncommon'),
+  N('pearl', 'rare'),
+  E('notes', 'rare'),
+  E('snow', 'rare'),
+  N('starpendant', 'special'),
+  N('goldchain', 'legend'),
+  E('flameaura', 'legend'),
   // 업적 전용(뽑기에는 나오지 않는다)
   A('headband', 'rare', false),
   A('antenna', 'rare', false),

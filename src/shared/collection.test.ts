@@ -28,7 +28,7 @@ import {
 import { LEGEND_LEVEL, createPet, levelOf, stageOf } from './pet.js';
 import { GRADE_PERCENT, RARITIES } from './rarity.js';
 import { COSMETIC_PITY } from './cosmetics.js';
-import { ACCESSORIES, HIDDEN_SPECIES, SPECIES, VARIANTS, speciesOf } from './species.js';
+import { ACCESSORIES, EFFECTS, HIDDEN_SPECIES, NECKS, SPECIES, VARIANTS, speciesOf } from './species.js';
 import { GACHA_ACCESSORIES } from './wardrobe.js';
 
 const NOW = 1_000_000;
@@ -205,12 +205,12 @@ describe('꾸미기 뽑기', () => {
     const high = pullCosmetic(c, gach, none, seq(0.999, 0));
     expect(high.result).toMatchObject({ ok: true, rarity: 'legend', item: { kind: 'accessory', id: 'wings' } });
     // 일반 구간(안 가진 것이 남은 5개 등급의 합 99 중 50)
-    expect(pullCosmetic(c, gach, none, seq(0.49, 0.99)).result).toMatchObject({ ok: true, rarity: 'common', item: { id: 'bandana' } }); // 일반의 마지막
+    expect(pullCosmetic(c, gach, none, seq(0.49, 0.99)).result).toMatchObject({ ok: true, rarity: 'common', item: { id: 'scarf' } }); // 일반의 마지막(장식 7 + 목 장식 2)
     expect(pullCosmetic(c, gach, none, seq(0.51, 0)).result).toMatchObject({ ok: true, rarity: 'uncommon' });
   });
 
   it('한 등급을 다 가졌으면 남은 등급끼리 다시 나눈다(이미 가진 것은 절대 다시 나오지 않는다)', () => {
-    const owned = { ...start(), tickets: 100, accessories: ['ribbon', 'sprout', 'flower', 'cap', 'beret', 'beanie', 'bandana'] as never[] };
+    const owned = { ...start(), tickets: 100, accessories: ['ribbon', 'sprout', 'flower', 'cap', 'beret', 'beanie', 'bandana'] as never[], necks: ['bell', 'scarf'] as never[] };
     const r = pullCosmetic(owned, { accessories: GACHA_ACCESSORIES, variants: VARIANTS }, none, seq(0, 0));
     expect(r.result).toMatchObject({ ok: true, rarity: 'uncommon' }); // 일반이 다 모였으니 가장 낮은 남은 등급
   });
@@ -224,12 +224,12 @@ describe('꾸미기 뽑기', () => {
     expect(before.result).toMatchObject({ ok: true, rarity: 'common' });
     expect(before.collection.cosmeticPity).toBe(COSMETIC_PITY - 1);
     // 전설을 이미 가졌으면 천장이어도 다른 등급이 나온다
-    const hasWings = { ...near, accessories: ['wings', 'flamecrown'] as never[] };
+    const hasWings = { ...near, accessories: ['wings', 'flamecrown'] as never[], necks: ['goldchain'] as never[], effects: ['flameaura'] as never[] };
     expect(pullCosmetic(hasWings, { accessories: GACHA_ACCESSORIES, variants: VARIANTS }, none, () => 0).result).toMatchObject({ ok: true, rarity: 'common' });
   });
 
   it('다 모으면 더 뽑을 수 없고 뽑기권도 쓰지 않는다', () => {
-    const c = withTickets({ ...start(), accessories: ACCESSORIES.filter((a) => a !== 'none'), variants: VARIANTS.filter((v) => v !== 'default') }, 10);
+    const c = withTickets({ ...start(), accessories: ACCESSORIES.filter((a) => a !== 'none'), variants: VARIANTS.filter((v) => v !== 'default'), necks: NECKS.filter((n) => n !== 'none'), effects: EFFECTS.filter((e) => e !== 'none') }, 10);
     const r = pullCosmetic(c, all, none, () => 0);
     expect(r.result).toMatchObject({ ok: false, reason: expect.stringContaining('모두') });
     expect(r.collection.tickets).toBe(10);

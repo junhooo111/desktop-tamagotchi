@@ -59,7 +59,7 @@ let view: PetView | null = null;
 let bubbleTimer: number | undefined;
 
 function sheetOf(v: PetView): SpriteSet {
-  return spriteSet(v.speciesId, v.stage, { variant: v.variant ?? 'default', accessory: v.accessory ?? 'none' });
+  return spriteSet(v.speciesId, v.stage, { variant: v.variant ?? 'default', accessory: v.accessory ?? 'none', neck: v.neck ?? 'none', effect: v.effect ?? 'none' });
 }
 
 /** 펫이 서 있는 자리(창의 아래쪽 가운데). 그림이 돌아가도 같은 칸을 쓴다. */
@@ -78,7 +78,7 @@ function figureTop(v: PetView): number {
 // 같은 자세는 매번 다시 뒤집고 돌리지 않도록 저장해 둔다.
 const rowCache = new Map<string, string[]>();
 function rowsFor(v: PetView, frame: FrameName, eyesClosed: boolean, flip: boolean, quarter: number): string[] {
-  const key = `${v.stage === 'egg' ? 'egg' : `${v.speciesId}|${v.variant ?? 'default'}|${v.accessory ?? 'none'}`}|${v.stage}|${frame}|${eyesClosed}|${flip}|${quarter}`;
+  const key = `${v.stage === 'egg' ? 'egg' : `${v.speciesId}|${v.variant ?? 'default'}|${v.accessory ?? 'none'}|${v.neck ?? 'none'}|${v.effect ?? 'none'}`}|${v.stage}|${frame}|${eyesClosed}|${flip}|${quarter}`;
   const cached = rowCache.get(key);
   if (cached) return cached;
   const sheet = sheetOf(v);

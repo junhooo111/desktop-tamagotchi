@@ -6,7 +6,7 @@
 import type { Lang } from '../shared/i18n.js';
 import { startUiLocalization } from './dom-i18n.js';
 import type { DisplayStage } from '../shared/pet.js';
-import { spriteSet, type Accessory, type SpeciesId, type Variant } from '../shared/species.js';
+import { spriteSet, type Accessory, type Effect, type Neck, type SpeciesId, type Variant } from '../shared/species.js';
 import type { WardrobeEntry, WardrobePatch, WardrobeView } from '../shared/wardrobe.js';
 import { cosmeticItem } from '../shared/cosmetics.js';
 
@@ -34,12 +34,22 @@ const $ = <T extends HTMLElement>(id: string): T => document.getElementById(id) 
 let data: WardrobeData;
 
 /** 캔버스에 펫을 그린다. 칸 크기에 맞게 배율을 정한다. */
-function paint(canvas: HTMLCanvasElement, variant: Variant, accessory: Accessory): void {
+interface Outfit {
+  variant: Variant;
+  accessory: Accessory;
+  neck: Neck;
+  effect: Effect;
+}
+
+/** 지금 입고 있는 것. 칸 그림은 여기서 한 칸만 바꿔서 그린다(전체 차림새를 보면서 고르게). */
+const current = (): Outfit => ({ variant: data.current.variant, accessory: data.current.accessory, neck: data.current.neck ?? 'none', effect: data.current.effect ?? 'none' });
+
+function paint(canvas: HTMLCanvasElement, outfit: Outfit): void {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   const scale = canvas.width / 32;
-  const set = spriteSet(data.current.speciesId, data.stage, { variant, accessory });
+  const set = spriteSet(data.current.speciesId, data.stage, outfit);
   set.frames.idleA.forEach((row, y) => {
     [...row].forEach((ch, x) => {
       const color = ch === '.' ? undefined : set.palette[ch];
@@ -51,11 +61,11 @@ function paint(canvas: HTMLCanvasElement, variant: Variant, accessory: Accessory
 }
 
 function drawPreview(): void {
-  paint($<HTMLCanvasElement>('preview'), data.current.variant, data.current.accessory);
+  paint($<HTMLCanvasElement>('preview'), current());
 }
 
 /** thumb 이 있으면 그 칸을 입었을 때의 모습을 작은 그림으로 함께 보여 준다(옷장처럼). */
-function group<T extends string>(boxId: string, entries: readonly WardrobeEntry<T>[], selected: T, patchOf: (id: T) => WardrobePatch, thumb?: (id: T) => { variant: Variant; accessory: Accessory }, kind?: 'accessory' | 'variant'): void {
+function group<T extends string>(boxId: string, entries: readonly WardrobeEntry<T>[], selected: T, patchOf: (id: T) => WardrobePatch, thumb?: (id: T) => Outfit, kind?: 'accessory' | 'variant' | 'neck' | 'effect'): void {
   const box = $(boxId);
   box.textContent = '';
   for (const e of entries) {
@@ -68,7 +78,7 @@ function group<T extends string>(boxId: string, entries: readonly WardrobeEntry<
       c.height = 64;
       c.setAttribute('aria-hidden', 'true');
       const t = thumb(e.id);
-      paint(c, t.variant, t.accessory);
+      paint(c, t);
       const span = document.createElement('span');
       span.className = 'label';
       span.textContent = label;
@@ -95,8 +105,10 @@ function group<T extends string>(boxId: string, entries: readonly WardrobeEntry<
 
 function render(): void {
   group<DisplayStage>('stages', data.stages, data.current.displayStage, (id) => ({ displayStage: id }));
-  group<Variant>('variants', data.variants, data.current.variant, (id) => ({ variant: id }), (id) => ({ variant: id, accessory: data.current.accessory }), 'variant');
-  group<Accessory>('accessories', data.accessories, data.current.accessory, (id) => ({ accessory: id }), (id) => ({ variant: data.current.variant, accessory: id }), 'accessory');
+  group<Variant>('variants', data.variants, data.current.variant, (id) => ({ variant: id }), (id) => ({ ...current(), variant: id }), 'variant');
+  group<Accessory>('accessories', data.accessories, data.current.accessory, (id) => ({ accessory: id }), (id) => ({ ...current(), accessory: id }), 'accessory');
+  group<Neck>('necks', data.necks ?? [], data.current.neck ?? 'none', (id) => ({ neck: id }), (id) => ({ ...current(), neck: id }), 'neck');
+  group<Effect>('effects', data.effects ?? [], data.current.effect ?? 'none', (id) => ({ effect: id }), (id) => ({ ...current(), effect: id }), 'effect');
   const cardEntries: WardrobeEntry<SpeciesId | 'current'>[] = [{ id: 'current', name: '지금 키우는 펫', unlocked: true, hint: '' }, ...data.species];
   group<SpeciesId | 'current'>('card-species', cardEntries, data.current.cardSpecies, (id) => ({ cardSpecies: id }));
   // 입력 중인 글자를 새로고침이 덮어쓰지 않게, 입력칸에 포커스가 없을 때만 값을 맞춘다.

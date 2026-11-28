@@ -6,8 +6,9 @@
 import type { Lang } from '../shared/i18n.js';
 import { currentUiLang, startUiLocalization } from './dom-i18n.js';
 import { nameEn } from '../shared/en-text.js';
-import { COSMETIC_ITEMS, cosmeticRarity } from '../shared/cosmetics.js';
-import { ACCESSORY_NAMES, VARIANT_NAMES } from '../shared/wardrobe.js';
+import { COSMETIC_ITEMS, cosmeticRarity, type CosmeticKind } from '../shared/cosmetics.js';
+import { cosmeticName } from '../shared/cosmetic-names.js';
+import type { Effect, Neck } from '../shared/art/extras.js';
 import { RARITY_NAME, RARITY_NAME_EN, isRarity, type Rarity } from '../shared/rarity.js';
 import { DUPLICATE_XP, type CollectionEntry, type CollectionView } from '../shared/collection.js';
 import { levelTier } from '../shared/pet.js';
@@ -17,7 +18,7 @@ type SpeciesPullResult = { ok: true; message: string; view: CollectionView; id: 
 type PullResult =
   | { ok: false; message: string; view: CollectionView }
   | SpeciesPullResult
-  | { ok: true; message: string; view: CollectionView; kind: 'accessory' | 'variant'; itemId: string; rarity?: Rarity };
+  | { ok: true; message: string; view: CollectionView; kind: CosmeticKind; itemId: string; rarity?: Rarity };
 
 interface CollectionApi {
   get(): Promise<CollectionView>;
@@ -125,8 +126,14 @@ export function buildReel(result: PullResult & { ok: true }, entries: readonly C
   } else {
     const id = activeStyle?.id ?? 'cat';
     const stage = activeStyle?.stage ?? 'adult';
-    const styled = (variant: Variant, accessory: Accessory): ReelItem => {
-      const set = spriteSet(id, stage, { variant, accessory });
+    /** 꾸미기 하나를 입힌 모습(종류에 따라 그 칸만 바꾼다) */
+    const wear = (kind: CosmeticKind, item: string): ReelItem => {
+      const style = { variant: 'default' as Variant, accessory: 'none' as Accessory, neck: 'none' as Neck, effect: 'none' as Effect };
+      if (kind === 'accessory') style.accessory = item as Accessory;
+      else if (kind === 'variant') style.variant = item as Variant;
+      else if (kind === 'neck') style.neck = item as Neck;
+      else style.effect = item as Effect;
+      const set = spriteSet(id, stage, style);
       return { rows: set.frames.idleA, palette: set.palette, rarity: 'plain' };
     };
     // 지나가는 칸도 꾸미기마다 등급 색으로 빛난다(뽑기에 나오는 것만, 등급 비중은 동물 룰렛과 같다)
@@ -143,12 +150,10 @@ export function buildReel(result: PullResult & { ok: true }, entries: readonly C
         }
       }
       const it = pick(pool.filter((i) => i.rarity === grade));
-      const base = it.kind === 'accessory' ? styled('default', it.id as Accessory) : styled(it.id as Variant, 'none');
-      return { ...base, rarity: it.rarity };
+      return { ...wear(it.kind, it.id), rarity: it.rarity };
     };
     for (let i = 0; i < CELLS; i++) items.push(fill());
-    const finalBase = result.kind === 'accessory' ? styled('default', result.itemId as Accessory) : styled(result.itemId as Variant, 'none');
-    items[final] = { ...finalBase, rarity: result.rarity ?? cosmeticRarity(result.kind, result.itemId) };
+    items[final] = { ...wear(result.kind, result.itemId), rarity: result.rarity ?? cosmeticRarity(result.kind, result.itemId) };
   }
   return { items, final, side };
 }
@@ -320,9 +325,9 @@ function describePull(text: HTMLElement, r: SpeciesPullResult, rarity: Rarity): 
 }
 
 /** "마법사 모자를 얻었어요! (희귀)" — 등급에 색이 입혀진다. */
-function describeCosmetic(text: HTMLElement, kind: 'accessory' | 'variant', itemId: string, rarity: Rarity): void {
+function describeCosmetic(text: HTMLElement, kind: CosmeticKind, itemId: string, rarity: Rarity): void {
   const en = currentUiLang() === 'en';
-  const ko = kind === 'accessory' ? (ACCESSORY_NAMES as Record<string, string>)[itemId] ?? itemId : `${(VARIANT_NAMES as Record<string, string>)[itemId] ?? itemId} 색`;
+  const ko = cosmeticName(kind, itemId);
   const eul = (w: string): string => {
     const code = w.charCodeAt(w.length - 1) - 0xac00;
     return code >= 0 && code <= 11171 && code % 28 !== 0 ? '을' : '를';
@@ -359,7 +364,11 @@ function showResult(result: PullResult): void {
     const active = data.entries.find((e) => e.active);
     if (active) {
       const stage = active.stage === 'egg' ? 'baby' : active.stage;
-      const style = result.kind === 'accessory' ? { variant: 'default' as const, accessory: result.itemId as never } : { variant: result.itemId as never, accessory: 'none' as const };
+      const style: { variant: Variant; accessory: Accessory; neck: Neck; effect: Effect } = { variant: 'default', accessory: 'none', neck: 'none', effect: 'none' };
+      if (result.kind === 'accessory') style.accessory = result.itemId as Accessory;
+      else if (result.kind === 'variant') style.variant = result.itemId as Variant;
+      else if (result.kind === 'neck') style.neck = result.itemId as Neck;
+      else style.effect = result.itemId as Effect;
       const set = spriteSet(active.id, stage, style);
       drawSprite(canvas, set.frames.idleA, set.palette, 4);
     }

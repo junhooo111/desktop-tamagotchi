@@ -4,6 +4,7 @@
  */
 import { blank, ellipse, line, markEllipse, part, px, rect, shift, toRows, triangle, type Grid } from '../pixel.js';
 import { drawBackWings, drawHeadAccessory, wingKind, type Accessory } from './accessory.js';
+import { drawNeckAccessory, type Neck } from './extras.js';
 import { drawHangArms } from './hang-arms.js';
 import { SHADE, type ArtStage, type EyePose, type Look, type Pose } from './types.js';
 
@@ -14,6 +15,8 @@ export interface BirdSpec {
   tuft?: boolean;
   /** 꾸미기 장식(리본·안경·왕관·날개) */
   accessory?: Accessory;
+  /** 목 장식(스카프·목걸이 …) */
+  neck?: Neck;
   /** 몸에 달린 날개(전설 단계). 꾸미기 날개를 달면 그쪽이 우선한다. */
   bodyWings?: boolean;
   /** 머리(와 머리깃)를 털과 다른 색(look.head)으로 칠한다(앵무새의 붉은 머리). 오리는 늘 그렇다. */
@@ -150,6 +153,7 @@ function drawFace(g: Grid, r: Rig, pose: Pose, head: { cx: number; cy: number; r
   const ey = Math.round(head.cy - head.ry * 0.25);
   drawEye(g, ex, ey, pose.eyes);
   drawBeak(g, r, Math.round(head.cx + head.rx * 0.96), Math.round(head.cy + head.ry * 0.12), pose.mouth === 'open' || pose.mouth === 'chew');
+  drawNeckAccessory(g, r.spec.neck, head);
   drawHeadAccessory(g, r.spec.accessory, head, [{ x: ex, y: ey }]);
 }
 
@@ -281,6 +285,7 @@ function lying(r: Rig, pose: Pose): Grid {
   const ex = Math.round(head.cx + head.rx * 0.2);
   drawEye(g, ex, Math.round(head.cy - 1.4), pose.eyes);
   drawBeak(g, r, Math.round(head.cx + head.rx * 0.95), Math.round(head.cy + 0.6), false);
+  drawNeckAccessory(g, r.spec.neck, head);
   drawHeadAccessory(g, r.spec.accessory, head, [{ x: ex, y: Math.round(head.cy - 1.4) }]);
   return g;
 }
@@ -347,6 +352,7 @@ function hanging(r: Rig, pose: Pose): Grid {
   drawEye(g, Math.round(hx + 1.8 * k * 0.9), ey, pose.eyes);
   // 정면 부리
   part(g, (t) => ellipse(t, hx, Math.round(hy + hry * 0.3), 2.4 * Math.max(sz, 0.85), 1.6 * Math.max(sz, 0.85), 'p'), { outline: 'k', shade: SHADE });
+  drawNeckAccessory(g, r.spec.neck, { cx: hx, cy: hy, rx: hrx, ry: hry });
   drawHeadAccessory(g, r.spec.accessory, { cx: hx, cy: hy, rx: hrx, ry: hry }, [
     { x: Math.round(hx - 4.6 * k * 0.9), y: ey },
     { x: Math.round(hx + 1.8 * k * 0.9), y: ey },

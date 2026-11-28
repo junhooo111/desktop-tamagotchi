@@ -4,6 +4,7 @@
  */
 import { mix, type Tone } from './color.js';
 import { ACCESSORIES, ACCESSORY_COLORS, type Accessory } from './accessory.js';
+import { EFFECT_COLORS, NECK_COLORS, type Effect, type Neck } from './extras.js';
 import type { Look } from './types.js';
 
 export type Variant = 'default' | 'pastel' | 'deep' | 'mono';
@@ -13,6 +14,10 @@ export const VARIANTS: readonly Variant[] = ['default', 'pastel', 'deep', 'mono'
 export interface PetStyle {
   variant: Variant;
   accessory: Accessory;
+  /** 목 장식(없으면 none) */
+  neck?: Neck;
+  /** 효과(없으면 none) */
+  effect?: Effect;
 }
 
 export const DEFAULT_STYLE: PetStyle = { variant: 'default', accessory: 'none' };
@@ -55,6 +60,16 @@ export function tintLook(look: Look, variant: Variant): Look {
     beak: tintTone(look.beak, variant),
     head: tintTone(look.head, variant),
   };
+}
+
+/** 팔레트에 더할 목 장식 색(N, M) */
+export function neckPalette(neck: Neck | undefined): Record<string, string> {
+  return NECK_COLORS[neck ?? 'none'];
+}
+
+/** 팔레트에 더할 효과 색(U, V) */
+export function effectPalette(effect: Effect | undefined): Record<string, string> {
+  return EFFECT_COLORS[effect ?? 'none'];
 }
 
 /** 팔레트에 더할 장식 색(X, Y) */

@@ -10,7 +10,8 @@
  */
 import { tone } from './art/color.js';
 import { chunky } from './art/chunky.js';
-import { accessoryPalette, DEFAULT_STYLE, tintLook, type PetStyle } from './art/style.js';
+import { accessoryPalette, DEFAULT_STYLE, effectPalette, neckPalette, tintLook, type PetStyle } from './art/style.js';
+import { applyEffect } from './art/extras.js';
 import { birdFrames } from './art/bird-plan.js';
 import { type BirdSpec } from './art/bird.js';
 import { CHICK, DUCK, GRIFFIN, OWL, PARROT, PEACOCK, PENGUIN, PHOENIX } from './art/bird-species.js';
@@ -26,6 +27,7 @@ import { hasLegendFormRarity, type Rarity } from './rarity.js';
 export { FRAME_NAMES, type FrameName, type Frames } from './art/frames.js';
 export { ACCESSORIES, type Accessory } from './art/accessory.js';
 export { DEFAULT_STYLE, VARIANTS, isAccessory, isVariant, type PetStyle, type Variant } from './art/style.js';
+export { EFFECTS, NECKS, isEffect, isNeck, type Effect, type Neck } from './art/extras.js';
 export { SIZE as SPRITE_SIZE };
 
 export type SpeciesId =
@@ -180,7 +182,7 @@ const cache = new Map<string, SpriteSet>();
 
 /** 종·단계·스타일에 맞는 스프라이트. 알 단계는 종·스타일과 상관없이 같은 알이다. */
 export function spriteSet(id: SpeciesId, stage: SpriteStage, style: PetStyle = DEFAULT_STYLE): SpriteSet {
-  const key = stage === 'egg' ? 'egg' : [id, stage === 'legend' && !hasLegendForm(id) ? 'adult' : stage, style.variant, style.accessory].join('/');
+  const key = stage === 'egg' ? 'egg' : [id, stage === 'legend' && !hasLegendForm(id) ? 'adult' : stage, style.variant, style.accessory, style.neck ?? 'none', style.effect ?? 'none'].join('/');
   const cached = cache.get(key);
   if (cached) return cached;
   let made: SpriteSet;
@@ -191,8 +193,10 @@ export function spriteSet(id: SpeciesId, stage: SpriteStage, style: PetStyle = D
     const d = legend ? legendDesign(DESIGNS[id]) : DESIGNS[id];
     const artStage = stage === 'baby' ? 'baby' : 'adult';
     const look = tintLook(d.spec.look, style.variant);
-    const frames = d.kind === 'quad' ? quadFrames({ ...d.spec, look, accessory: style.accessory }, artStage, d.gait) : birdFrames({ ...d.spec, look, accessory: style.accessory }, artStage);
-    made = { palette: { ...paletteOf(look), ...accessoryPalette(style.accessory) }, frames: chunkAll(frames), skin: d.skin };
+    const frames = d.kind === 'quad' ? quadFrames({ ...d.spec, look, accessory: style.accessory, neck: style.neck ?? 'none' }, artStage, d.gait) : birdFrames({ ...d.spec, look, accessory: style.accessory, neck: style.neck ?? 'none' }, artStage);
+    const chunked = chunkAll(frames);
+    const withEffect = style.effect && style.effect !== 'none' ? (Object.fromEntries(Object.entries(chunked).map(([k, v]) => [k, applyEffect(v, style.effect)])) as Frames) : chunked;
+    made = { palette: { ...paletteOf(look), ...accessoryPalette(style.accessory), ...neckPalette(style.neck), ...effectPalette(style.effect) }, frames: withEffect, skin: d.skin };
   }
   cache.set(key, made);
   return made;

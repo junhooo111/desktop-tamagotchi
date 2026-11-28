@@ -13,6 +13,7 @@ import { createPet, type Stage } from './pet.js';
 import { sanitizePetName } from './settings.js';
 import { DEFAULT_STYLE, hasLegendForm, isSpeciesId, type PetStyle } from './species.js';
 import { isAccessory, isVariant } from './art/style.js';
+import { isEffect, isNeck } from './art/extras.js';
 
 /** public_card_data() 가 돌려주는 모양. */
 export interface CardRow {
@@ -52,6 +53,8 @@ export function readExtras(raw: unknown, speciesId: string | null, now: number):
   const style: PetStyle = {
     variant: isVariant(e['variant']) ? e['variant'] : DEFAULT_STYLE.variant,
     accessory: isAccessory(e['accessory']) ? e['accessory'] : DEFAULT_STYLE.accessory,
+    neck: isNeck(e['neck']) ? e['neck'] : 'none',
+    effect: isEffect(e['effect']) ? e['effect'] : 'none',
   };
   const name = sanitizePetName(e['name']);
   const stage = e['stage'] === 'baby' || e['stage'] === 'adult' || (e['stage'] === 'legend' && speciesId !== null && isSpeciesId(speciesId) && hasLegendForm(speciesId)) ? (e['stage'] as Stage) : undefined;

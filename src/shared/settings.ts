@@ -3,6 +3,7 @@
  * 파일이 깨졌거나 허용하지 않는 값이 들어 있어도 앱이 죽지 않도록, 읽을 때마다 sanitizeSettings 로 걸러 낸다.
  */
 import type { Accessory } from './art/accessory.js';
+import { isEffect, isNeck, type Effect, type Neck } from './art/extras.js';
 import { isAccessory, isVariant, type Variant } from './art/style.js';
 import { isDisplayStage, type DisplayStage } from './pet.js';
 import { isSpeciesId, type SpeciesId } from './species.js';
@@ -32,6 +33,9 @@ export interface Settings {
   /** 꾸미기: 색 변형과 장식(업적으로 연 것만 고를 수 있다. 검증은 메인에서) */
   variant: Variant;
   accessory: Accessory;
+  /** 목 장식과 효과(뽑기로 얻은 것만 고를 수 있다) */
+  neck: Neck;
+  effect: Effect;
   /** 펫 이름(없으면 빈 문자열). 말풍선·프로필 카드에 보인다. */
   petName: string;
   /** 꾸미기에서 고른 모습: auto 는 지금 단계 그대로, 아니면 이미 지나온 단계(새끼·성체·전설)로 되돌린 모습. 동물을 바꾸면 auto 로 돌아간다. */
@@ -63,6 +67,8 @@ export const DEFAULT_SETTINGS: Settings = {
   ignored: [],
   variant: 'default',
   accessory: 'none',
+  neck: 'none',
+  effect: 'none',
   petName: '',
   displayStage: 'auto',
   cardSpecies: 'current',
@@ -109,6 +115,8 @@ export function sanitizeSettings(raw: unknown): Settings {
     ignored: keyList(r['ignored']),
     variant: isVariant(r['variant']) ? r['variant'] : DEFAULT_SETTINGS.variant,
     accessory: isAccessory(r['accessory']) ? r['accessory'] : DEFAULT_SETTINGS.accessory,
+    neck: isNeck(r['neck']) ? r['neck'] : DEFAULT_SETTINGS.neck,
+    effect: isEffect(r['effect']) ? r['effect'] : DEFAULT_SETTINGS.effect,
     petName: sanitizePetName(r['petName']),
     displayStage: isDisplayStage(r['displayStage']) ? r['displayStage'] : DEFAULT_SETTINGS.displayStage,
     cardSpecies: r['cardSpecies'] === 'current' || isSpeciesId(r['cardSpecies']) ? r['cardSpecies'] : DEFAULT_SETTINGS.cardSpecies,

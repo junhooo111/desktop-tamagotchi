@@ -2,6 +2,7 @@
 import type { Dir, Mode, PlayKind, Surface } from './motion.js';
 import type { Mood, Stage } from './pet.js';
 import type { Accessory, SpeciesId, Variant } from './species.js';
+import type { Effect, Neck } from './art/extras.js';
 
 export interface PetView {
   speciesId: SpeciesId;
@@ -21,6 +22,8 @@ export interface PetView {
   /** 꾸미기: 색 변형과 장식 */
   variant: Variant;
   accessory: Accessory;
+  neck?: Neck;
+  effect?: Effect;
   /** 더러워서 냄새가 난다(청결이 낮다) */
   dirty?: boolean;
 }

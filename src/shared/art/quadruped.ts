@@ -9,6 +9,7 @@
  */
 import { blank, ellipse, line, markEllipse, part, px, rect, shift, toRows, triangle, type Grid } from '../pixel.js';
 import { drawBackWings, drawHeadAccessory, drawHorns, wingKind, type Accessory, type Horns } from './accessory.js';
+import { drawNeckAccessory, type Neck } from './extras.js';
 import { drawBackCrest, drawMane, drawMarkings, drawStreamers, paintFur, type Crest, type Mane, type Markings } from './hidden.js';
 import { drawHangArms } from './hang-arms.js';
 import { SHADE, type ArtStage, type EyePose, type Look, type MouthPose, type Pose } from './types.js';
@@ -44,6 +45,8 @@ export interface QuadSpec {
   bodyScale?: { rx: number; ry: number };
   /** 꾸미기 장식(리본·안경·왕관·날개) */
   accessory?: Accessory;
+  /** 목 장식(스카프·목걸이 …) */
+  neck?: Neck;
   /** 볼이 빵빵한 얼굴(햄스터) */
   cheeks?: boolean;
   /** 다리 길이 배율(기본 1, 거북이 0.62). 작을수록 짧은 다리 */
@@ -372,6 +375,7 @@ function drawHead(g: Grid, r: Rig, pose: Pose, hc: HeadDims): void {
   drawMouth(g, noseX, noseY, pose.mouth);
   drawHorns(g, spec.horns, head);
   drawMarkings(g, spec.markings, head, eyeX, eyeY);
+  drawNeckAccessory(g, spec.neck, head);
   drawHeadAccessory(g, spec.accessory, head, [{ x: eyeX, y: eyeY }]);
 
   if (spec.whiskers) {
@@ -631,6 +635,7 @@ function hanging(r: Rig, pose: Pose): Grid {
   drawMouth(g, hx + 1, Math.round(hy + hry * 0.18), pose.mouth);
   const eyeScale = small ? 0.7 : 1;
   drawHorns(g, spec.horns, { cx: hx, cy: hy, rx: hrx, ry: hry });
+  drawNeckAccessory(g, spec.neck, { cx: hx, cy: hy, rx: hrx, ry: hry });
   drawHeadAccessory(g, spec.accessory, { cx: hx, cy: hy, rx: hrx, ry: hry }, [
     { x: Math.round(hx - 4.2 * k * eyeScale - 1), y: ey },
     { x: Math.round(hx + 1.6 * k * eyeScale), y: ey },

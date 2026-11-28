@@ -9,7 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { RpcResult } from './account-sync.js';
 import { DUPLICATE_XP, newOwned, type Collection } from '../shared/collection.js';
-import { isAccessory, isSpeciesId, isVariant, rarityOf } from '../shared/species.js';
+import { isAccessory, isEffect, isNeck, isSpeciesId, isVariant, rarityOf } from '../shared/species.js';
 import { PITY_RESETS_ON, isRarity, type Rarity } from '../shared/rarity.js';
 
 export interface ServerRpc {
@@ -69,6 +69,9 @@ export interface ServerState {
   species: Record<string, number>;
   accessories: string[];
   variants: string[];
+  /** 뽑기로 얻은 목 장식과 효과(서버가 알려 준다) */
+  necks?: string[];
+  effects?: string[];
 }
 
 export interface Grant {
@@ -83,7 +86,7 @@ export interface PullResult {
   tickets: number;
 }
 export interface CosmeticResult {
-  kind: 'accessory' | 'variant';
+  kind: 'accessory' | 'variant' | 'neck' | 'effect';
   itemId: string;
   /** 서버가 알려 준 등급(없으면 앱의 표로 안다) */
   rarity?: string;
@@ -192,6 +195,8 @@ export class ServerGame {
       species,
       accessories: (cos.data ?? []).filter((c) => c.kind === 'accessory').map((c) => c.item_id),
       variants: (cos.data ?? []).filter((c) => c.kind === 'variant').map((c) => c.item_id),
+      necks: (cos.data ?? []).filter((c) => c.kind === 'neck').map((c) => c.item_id),
+      effects: (cos.data ?? []).filter((c) => c.kind === 'effect').map((c) => c.item_id),
     };
     return { ok: true };
   }
@@ -206,7 +211,7 @@ export class ServerGame {
   }
 
   async pullCosmetic(): Promise<{ ok: true; result: CosmeticResult } | { ok: false; message: string }> {
-    const r = await this.rpc.call<{ kind: 'accessory' | 'variant'; item_id: string; rarity?: string; tickets: number }>('gacha_cosmetic');
+    const r = await this.rpc.call<{ kind: 'accessory' | 'variant' | 'neck' | 'effect'; item_id: string; rarity?: string; tickets: number }>('gacha_cosmetic');
     if (r.error || !r.data) return { ok: false, message: friendlyError(r.error?.message ?? '') };
     if (this.state) {
       const s = this.state;
@@ -215,6 +220,8 @@ export class ServerGame {
         tickets: r.data.tickets,
         accessories: r.data.kind === 'accessory' ? [...s.accessories, r.data.item_id] : s.accessories,
         variants: r.data.kind === 'variant' ? [...s.variants, r.data.item_id] : s.variants,
+        necks: r.data.kind === 'neck' ? [...(s.necks ?? []), r.data.item_id] : s.necks,
+        effects: r.data.kind === 'effect' ? [...(s.effects ?? []), r.data.item_id] : s.effects,
       };
     }
     return { ok: true, result: { kind: r.data.kind, itemId: r.data.item_id, ...(r.data.rarity ? { rarity: r.data.rarity } : {}), tickets: r.data.tickets } };
@@ -366,7 +373,9 @@ export function mirrorCollection(c: Collection, s: ServerState, now: number): Co
   }
   const accessories = [...new Set([...c.accessories, ...s.accessories.filter(isAccessory)])];
   const variants = [...new Set([...c.variants, ...s.variants.filter(isVariant)])];
-  return { ...c, owned, active, tickets: s.tickets, sinceHidden: s.pity, accessories, variants };
+  const necks = [...new Set([...c.necks, ...(s.necks ?? []).filter(isNeck)])];
+  const effects = [...new Set([...c.effects, ...(s.effects ?? []).filter(isEffect)])];
+  return { ...c, owned, active, tickets: s.tickets, sinceHidden: s.pity, accessories, variants, necks, effects };
 }
 
 /** 서버 뽑기 결과를 앱의 컬렉션에 반영한다(앱의 pullSpecies 와 같은 화면 규칙: 처음이면 새로, 중복이면 횟수와 경험치). */

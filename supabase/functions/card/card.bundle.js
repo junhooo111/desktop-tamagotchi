@@ -1310,9 +1310,9 @@ function part(g, draw, opts) {
 
 // dist/shared/art/chunky.js
 var PRIORITY = ["e", "n", "m", "t", "k"];
-function pickOf(cells2) {
+function pickOf(cells3) {
   const counts = /* @__PURE__ */ new Map();
-  for (const c of cells2)
+  for (const c of cells3)
     if (c !== ".")
       counts.set(c, (counts.get(c) ?? 0) + 1);
   const filled = [...counts.values()].reduce((x, y) => x + y, 0);
@@ -1347,8 +1347,8 @@ function chunky(rows) {
     let a = "";
     let b = "";
     for (let bx = 0; bx < SIZE; bx += 2) {
-      const cells2 = [rows[by]?.[bx] ?? ".", rows[by]?.[bx + 1] ?? ".", rows[by + 1]?.[bx] ?? ".", rows[by + 1]?.[bx + 1] ?? "."];
-      const ch = pickOf(cells2);
+      const cells3 = [rows[by]?.[bx] ?? ".", rows[by]?.[bx + 1] ?? ".", rows[by + 1]?.[bx] ?? ".", rows[by + 1]?.[bx + 1] ?? "."];
+      const ch = pickOf(cells3);
       a += ch + ch;
       b += ch + ch;
     }
@@ -1617,6 +1617,128 @@ function drawBackWings(g, acc, x, y, size) {
   }, { outline: "k" });
 }
 
+// dist/shared/art/extras.js
+var NECKS = ["none", "bell", "scarf", "bowtie", "pearl", "starpendant", "goldchain"];
+var NECK_COLORS = {
+  none: { N: "#ffffff", M: "#ffffff" },
+  bell: { N: "#e5484d", M: "#ffd34a" },
+  scarf: { N: "#4a9bff", M: "#ffffff" },
+  bowtie: { N: "#e5484d", M: "#7a1f2a" },
+  pearl: { N: "#ffffff", M: "#cfd6e6" },
+  starpendant: { N: "#ffe14a", M: "#8a6b1c" },
+  goldchain: { N: "#ffd34a", M: "#c98a1a" }
+};
+var EFFECTS = ["none", "sparkles", "hearts", "notes", "snow", "flameaura"];
+var EFFECT_COLORS = {
+  none: { U: "#ffffff", V: "#ffffff" },
+  sparkles: { U: "#ffe14a", V: "#ffffff" },
+  hearts: { U: "#ff6b8b", V: "#ffb3c8" },
+  notes: { U: "#7a5cff", V: "#b8a8ff" },
+  snow: { U: "#bfe3f7", V: "#ffffff" },
+  flameaura: { U: "#ff9b2e", V: "#ffd34a" }
+};
+var isNeck = (v) => typeof v === "string" && NECKS.includes(v);
+var isEffect = (v) => typeof v === "string" && EFFECTS.includes(v);
+var even2 = (n) => Math.round(n / 2) * 2;
+function cells2(t, x, y, rows) {
+  rows.forEach((row, ry) => {
+    [...row].forEach((ch, rx) => {
+      if (ch !== "." && ch !== " ")
+        rect(t, x + rx * 2, y + ry * 2, 2, 2, ch);
+    });
+  });
+}
+var NECK_ROWS = {
+  // 빨간 목줄에 금빛 방울
+  bell: ["NNNNNN", "..MM.."],
+  // 줄무늬 스카프와 늘어진 끝
+  scarf: ["NNNNNN", "MNMNMN", "..NM.."],
+  // 나비넥타이
+  bowtie: ["NN.NN", "NNMNN", "NN.NN"],
+  // 진주 목걸이
+  pearl: ["MMMMMM", ".NNNN.", "..NN.."],
+  // 별 펜던트
+  starpendant: ["MMMMMM", "..NN..", ".NNNN.", "..NN.."],
+  // 굵은 황금 목걸이
+  goldchain: ["NNNNNNN", "MNMNMNM", ".MNNNM.", "..MNM.."]
+};
+function drawNeckAccessory(g, neck, head) {
+  if (!neck || neck === "none")
+    return;
+  const rows = NECK_ROWS[neck];
+  const width = (rows[0]?.length ?? 0) * 2;
+  const x = even2(head.cx - head.rx * 0.2) - Math.round(width / 2);
+  const y = even2(head.cy + head.ry * 0.72);
+  part(g, (t) => cells2(t, x, y, rows), { outline: "k" });
+}
+function applyEffect(rows, effect) {
+  if (!effect || effect === "none")
+    return [...rows];
+  const grid = rows.map((r) => [...r]);
+  const free = (x, y) => grid[y]?.[x] === ".";
+  const put = (x, y, art) => {
+    art.forEach((line2, ry) => {
+      [...line2].forEach((ch, rx) => {
+        if (ch === ".")
+          return;
+        for (let dy = 0; dy < 2; dy++) {
+          for (let dx = 0; dx < 2; dx++) {
+            const px2 = x + rx * 2 + dx;
+            const py = y + ry * 2 + dy;
+            if (free(px2, py))
+              grid[py][px2] = ch;
+          }
+        }
+      });
+    });
+  };
+  if (effect === "sparkles") {
+    const plus = [".U.", "UVU", ".U."];
+    put(2, 2, plus);
+    put(24, 0, plus);
+    put(26, 14, [".U.", "UUU", ".U."]);
+    put(0, 12, [".V."]);
+  } else if (effect === "hearts") {
+    const heart = ["U.U", "UUU", ".U."];
+    put(2, 2, heart);
+    put(24, 4, ["V.V", "VVV", ".V."]);
+    put(26, 18, heart);
+  } else if (effect === "notes") {
+    put(2, 2, [".UU", ".U.", "UV."]);
+    put(24, 2, [".VV", ".V.", "UU."]);
+    put(26, 16, [".UU", ".U.", "UV."]);
+  } else if (effect === "snow") {
+    const flake = ["U.U", ".V.", "U.U"];
+    put(2, 2, flake);
+    put(24, 0, flake);
+    put(0, 14, [".U.", "UVU", ".U."]);
+    put(26, 14, flake);
+  } else if (effect === "flameaura") {
+    const filled = (bx, by) => {
+      const ch = rows[by * 2]?.[bx * 2];
+      return ch !== void 0 && ch !== ".";
+    };
+    for (let by = 0; by < 16; by++) {
+      for (let bx = 0; bx < 16; bx++) {
+        if (filled(bx, by))
+          continue;
+        let near = false;
+        for (let dy = -1; dy <= 1 && !near; dy++)
+          for (let dx = -1; dx <= 1; dx++)
+            if ((dx || dy) && filled(bx + dx, by + dy))
+              near = true;
+        if (!near)
+          continue;
+        const ch = (bx + by) % 2 === 0 ? "U" : "V";
+        for (let dy = 0; dy < 2; dy++)
+          for (let dx = 0; dx < 2; dx++)
+            grid[by * 2 + dy][bx * 2 + dx] = ch;
+      }
+    }
+  }
+  return grid.map((r) => r.join(""));
+}
+
 // dist/shared/art/style.js
 var VARIANTS = ["default", "pastel", "deep", "mono"];
 var DEFAULT_STYLE = { variant: "default", accessory: "none" };
@@ -1654,6 +1776,12 @@ function tintLook(look, variant) {
     beak: tintTone(look.beak, variant),
     head: tintTone(look.head, variant)
   };
+}
+function neckPalette(neck) {
+  return NECK_COLORS[neck ?? "none"];
+}
+function effectPalette(effect) {
+  return EFFECT_COLORS[effect ?? "none"];
 }
 function accessoryPalette(acc) {
   return ACCESSORY_COLORS[acc];
@@ -1837,6 +1965,7 @@ function drawFace(g, r, pose, head) {
   const ey = Math.round(head.cy - head.ry * 0.25);
   drawEye(g, ex, ey, pose.eyes);
   drawBeak(g, r, Math.round(head.cx + head.rx * 0.96), Math.round(head.cy + head.ry * 0.12), pose.mouth === "open" || pose.mouth === "chew");
+  drawNeckAccessory(g, r.spec.neck, head);
   drawHeadAccessory(g, r.spec.accessory, head, [{ x: ex, y: ey }]);
 }
 function drawHead(g, r, pose) {
@@ -1942,6 +2071,7 @@ function lying(r, pose) {
   const ex = Math.round(head.cx + head.rx * 0.2);
   drawEye(g, ex, Math.round(head.cy - 1.4), pose.eyes);
   drawBeak(g, r, Math.round(head.cx + head.rx * 0.95), Math.round(head.cy + 0.6), false);
+  drawNeckAccessory(g, r.spec.neck, head);
   drawHeadAccessory(g, r.spec.accessory, head, [{ x: ex, y: Math.round(head.cy - 1.4) }]);
   return g;
 }
@@ -1991,6 +2121,7 @@ function hanging(r, pose) {
   drawEye(g, Math.round(hx - 4.6 * k * 0.9), ey, pose.eyes);
   drawEye(g, Math.round(hx + 1.8 * k * 0.9), ey, pose.eyes);
   part(g, (t) => ellipse(t, hx, Math.round(hy + hry * 0.3), 2.4 * Math.max(sz, 0.85), 1.6 * Math.max(sz, 0.85), "p"), { outline: "k", shade: SHADE });
+  drawNeckAccessory(g, r.spec.neck, { cx: hx, cy: hy, rx: hrx, ry: hry });
   drawHeadAccessory(g, r.spec.accessory, { cx: hx, cy: hy, rx: hrx, ry: hry }, [
     { x: Math.round(hx - 4.6 * k * 0.9), y: ey },
     { x: Math.round(hx + 1.8 * k * 0.9), y: ey }
@@ -2595,6 +2726,7 @@ function drawHead2(g, r, pose, hc) {
   drawMouth(g, noseX, noseY, pose.mouth);
   drawHorns(g, spec.horns, head);
   drawMarkings(g, spec.markings, head, eyeX, eyeY);
+  drawNeckAccessory(g, spec.neck, head);
   drawHeadAccessory(g, spec.accessory, head, [{ x: eyeX, y: eyeY }]);
   if (spec.whiskers) {
     line(g, noseX - 3, noseY + 3, noseX, noseY + 4, "k");
@@ -2796,6 +2928,7 @@ function hanging2(r, pose) {
   drawMouth(g, hx + 1, Math.round(hy + hry * 0.18), pose.mouth);
   const eyeScale = small ? 0.7 : 1;
   drawHorns(g, spec.horns, { cx: hx, cy: hy, rx: hrx, ry: hry });
+  drawNeckAccessory(g, spec.neck, { cx: hx, cy: hy, rx: hrx, ry: hry });
   drawHeadAccessory(g, spec.accessory, { cx: hx, cy: hy, rx: hrx, ry: hry }, [
     { x: Math.round(hx - 4.2 * k * eyeScale - 1), y: ey },
     { x: Math.round(hx + 1.6 * k * eyeScale), y: ey }
@@ -3540,7 +3673,7 @@ function chunkAll(frames) {
 }
 var cache = /* @__PURE__ */ new Map();
 function spriteSet(id, stage, style = DEFAULT_STYLE) {
-  const key = stage === "egg" ? "egg" : [id, stage === "legend" && !hasLegendForm(id) ? "adult" : stage, style.variant, style.accessory].join("/");
+  const key = stage === "egg" ? "egg" : [id, stage === "legend" && !hasLegendForm(id) ? "adult" : stage, style.variant, style.accessory, style.neck ?? "none", style.effect ?? "none"].join("/");
   const cached = cache.get(key);
   if (cached)
     return cached;
@@ -3552,8 +3685,10 @@ function spriteSet(id, stage, style = DEFAULT_STYLE) {
     const d = legend ? legendDesign(DESIGNS[id]) : DESIGNS[id];
     const artStage = stage === "baby" ? "baby" : "adult";
     const look = tintLook(d.spec.look, style.variant);
-    const frames = d.kind === "quad" ? quadFrames({ ...d.spec, look, accessory: style.accessory }, artStage, d.gait) : birdFrames({ ...d.spec, look, accessory: style.accessory }, artStage);
-    made = { palette: { ...paletteOf(look), ...accessoryPalette(style.accessory) }, frames: chunkAll(frames), skin: d.skin };
+    const frames = d.kind === "quad" ? quadFrames({ ...d.spec, look, accessory: style.accessory, neck: style.neck ?? "none" }, artStage, d.gait) : birdFrames({ ...d.spec, look, accessory: style.accessory, neck: style.neck ?? "none" }, artStage);
+    const chunked = chunkAll(frames);
+    const withEffect = style.effect && style.effect !== "none" ? Object.fromEntries(Object.entries(chunked).map(([k, v]) => [k, applyEffect(v, style.effect)])) : chunked;
+    made = { palette: { ...paletteOf(look), ...accessoryPalette(style.accessory), ...neckPalette(style.neck), ...effectPalette(style.effect) }, frames: withEffect, skin: d.skin };
   }
   cache.set(key, made);
   return made;
@@ -3881,7 +4016,9 @@ function readExtras(raw, speciesId, now) {
   const e = raw;
   const style = {
     variant: isVariant(e["variant"]) ? e["variant"] : DEFAULT_STYLE.variant,
-    accessory: isAccessory(e["accessory"]) ? e["accessory"] : DEFAULT_STYLE.accessory
+    accessory: isAccessory(e["accessory"]) ? e["accessory"] : DEFAULT_STYLE.accessory,
+    neck: isNeck(e["neck"]) ? e["neck"] : "none",
+    effect: isEffect(e["effect"]) ? e["effect"] : "none"
   };
   const name = sanitizePetName(e["name"]);
   const stage = e["stage"] === "baby" || e["stage"] === "adult" || e["stage"] === "legend" && speciesId !== null && isSpeciesId(speciesId) && hasLegendForm(speciesId) ? e["stage"] : void 0;

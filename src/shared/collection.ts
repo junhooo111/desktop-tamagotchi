@@ -9,6 +9,7 @@
 import type { Accessory, SpeciesId, Variant } from './species.js';
 import { GRADE_PERCENT, PITY_RESETS_ON, RARITIES, type Rarity } from './rarity.js';
 import { COSMETIC_PITY, cosmeticRarity } from './cosmetics.js';
+import { EFFECTS, NECKS, type Effect, type Neck } from './art/extras.js';
 import { LEGEND_SPECIES, SPECIES, isSpeciesId, speciesOf } from './species.js';
 import { HATCH_XP, createPet, levelOf, stageOf, type PetState, type Stage } from './pet.js';
 import { sanitizePetName } from './settings.js';
@@ -73,6 +74,9 @@ export interface Collection {
   /** 꾸미기 뽑기로 얻은 장식·색(업적으로 연 것과 합쳐서 쓴다) */
   accessories: Accessory[];
   variants: Variant[];
+  /** 뽑기로 얻은 목 장식과 효과 */
+  necks: Neck[];
+  effects: Effect[];
   /** 마지막으로 출석 보상을 받은 날 'YYYY-MM-DD' */
   lastDaily: string;
   /** 돌봄 보상으로 이미 받은 뽑기권 수 */
@@ -107,6 +111,8 @@ export function startCollection(pet: PetState, now: number, name = ''): Collecti
     cosmeticPity: 0,
     accessories: [],
     variants: [],
+    necks: [],
+    effects: [],
     lastDaily: '',
     careTicketsGiven: 0,
     uptimeMs: 0,
@@ -203,7 +209,7 @@ export function pullSpecies(c: Collection, now: number, rng: () => number): { co
 
 // ---- 꾸미기 뽑기 ----
 
-export type CosmeticItem = { kind: 'accessory'; id: Accessory } | { kind: 'variant'; id: Variant };
+export type CosmeticItem = { kind: 'accessory'; id: Accessory } | { kind: 'variant'; id: Variant } | { kind: 'neck'; id: Neck } | { kind: 'effect'; id: Effect };
 
 export type CosmeticPull = { ok: false; reason: string } | { ok: true; item: CosmeticItem; rarity: Rarity };
 
@@ -214,7 +220,7 @@ export type CosmeticPull = { ok: false; reason: string } | { ok: true; item: Cos
  */
 export function pullCosmetic(
   c: Collection,
-  all: { accessories: readonly Accessory[]; variants: readonly Variant[] },
+  all: { accessories: readonly Accessory[]; variants: readonly Variant[]; necks?: readonly Neck[]; effects?: readonly Effect[] },
   unlocked: { accessories: ReadonlySet<Accessory>; variants: ReadonlySet<Variant> },
   rng: () => number,
 ): { collection: Collection; result: CosmeticPull } {
@@ -222,6 +228,8 @@ export function pullCosmetic(
   const pool: CosmeticItem[] = [
     ...all.accessories.filter((a) => a !== 'none' && !unlocked.accessories.has(a) && !c.accessories.includes(a)).map((id) => ({ kind: 'accessory' as const, id })),
     ...all.variants.filter((v) => v !== 'default' && !unlocked.variants.has(v) && !c.variants.includes(v)).map((id) => ({ kind: 'variant' as const, id })),
+    ...(all.necks ?? NECKS).filter((n) => n !== 'none' && !c.necks.includes(n)).map((id) => ({ kind: 'neck' as const, id })),
+    ...(all.effects ?? EFFECTS).filter((e) => e !== 'none' && !c.effects.includes(e)).map((id) => ({ kind: 'effect' as const, id })),
   ];
   if (pool.length === 0) return { collection: c, result: { ok: false, reason: '꾸미기를 모두 모았어요!' } };
   const gradeOf = (i: CosmeticItem): Rarity => cosmeticRarity(i.kind, i.id);
@@ -243,7 +251,9 @@ export function pullCosmetic(
   const item = ofGrade[Math.min(ofGrade.length - 1, Math.floor(rng() * ofGrade.length))]!;
   const next: Collection = { ...c, tickets: c.tickets - COST.cosmetic, cosmeticPity: PITY_RESETS_ON.includes(grade) ? 0 : c.cosmeticPity + 1 };
   if (item.kind === 'accessory') next.accessories = [...c.accessories, item.id];
-  else next.variants = [...c.variants, item.id];
+  else if (item.kind === 'variant') next.variants = [...c.variants, item.id];
+  else if (item.kind === 'neck') next.necks = [...c.necks, item.id];
+  else next.effects = [...c.effects, item.id];
   return { collection: next, result: { ok: true, item, rarity: grade } };
 }
 
@@ -428,6 +438,8 @@ export function sanitizeCollection(raw: unknown, validAccessories: readonly Acce
     cosmeticPity: count(r['cosmeticPity']),
     accessories: list(r['accessories'], validAccessories),
     variants: list(r['variants'], validVariants),
+    necks: list(r['necks'], NECKS.filter((n) => n !== 'none')),
+    effects: list(r['effects'], EFFECTS.filter((e) => e !== 'none')),
     lastDaily: typeof r['lastDaily'] === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r['lastDaily']) ? r['lastDaily'] : '',
     careTicketsGiven: count(r['careTicketsGiven']),
     uptimeMs: Math.min(UPTIME_MS_PER_TICKET, count(r['uptimeMs'])),
