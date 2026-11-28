@@ -6,6 +6,8 @@
 import type { Lang } from '../shared/i18n.js';
 import { currentUiLang, startUiLocalization } from './dom-i18n.js';
 import { nameEn } from '../shared/en-text.js';
+import { COSMETIC_ITEMS, cosmeticRarity } from '../shared/cosmetics.js';
+import { ACCESSORY_NAMES, VARIANT_NAMES } from '../shared/wardrobe.js';
 import { RARITY_NAME, RARITY_NAME_EN, isRarity, type Rarity } from '../shared/rarity.js';
 import { DUPLICATE_XP, type CollectionEntry, type CollectionView } from '../shared/collection.js';
 import { levelTier } from '../shared/pet.js';
@@ -15,7 +17,7 @@ type SpeciesPullResult = { ok: true; message: string; view: CollectionView; id: 
 type PullResult =
   | { ok: false; message: string; view: CollectionView }
   | SpeciesPullResult
-  | { ok: true; message: string; view: CollectionView; kind: 'accessory' | 'variant'; itemId: string };
+  | { ok: true; message: string; view: CollectionView; kind: 'accessory' | 'variant'; itemId: string; rarity?: Rarity };
 
 interface CollectionApi {
   get(): Promise<CollectionView>;
@@ -127,9 +129,26 @@ export function buildReel(result: PullResult & { ok: true }, entries: readonly C
       const set = spriteSet(id, stage, { variant, accessory });
       return { rows: set.frames.idleA, palette: set.palette, rarity: 'plain' };
     };
-    const accessories = ACCESSORIES.filter((a) => a !== 'none');
-    for (let i = 0; i < CELLS; i++) items.push(Math.random() < 0.7 ? styled('default', pick(accessories)) : styled(pick(VARIANTS), 'none'));
-    items[final] = result.kind === 'accessory' ? styled('default', result.itemId as Accessory) : styled(result.itemId as Variant, 'none');
+    // 지나가는 칸도 꾸미기마다 등급 색으로 빛난다(뽑기에 나오는 것만, 등급 비중은 동물 룰렛과 같다)
+    const pool = COSMETIC_ITEMS.filter((i) => i.gacha);
+    const present = REEL_MIX.filter(([r]) => pool.some((i) => i.rarity === r));
+    const fill = (): ReelItem => {
+      let roll = Math.random() * present.reduce((n, [, w]) => n + w, 0);
+      let grade: Rarity = present[present.length - 1]![0];
+      for (const [r, w] of present) {
+        roll -= w;
+        if (roll < 0) {
+          grade = r;
+          break;
+        }
+      }
+      const it = pick(pool.filter((i) => i.rarity === grade));
+      const base = it.kind === 'accessory' ? styled('default', it.id as Accessory) : styled(it.id as Variant, 'none');
+      return { ...base, rarity: it.rarity };
+    };
+    for (let i = 0; i < CELLS; i++) items.push(fill());
+    const finalBase = result.kind === 'accessory' ? styled('default', result.itemId as Accessory) : styled(result.itemId as Variant, 'none');
+    items[final] = { ...finalBase, rarity: result.rarity ?? cosmeticRarity(result.kind, result.itemId) };
   }
   return { items, final, side };
 }
@@ -300,6 +319,18 @@ function describePull(text: HTMLElement, r: SpeciesPullResult, rarity: Rarity): 
   else text.append(en ? ` · #${r.count} · XP +${DUPLICATE_XP}` : ` · ${r.count}번째 · 경험치 +${DUPLICATE_XP}`);
 }
 
+/** "마법사 모자를 얻었어요! (희귀)" — 등급에 색이 입혀진다. */
+function describeCosmetic(text: HTMLElement, kind: 'accessory' | 'variant', itemId: string, rarity: Rarity): void {
+  const en = currentUiLang() === 'en';
+  const ko = kind === 'accessory' ? (ACCESSORY_NAMES as Record<string, string>)[itemId] ?? itemId : `${(VARIANT_NAMES as Record<string, string>)[itemId] ?? itemId} 색`;
+  const eul = (w: string): string => {
+    const code = w.charCodeAt(w.length - 1) - 0xac00;
+    return code >= 0 && code <= 11171 && code % 28 !== 0 ? '을' : '를';
+  };
+  text.textContent = '';
+  text.append(en ? `Got ${nameEn(ko)}! (` : `${ko}${eul(ko)} 얻었어요! (`, gradeSpan(rarity), ')');
+}
+
 function showResult(result: PullResult): void {
   const box = $('result');
   box.classList.remove('shaking', 'win-hidden', 'win-legend', 'win-special');
@@ -320,6 +351,11 @@ function showResult(result: PullResult): void {
     drawSprite(canvas, set.frames.idleA, set.palette, 4);
   } else {
     // 꾸미기: 지금 키우는 동물에게 입혀 보여 준다.
+    const rarity = result.rarity ?? cosmeticRarity(result.kind, result.itemId);
+    if (rarity === 'legend') box.classList.add('win-legend');
+    else if (rarity === 'special') box.classList.add('win-special');
+    else if (rarity === 'hidden') box.classList.add('win-hidden');
+    describeCosmetic(text, result.kind, result.itemId, rarity);
     const active = data.entries.find((e) => e.active);
     if (active) {
       const stage = active.stage === 'egg' ? 'baby' : active.stage;

@@ -257,3 +257,27 @@ describe('뽑기 룰렛', () => {
     expect(el<HTMLCanvasElement>('result-canvas').hidden).toBe(false);
   });
 });
+
+describe('꾸미기 뽑기 결과의 등급', () => {
+  it('"마법사 모자를 얻었어요! (희귀)" 처럼 등급 이름에 색이 입혀지고, 룰렛 칸마다 등급이 있다', async () => {
+    const { api } = await open(view(base(5)));
+    api.pullCosmetic.mockResolvedValue({ ok: true, message: '', kind: 'accessory', itemId: 'witch', rarity: 'rare', view: view(base(3)) });
+    el('pull-cosmetic').click();
+    await flush(100);
+    const grades = new Set([...el('strip').querySelectorAll('.cell')].map((c) => [...c.classList].find((k) => ['common', 'uncommon', 'rare', 'special', 'legend', 'hidden', 'plain'].includes(k))));
+    expect(grades.has('plain')).toBe(false); // 꾸미기도 등급 색으로 빛난다
+    expect(el('strip').querySelector('.final')!.classList.contains('rare')).toBe(true);
+    await settle();
+    expect(el('result-text').textContent).toBe('마법사 모자를 얻었어요! (희귀)');
+    expect(el('result-text').querySelector('.grade-rare')).not.toBeNull();
+  });
+
+  it('전설 꾸미기는 결과 칸 배경이 전설색이다', async () => {
+    const { api } = await open(view(base(5)));
+    api.pullCosmetic.mockResolvedValue({ ok: true, message: '', kind: 'accessory', itemId: 'wings', rarity: 'legend', view: view(base(3)) });
+    el('pull-cosmetic').click();
+    await settle();
+    expect(el('result').classList.contains('win-legend')).toBe(true);
+    expect(el('result-text').textContent).toBe('날개를 얻었어요! (전설)');
+  });
+});

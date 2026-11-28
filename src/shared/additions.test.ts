@@ -90,7 +90,16 @@ describe('장식 10종 추가', () => {
     const none = { accessories: new Set<never>(), variants: new Set<never>() };
     const seen = new Set<string>();
     for (let i = 0; i < 400; i++) {
-      const r = pullCosmetic(c, { accessories: GACHA_ACCESSORIES, variants: VARIANTS }, none, () => i / 400).result;
+      // 등급과 고르기가 같은 난수에 묶이지 않게, 시드마다 다른 수열을 쓴다
+      let seed = Math.imul(i + 1, 2654435761) >>> 0;
+      const rng = (): number => {
+        seed = (seed + 0x6d2b79f5) >>> 0; // mulberry32
+        let t = seed;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+      const r = pullCosmetic(c, { accessories: GACHA_ACCESSORIES, variants: VARIANTS }, none, rng).result;
       if (r.ok) seen.add(r.item.id);
     }
     for (const a of ACHIEVEMENT_ONLY) expect(seen.has(a), a).toBe(false);

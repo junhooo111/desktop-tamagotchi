@@ -27,7 +27,9 @@ import {
 } from './collection.js';
 import { LEGEND_LEVEL, createPet, levelOf, stageOf } from './pet.js';
 import { GRADE_PERCENT, RARITIES } from './rarity.js';
+import { COSMETIC_PITY } from './cosmetics.js';
 import { ACCESSORIES, HIDDEN_SPECIES, SPECIES, VARIANTS, speciesOf } from './species.js';
+import { GACHA_ACCESSORIES } from './wardrobe.js';
 
 const NOW = 1_000_000;
 const start = (): Collection => startCollection({ ...createPet('cat', NOW), xp: 300 }, NOW);
@@ -183,6 +185,38 @@ describe('꾸미기 뽑기', () => {
     expect(seen.has('variant:deep')).toBe(true);
     expect(seen.has('accessory:none')).toBe(false);
     expect(seen.has('variant:default')).toBe(false);
+  });
+
+  it('등급을 먼저 정하고(안 가진 것이 남은 등급끼리 표의 비율로), 그 등급의 안 가진 것 중 하나를 고른다', () => {
+    const c = withTickets(start(), 100);
+    const gach = { accessories: GACHA_ACCESSORIES, variants: VARIANTS };
+    // 난수 0: 가장 낮은 등급(일반)의 첫 번째, 난수가 큰 쪽은 가장 높은 등급(전설)
+    const low = pullCosmetic(c, gach, none, seq(0, 0));
+    expect(low.result).toMatchObject({ ok: true, rarity: 'common', item: { kind: 'accessory', id: 'ribbon' } });
+    const high = pullCosmetic(c, gach, none, seq(0.999, 0));
+    expect(high.result).toMatchObject({ ok: true, rarity: 'legend', item: { kind: 'accessory', id: 'wings' } });
+    // 일반 구간(안 가진 것이 남은 5개 등급의 합 99 중 50)
+    expect(pullCosmetic(c, gach, none, seq(0.49, 0.99)).result).toMatchObject({ ok: true, rarity: 'common', item: { id: 'cap' } });
+    expect(pullCosmetic(c, gach, none, seq(0.51, 0)).result).toMatchObject({ ok: true, rarity: 'uncommon' });
+  });
+
+  it('한 등급을 다 가졌으면 남은 등급끼리 다시 나눈다(이미 가진 것은 절대 다시 나오지 않는다)', () => {
+    const owned = { ...start(), tickets: 100, accessories: ['ribbon', 'sprout', 'flower', 'cap'] as never[] };
+    const r = pullCosmetic(owned, { accessories: GACHA_ACCESSORIES, variants: VARIANTS }, none, seq(0, 0));
+    expect(r.result).toMatchObject({ ok: true, rarity: 'uncommon' }); // 일반이 다 모였으니 가장 낮은 남은 등급
+  });
+
+  it('꾸미기 천장: 전설이 안 나온 채 COSMETIC_PITY 번 뽑으면 다음은 안 가진 전설이고, 나오면 카운트가 0 이 된다', () => {
+    const near = { ...withTickets(start(), 100), cosmeticPity: COSMETIC_PITY - 1 };
+    const r = pullCosmetic(near, { accessories: GACHA_ACCESSORIES, variants: VARIANTS }, none, () => 0);
+    expect(r.result).toMatchObject({ ok: true, rarity: 'legend', item: { id: 'wings' } });
+    expect(r.collection.cosmeticPity).toBe(0);
+    const before = pullCosmetic({ ...near, cosmeticPity: COSMETIC_PITY - 2 }, { accessories: GACHA_ACCESSORIES, variants: VARIANTS }, none, () => 0);
+    expect(before.result).toMatchObject({ ok: true, rarity: 'common' });
+    expect(before.collection.cosmeticPity).toBe(COSMETIC_PITY - 1);
+    // 전설을 이미 가졌으면 천장이어도 다른 등급이 나온다
+    const hasWings = { ...near, accessories: ['wings'] as never[] };
+    expect(pullCosmetic(hasWings, { accessories: GACHA_ACCESSORIES, variants: VARIANTS }, none, () => 0).result).toMatchObject({ ok: true, rarity: 'common' });
   });
 
   it('다 모으면 더 뽑을 수 없고 뽑기권도 쓰지 않는다', () => {

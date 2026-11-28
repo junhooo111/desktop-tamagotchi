@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { COST, DAILY_TICKETS, LEGEND_PITY, WELCOME_TICKETS, percentEach } from '../../src/shared/collection.js';
 import { GRADE_PERCENT, RARITIES } from '../../src/shared/rarity.js';
+import { COSMETIC_ITEMS, COSMETIC_PITY } from '../../src/shared/cosmetics.js';
 import { SPECIES } from '../../src/shared/species.js';
 import { admin, as, coinsOf, createDb, errorOf, givePet, ledgerMismatches, setTickets, signUp, ticketMismatches, ticketsOf, type Db } from './helpers.js';
 
@@ -239,19 +240,66 @@ describe('꾸미기 뽑기 (gacha_cosmetic)', () => {
     expect((await db.query("select delta, currency from public.ledger where user_id = $1 and reason = 'gacha_cosmetic'", [u])).rows).toEqual([{ delta: -COST.cosmetic, currency: 'ticket' }]);
   });
 
-  it('이미 가진 꾸미기는 다시 나오지 않고, 다 모으면 거절한다(총 21개: 장식 18 + 색 3)', async () => {
+  it('서버의 꾸미기 표(종류·등급·뽑기 여부)가 앱의 COSMETIC_ITEMS 와 같다', async () => {
+    const rows = (await db.query<{ kind: string; item_id: string; rarity: string; gacha: boolean }>('select kind, item_id, rarity, gacha from public.cosmetic_items order by kind, item_id')).rows;
+    const mine = [...COSMETIC_ITEMS].map((i) => ({ kind: i.kind, item_id: i.id, rarity: i.rarity, gacha: i.gacha })).sort((x, y) => (x.kind + x.item_id).localeCompare(y.kind + y.item_id));
+    expect(rows).toEqual(mine);
+  });
+
+  it('이미 가진 꾸미기는 다시 나오지 않고, 뽑기에 나오는 것만 다 모으면 거절한다(업적 전용 6종은 나오지 않는다)', async () => {
     const u = await signUp(db, 'collector');
-    await setTickets(db, u, COST.cosmetic * 25);
+    const pool = COSMETIC_ITEMS.filter((i) => i.gacha);
+    await setTickets(db, u, COST.cosmetic * (pool.length + 4));
     const seen = new Set<string>();
-    for (let i = 0; i < 21; i++) {
+    for (let i = 0; i < pool.length; i++) {
       const r = await cosmetic(u);
       const key = `${r.kind}:${r.item_id}`;
       expect(seen.has(key), key).toBe(false);
       seen.add(key);
     }
+    expect([...seen].sort()).toEqual(pool.map((i) => `${i.kind}:${i.id}`).sort());
     expect(await errorOf(() => cosmetic(u))).toMatch(/all_collected/);
-    expect(await ticketsOf(db, u)).toBe(COST.cosmetic * 25 - COST.cosmetic * 21);
+    expect(await ticketsOf(db, u)).toBe(COST.cosmetic * 4);
   });
+
+  it('결과에 등급이 들어 있고, 앱의 표와 같은 등급이다', async () => {
+    const u = await signUp(db, 'grader');
+    await setTickets(db, u, COST.cosmetic * 6);
+    for (let i = 0; i < 6; i++) {
+      const r = await as(db, u, async () => (await db.query<{ r: { kind: string; item_id: string; rarity: string } }>('select public.gacha_cosmetic() as r')).rows[0]!.r);
+      expect(r.rarity, r.item_id).toBe(COSMETIC_ITEMS.find((x) => x.kind === r.kind && x.id === r.item_id)!.rarity);
+    }
+  });
+
+  it(`전설이 안 나온 채 ${COSMETIC_PITY}번 뽑으면 다음은 안 가진 전설이 확정이고, 전설이 나오면 카운트가 0 으로 돌아간다`, async () => {
+    const u = await signUp(db, 'cpity');
+    await setTickets(db, u, COST.cosmetic * 3);
+    await admin(db, 'update public.profiles set cosmetic_pity = $2 where user_id = $1', [u, COSMETIC_PITY]);
+    const r = await as(db, u, async () => (await db.query<{ r: { item_id: string; rarity: string } }>('select public.gacha_cosmetic() as r')).rows[0]!.r);
+    expect(r.rarity).toBe('legend');
+    expect(r.item_id).toBe('wings');
+    expect((await db.query<{ c: number }>('select cosmetic_pity as c from public.profiles where user_id = $1', [u])).rows[0]!.c).toBe(0);
+    // 전설을 다 가졌으면 천장이어도 다른 등급이 나온다(거절하지 않는다)
+    await admin(db, 'update public.profiles set cosmetic_pity = $2 where user_id = $1', [u, COSMETIC_PITY]);
+    expect((await as(db, u, async () => (await db.query<{ r: { rarity: string } }>('select public.gacha_cosmetic() as r')).rows[0]!.r)).rarity).not.toBe('legend');
+  });
+
+  it('등급 확률: 안 가진 것이 남은 등급끼리 표의 비율로 나온다(일반이 절반쯤)', async () => {
+    const u = await signUp(db, 'cstats');
+    const N = 300;
+    let common = 0;
+    for (let i = 0; i < N; i++) {
+      await admin(db, 'delete from public.cosmetics where user_id = $1', [u]);
+      await admin(db, 'update public.profiles set cosmetic_pity = 0 where user_id = $1', [u]);
+      await setTickets(db, u, 100);
+      const r = await as(db, u, async () => (await db.query<{ r: { rarity: string } }>('select public.gacha_cosmetic() as r')).rows[0]!.r);
+      if (r.rarity === 'common') common++;
+    }
+    // 모두 비어 있을 때 일반 50 / (50+24+15+7+3) = 약 50.5%
+    const expected = GRADE_PERCENT.common / (GRADE_PERCENT.common + GRADE_PERCENT.uncommon + GRADE_PERCENT.rare + GRADE_PERCENT.special + GRADE_PERCENT.legend);
+    expect(common / N).toBeGreaterThan(expected - 0.12);
+    expect(common / N).toBeLessThan(expected + 0.12);
+  }, 120_000);
 
   it('뽑기권이 모자라면 거절한다', async () => {
     const u = await signUp(db, 'poor2');

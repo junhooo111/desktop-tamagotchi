@@ -8,6 +8,7 @@ import { startUiLocalization } from './dom-i18n.js';
 import type { DisplayStage } from '../shared/pet.js';
 import { spriteSet, type Accessory, type SpeciesId, type Variant } from '../shared/species.js';
 import type { WardrobeEntry, WardrobePatch, WardrobeView } from '../shared/wardrobe.js';
+import { cosmeticItem } from '../shared/cosmetics.js';
 
 /** 메인이 stage(미리보기에 쓸 단계)를 덧붙여 준다. 알이면 새끼 모습으로 보여 준다. */
 export interface WardrobeData extends WardrobeView {
@@ -54,7 +55,7 @@ function drawPreview(): void {
 }
 
 /** thumb 이 있으면 그 칸을 입었을 때의 모습을 작은 그림으로 함께 보여 준다(옷장처럼). */
-function group<T extends string>(boxId: string, entries: readonly WardrobeEntry<T>[], selected: T, patchOf: (id: T) => WardrobePatch, thumb?: (id: T) => { variant: Variant; accessory: Accessory }): void {
+function group<T extends string>(boxId: string, entries: readonly WardrobeEntry<T>[], selected: T, patchOf: (id: T) => WardrobePatch, thumb?: (id: T) => { variant: Variant; accessory: Accessory }, kind?: 'accessory' | 'variant'): void {
   const box = $(boxId);
   box.textContent = '';
   for (const e of entries) {
@@ -76,6 +77,9 @@ function group<T extends string>(boxId: string, entries: readonly WardrobeEntry<
       b.textContent = label;
     }
     b.dataset['id'] = e.id;
+    // 꾸미기 칸 아래쪽에 등급 색 줄(일반 흰색 … 전설 주황)을 그어 한눈에 구분되게 한다
+    const grade = kind ? cosmeticItem(kind, e.id)?.rarity : undefined;
+    if (grade) b.classList.add(`r-${grade}`);
     b.setAttribute('aria-pressed', String(e.unlocked && e.id === selected));
     if (e.unlocked) {
       b.addEventListener('click', () => void change(patchOf(e.id)));
@@ -91,8 +95,8 @@ function group<T extends string>(boxId: string, entries: readonly WardrobeEntry<
 
 function render(): void {
   group<DisplayStage>('stages', data.stages, data.current.displayStage, (id) => ({ displayStage: id }));
-  group<Variant>('variants', data.variants, data.current.variant, (id) => ({ variant: id }), (id) => ({ variant: id, accessory: data.current.accessory }));
-  group<Accessory>('accessories', data.accessories, data.current.accessory, (id) => ({ accessory: id }), (id) => ({ variant: data.current.variant, accessory: id }));
+  group<Variant>('variants', data.variants, data.current.variant, (id) => ({ variant: id }), (id) => ({ variant: id, accessory: data.current.accessory }), 'variant');
+  group<Accessory>('accessories', data.accessories, data.current.accessory, (id) => ({ accessory: id }), (id) => ({ variant: data.current.variant, accessory: id }), 'accessory');
   const cardEntries: WardrobeEntry<SpeciesId | 'current'>[] = [{ id: 'current', name: '지금 키우는 펫', unlocked: true, hint: '' }, ...data.species];
   group<SpeciesId | 'current'>('card-species', cardEntries, data.current.cardSpecies, (id) => ({ cardSpecies: id }));
   // 입력 중인 글자를 새로고침이 덮어쓰지 않게, 입력칸에 포커스가 없을 때만 값을 맞춘다.

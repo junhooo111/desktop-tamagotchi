@@ -85,6 +85,8 @@ export interface PullResult {
 export interface CosmeticResult {
   kind: 'accessory' | 'variant';
   itemId: string;
+  /** 서버가 알려 준 등급(없으면 앱의 표로 안다) */
+  rarity?: string;
   tickets: number;
 }
 
@@ -204,7 +206,7 @@ export class ServerGame {
   }
 
   async pullCosmetic(): Promise<{ ok: true; result: CosmeticResult } | { ok: false; message: string }> {
-    const r = await this.rpc.call<{ kind: 'accessory' | 'variant'; item_id: string; tickets: number }>('gacha_cosmetic');
+    const r = await this.rpc.call<{ kind: 'accessory' | 'variant'; item_id: string; rarity?: string; tickets: number }>('gacha_cosmetic');
     if (r.error || !r.data) return { ok: false, message: friendlyError(r.error?.message ?? '') };
     if (this.state) {
       const s = this.state;
@@ -215,7 +217,7 @@ export class ServerGame {
         variants: r.data.kind === 'variant' ? [...s.variants, r.data.item_id] : s.variants,
       };
     }
-    return { ok: true, result: { kind: r.data.kind, itemId: r.data.item_id, tickets: r.data.tickets } };
+    return { ok: true, result: { kind: r.data.kind, itemId: r.data.item_id, ...(r.data.rarity ? { rarity: r.data.rarity } : {}), tickets: r.data.tickets } };
   }
 
   /** 출석 뽑기권(하루 1장). */

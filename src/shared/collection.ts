@@ -8,6 +8,7 @@
  */
 import type { Accessory, SpeciesId, Variant } from './species.js';
 import { GRADE_PERCENT, PITY_RESETS_ON, RARITIES, type Rarity } from './rarity.js';
+import { COSMETIC_PITY, cosmeticRarity } from './cosmetics.js';
 import { LEGEND_SPECIES, SPECIES, isSpeciesId, speciesOf } from './species.js';
 import { HATCH_XP, createPet, levelOf, stageOf, type PetState, type Stage } from './pet.js';
 import { sanitizePetName } from './settings.js';
@@ -67,6 +68,8 @@ export interface Collection {
   pulls: number;
   /** 마지막 히든 이후 뽑은 횟수(천장 계산) */
   sinceHidden: number;
+  /** 마지막 전설·히든 꾸미기 이후 꾸미기를 뽑은 횟수(꾸미기 천장) */
+  cosmeticPity: number;
   /** 꾸미기 뽑기로 얻은 장식·색(업적으로 연 것과 합쳐서 쓴다) */
   accessories: Accessory[];
   variants: Variant[];
@@ -101,6 +104,7 @@ export function startCollection(pet: PetState, now: number, name = ''): Collecti
     tickets: WELCOME_TICKETS,
     pulls: 0,
     sinceHidden: 0,
+    cosmeticPity: 0,
     accessories: [],
     variants: [],
     lastDaily: '',
@@ -201,9 +205,13 @@ export function pullSpecies(c: Collection, now: number, rng: () => number): { co
 
 export type CosmeticItem = { kind: 'accessory'; id: Accessory } | { kind: 'variant'; id: Variant };
 
-export type CosmeticPull = { ok: false; reason: string } | { ok: true; item: CosmeticItem };
+export type CosmeticPull = { ok: false; reason: string } | { ok: true; item: CosmeticItem; rarity: Rarity };
 
-/** 아직 못 가진 장식·색 중에서 같은 확률로 하나를 뽑는다. unlocked 는 업적으로 이미 연 것. */
+/**
+ * 아직 못 가진 장식·색 중에서 하나를 뽑는다. unlocked 는 업적으로 이미 연 것.
+ * 먼저 등급을 정하고(안 가진 것이 남은 등급끼리 GRADE_PERCENT 비율로), 그 등급의 안 가진 것 중 하나를 같은 확률로 고른다.
+ * 전설이 안 나온 채 COSMETIC_PITY 번 뽑으면 다음은 안 가진 전설이 나온다(남아 있을 때).
+ */
 export function pullCosmetic(
   c: Collection,
   all: { accessories: readonly Accessory[]; variants: readonly Variant[] },
@@ -216,11 +224,27 @@ export function pullCosmetic(
     ...all.variants.filter((v) => v !== 'default' && !unlocked.variants.has(v) && !c.variants.includes(v)).map((id) => ({ kind: 'variant' as const, id })),
   ];
   if (pool.length === 0) return { collection: c, result: { ok: false, reason: '꾸미기를 모두 모았어요!' } };
-  const item = pool[Math.min(pool.length - 1, Math.floor(rng() * pool.length))]!;
-  const next: Collection = { ...c, tickets: c.tickets - COST.cosmetic };
+  const gradeOf = (i: CosmeticItem): Rarity => cosmeticRarity(i.kind, i.id);
+  const left = RARITIES.filter((r) => pool.some((i) => gradeOf(i) === r));
+  let grade: Rarity = left[left.length - 1]!;
+  if (c.cosmeticPity + 1 >= COSMETIC_PITY && left.includes('legend')) {
+    grade = 'legend';
+  } else {
+    let roll = rng() * left.reduce((n, r) => n + GRADE_PERCENT[r], 0);
+    for (const r of left) {
+      roll -= GRADE_PERCENT[r];
+      if (roll < 0) {
+        grade = r;
+        break;
+      }
+    }
+  }
+  const ofGrade = pool.filter((i) => gradeOf(i) === grade);
+  const item = ofGrade[Math.min(ofGrade.length - 1, Math.floor(rng() * ofGrade.length))]!;
+  const next: Collection = { ...c, tickets: c.tickets - COST.cosmetic, cosmeticPity: PITY_RESETS_ON.includes(grade) ? 0 : c.cosmeticPity + 1 };
   if (item.kind === 'accessory') next.accessories = [...c.accessories, item.id];
   else next.variants = [...c.variants, item.id];
-  return { collection: next, result: { ok: true, item } };
+  return { collection: next, result: { ok: true, item, rarity: grade } };
 }
 
 // ---- 뽑기권을 버는 길 ----
@@ -401,6 +425,7 @@ export function sanitizeCollection(raw: unknown, validAccessories: readonly Acce
     tickets: count(r['tickets']),
     pulls: count(r['pulls']),
     sinceHidden: count(r['sinceHidden']),
+    cosmeticPity: count(r['cosmeticPity']),
     accessories: list(r['accessories'], validAccessories),
     variants: list(r['variants'], validVariants),
     lastDaily: typeof r['lastDaily'] === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(r['lastDaily']) ? r['lastDaily'] : '',

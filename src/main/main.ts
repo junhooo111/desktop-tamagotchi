@@ -85,6 +85,8 @@ import {
   syncActive,
   type Collection,
 } from '../shared/collection.js';
+import { isRarity } from '../shared/rarity.js';
+import { cosmeticRarity } from '../shared/cosmetics.js';
 import { loadCollection, saveCollection } from './collection-store.js';
 import type { PetView, TipBubble } from '../shared/view.js';
 import { debugProfileDir, findBrowser, launchArgs, type BrowserEnv } from './browser.js';
@@ -1584,7 +1586,8 @@ async function doPullCosmetic() {
     saveCollectionSafe();
     refreshWardrobe();
     const name = kind === 'accessory' ? ACCESSORY_NAMES[itemId as keyof typeof ACCESSORY_NAMES] : VARIANT_NAMES[itemId as keyof typeof VARIANT_NAMES] + L(' 색', ' color');
-    return { ok: true as const, message: L(`${name}(을)를 얻었어요!`, `Got ${nameEn(name)}!`), kind, itemId: itemId as never, view: collectionData() };
+    const rarity = isRarity(r.result.rarity) ? r.result.rarity : cosmeticRarity(kind, itemId);
+    return { ok: true as const, message: L(`${name}(을)를 얻었어요!`, `Got ${nameEn(name)}!`), kind, itemId: itemId as never, rarity, view: collectionData() };
   }
   return doPullCosmeticLocal();
 }
@@ -1602,7 +1605,7 @@ function doPullCosmeticLocal() {
   refreshWardrobe();
   const item = r.result.item;
   const name = item.kind === 'accessory' ? ACCESSORY_NAMES[item.id] : VARIANT_NAMES[item.id] + L(' 색', ' color');
-  return { ok: true as const, message: L(`${name}(을)를 얻었어요!`, `Got ${nameEn(name)}!`), kind: item.kind, itemId: item.id, view: collectionData() };
+  return { ok: true as const, message: L(`${name}(을)를 얻었어요!`, `Got ${nameEn(name)}!`), kind: item.kind, itemId: item.id, rarity: r.result.rarity, view: collectionData() };
 }
 
 /** 뽑기 창(collection.html)과 내 펫 창(pets.html)은 같은 통로(collectionApi)를 쓴다. */

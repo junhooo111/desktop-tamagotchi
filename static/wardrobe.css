@@ -187,3 +187,11 @@ footer {
   margin-top: 14px;
   text-align: right;
 }
+
+/* 꾸미기 등급: 칸 아래쪽 색 줄 */
+.tiles button.r-common { box-shadow: inset 0 -4px 0 #d9d9d9; }
+.tiles button.r-uncommon { box-shadow: inset 0 -4px 0 #5fd16a; }
+.tiles button.r-rare { box-shadow: inset 0 -4px 0 #4a9bff; }
+.tiles button.r-special { box-shadow: inset 0 -4px 0 #b36bff; }
+.tiles button.r-legend { box-shadow: inset 0 -4px 0 #ff9b2e; }
+.tiles button.r-hidden { box-shadow: inset 0 -4px 0 #ff5fd2; }
