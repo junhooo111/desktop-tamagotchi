@@ -1377,7 +1377,17 @@ var ACCESSORIES = [
   "bunnyears",
   "eyepatch",
   "monocle",
-  "star"
+  "star",
+  "beret",
+  "beanie",
+  "bandana",
+  "cowboy",
+  "headphones",
+  "pirate",
+  "knight",
+  "devil",
+  "unicornhorn",
+  "flamecrown"
 ];
 var ACCESSORY_COLORS = {
   none: { X: "#ffffff", Y: "#ffffff" },
@@ -1398,7 +1408,17 @@ var ACCESSORY_COLORS = {
   bunnyears: { X: "#ffffff", Y: "#ffb3c8" },
   eyepatch: { X: "#2b2b3a", Y: "#2b2b3a" },
   monocle: { X: "#ffd04a", Y: "#8a6b1c" },
-  star: { X: "#ffe14a", Y: "#ffa62e" }
+  star: { X: "#ffe14a", Y: "#ffa62e" },
+  beret: { X: "#c43a4a", Y: "#7a1f2a" },
+  beanie: { X: "#4a9bff", Y: "#ffffff" },
+  bandana: { X: "#e5484d", Y: "#ffffff" },
+  cowboy: { X: "#c8975a", Y: "#7a5230" },
+  headphones: { X: "#3a3f5a", Y: "#ff6b8b" },
+  pirate: { X: "#2b2b3a", Y: "#f2f2f2" },
+  knight: { X: "#aeb8c4", Y: "#e5484d" },
+  devil: { X: "#e5484d", Y: "#7a1f2a" },
+  unicornhorn: { X: "#ffffff", Y: "#ffd34a" },
+  flamecrown: { X: "#ff9b2e", Y: "#ffd34a" }
 };
 var even = (n) => Math.round(n / 2) * 2;
 function cells(t, x, y, rows) {
@@ -1409,86 +1429,71 @@ function cells(t, x, y, rows) {
     });
   });
 }
+function placeOnHead(g, head, rows, opts = {}) {
+  const overlap = opts.overlap ?? 2;
+  const bottom = even(head.cy - head.ry) + overlap;
+  const room = Math.max(2, Math.floor(bottom / 2));
+  const fitted = [...rows];
+  while (fitted.length > room && fitted.length > 2)
+    fitted.splice(Math.floor((fitted.length - 1) / 2), 1);
+  const width = (fitted[0]?.length ?? 0) * 2;
+  const x = even(head.cx + head.rx * (opts.dx ?? 0)) - Math.round(width / 2);
+  const y = Math.max(0, bottom - fitted.length * 2);
+  part(g, (t) => cells(t, x, y, fitted), { outline: "k" });
+}
+function ringBlocks(t, cx, cy, rIn, rOut, ch, keep) {
+  const r = Math.ceil(rOut / 2) * 2 + 2;
+  for (let y = even(cy) - r; y <= even(cy) + r; y += 2) {
+    for (let x = even(cx) - r; x <= even(cx) + r; x += 2) {
+      const d = Math.hypot(x + 1 - cx, y + 1 - cy);
+      if (d >= rIn && d <= rOut && (!keep || keep(x, y)))
+        rect(t, x, y, 2, 2, ch);
+    }
+  }
+}
 function drawHeadAccessory(g, acc, head, eyes) {
   switch (acc) {
-    case "crown": {
-      const x = even(head.cx) - 5;
-      const y = Math.max(2, even(head.cy - head.ry) - 4);
-      part(g, (t) => cells(t, x, y, ["X.X.X", "XXXXX", "XXYXX"]), { outline: "k" });
+    case "crown":
+      placeOnHead(g, head, ["X..X..X", "XXXXXXX", "XYXYXYX"]);
       break;
-    }
-    case "ribbon": {
-      const x = even(head.cx - head.rx * 0.35) - 6;
-      const y = Math.max(2, even(head.cy - head.ry) - 4);
-      part(g, (t) => cells(t, x, y, ["XX..XX", "XXYYXX", "XX..XX"]), { outline: "k" });
+    case "ribbon":
+      placeOnHead(g, head, ["XX..XX", "XXYYXX", "XX..XX"], { dx: -0.35 });
       break;
-    }
-    case "sprout": {
-      const x = even(head.cx) - 7;
-      const y = Math.max(2, even(head.cy - head.ry) - 8);
-      part(g, (t) => cells(t, x, y, ["XX...XX", "XXX.XXX", ".XXYXX.", "...Y...", "...Y..."]), { outline: "k" });
+    case "sprout":
+      placeOnHead(g, head, ["XX...XX", "XXX.XXX", ".XXYXX.", "...Y...", "...Y..."]);
       break;
-    }
-    case "flower": {
-      const x = even(head.cx - head.rx * 0.35) - 5;
-      const y = Math.max(2, even(head.cy - head.ry) - 8);
-      part(g, (t) => cells(t, x, y, [".X.X.", "XXXXX", "XXYXX", "XXXXX", ".X.X."]), { outline: "k" });
+    case "flower":
+      placeOnHead(g, head, [".X.X.", "XXXXX", "XXYXX", "XXXXX", ".X.X."], { dx: -0.35 });
       break;
-    }
-    case "partyhat": {
-      const x = even(head.cx) - 5;
-      const y = Math.max(2, even(head.cy - head.ry) - 8);
-      part(g, (t) => cells(t, x, y, ["..Y..", "..X..", ".XYX.", ".XXX.", "XYXYX"]), { outline: "k" });
+    case "partyhat":
+      placeOnHead(g, head, ["..Y..", "..X..", ".XYX.", ".XXX.", "XYXYX"]);
       break;
-    }
-    case "halo": {
-      const x = even(head.cx) - 6;
-      const y = Math.max(2, even(head.cy - head.ry) - 8);
-      part(g, (t) => cells(t, x, y, [".YXXY.", "X....X", ".YXXY."]), { outline: "k" });
+    case "halo":
+      placeOnHead(g, head, [".YXXY.", "X....X", ".YXXY."], { overlap: -2 });
       break;
-    }
-    case "cap": {
-      const x = even(head.cx) - 6;
-      const y = Math.max(2, even(head.cy - head.ry) - 4);
-      part(g, (t) => cells(t, x, y, [".XXXX..", "XXXXXX.", "YYYYYYY"]), { outline: "k" });
+    case "cap":
+      placeOnHead(g, head, [".XXXX..", "XXXXXX.", "YYYYYYY"]);
       break;
-    }
-    case "witch": {
-      const x = even(head.cx) - 7;
-      const y = Math.max(2, even(head.cy - head.ry) - 10);
-      part(g, (t) => cells(t, x, y, ["...X...", "...X...", "..XXX..", "..XYX..", ".XXXXX.", "XXXXXXX"]), { outline: "k" });
+    case "witch":
+      placeOnHead(g, head, ["...X...", "...X...", "..XXX..", "..XYX..", ".XXXXX.", "XXXXXXX"]);
       break;
-    }
-    case "chef": {
-      const x = even(head.cx) - 5;
-      const y = Math.max(2, even(head.cy - head.ry) - 6);
-      part(g, (t) => cells(t, x, y, [".XXX.", "XXXXX", "XXXXX", "YYYYY"]), { outline: "k" });
+    case "chef":
+      placeOnHead(g, head, [".X.X.", "XXXXX", "XXXXX", "XXXXX", "YYYYY"]);
       break;
-    }
-    case "santa": {
-      const x = even(head.cx) - 6;
-      const y = Math.max(2, even(head.cy - head.ry) - 6);
-      part(g, (t) => cells(t, x, y, ["..XXY.", ".XXXX.", "XXXXXX", "YYYYYY"]), { outline: "k" });
+    case "santa":
+      placeOnHead(g, head, ["..XXY.", ".XXXX.", "XXXXXX", "YYYYYY"]);
       break;
-    }
     case "headband": {
-      const x = even(head.cx) - 5;
-      const y = Math.max(2, even(head.cy - head.ry) - 4);
-      part(g, (t) => cells(t, x, y, ["..Y..", ".YYY.", "XXXXX"]), { outline: "k" });
+      part(g, (t) => ringBlocks(t, head.cx, head.cy, Math.min(head.rx, head.ry) - 1.2, Math.max(head.rx, head.ry) + 0.8, "X", (_x, y) => y + 1 < head.cy - head.ry * 0.25 && y + 1 > head.cy - head.ry - 3), { outline: "k" });
+      placeOnHead(g, head, ["..Y..", ".YYY.", "..Y.."], { dx: 0.15, overlap: 0 });
       break;
     }
-    case "antenna": {
-      const x = even(head.cx - head.rx * 0.2) - 3;
-      const y = Math.max(2, even(head.cy - head.ry) - 6);
-      part(g, (t) => cells(t, x, y, ["X.X", "XXX", ".Y.", ".Y."]), { outline: "k" });
+    case "antenna":
+      placeOnHead(g, head, ["X.X", "XXX", ".X.", ".Y.", ".Y."], { dx: -0.2 });
       break;
-    }
-    case "bunnyears": {
-      const x = even(head.cx) - 7;
-      const y = Math.max(2, even(head.cy - head.ry) - 6);
-      part(g, (t) => cells(t, x, y, ["XX...XX", "XY...YX", "XY...YX", "XXXXXXX"]), { outline: "k" });
+    case "bunnyears":
+      placeOnHead(g, head, ["XX...XX", "XY...YX", "XY...YX", "XXXXXXX"]);
       break;
-    }
     case "eyepatch": {
       const e = eyes[0];
       if (!e)
@@ -1505,34 +1510,59 @@ function drawHeadAccessory(g, acc, head, eyes) {
         break;
       const ex = e.x - (e.x & 1);
       const ey = e.y - (e.y & 1);
-      rect(g, ex - 3, ey - 3, 8, 2, "X");
-      rect(g, ex - 3, ey + 3, 8, 2, "X");
-      rect(g, ex - 3, ey - 1, 2, 4, "X");
-      rect(g, ex + 3, ey - 1, 2, 4, "X");
-      line(g, ex + 4, ey + 5, ex + 6, ey + 11, "Y", 1);
+      part(g, (t) => ringBlocks(t, ex + 1, ey + 1, 3, 5.4, "X"), { outline: "k" });
+      for (const [dx, dy] of [[-2, 6], [-4, 8], [-4, 10], [-2, 12]])
+        rect(g, ex + dx, ey + dy, 2, 2, "Y");
       break;
     }
     case "star": {
-      const x = even(head.cx) - 5;
-      const y = Math.max(2, even(head.cy - head.ry) - 8);
-      part(g, (t) => cells(t, x, y, ["..X..", ".XXX.", "XXYXX", ".XXX.", "..X.."]), { outline: "k" });
+      placeOnHead(g, head, ["..X..", ".XXX.", "XXYXX", ".XXX.", "..X.."], { overlap: 0 });
+      const top = even(head.cy - head.ry);
+      const sx = even(head.cx);
+      rect(g, sx - 10, Math.max(0, top - 8), 2, 2, "Y");
+      rect(g, sx + 8, Math.max(0, top - 6), 2, 2, "Y");
       break;
     }
+    case "beret":
+      placeOnHead(g, head, ["..Y...", ".XXXX.", "XXXXXX"]);
+      break;
+    case "beanie":
+      placeOnHead(g, head, ["..YY..", ".XXXX.", "XXXXXX", "YYYYYY"]);
+      break;
+    case "bandana":
+      placeOnHead(g, head, ["XXXXXXX", "XYXYXYX", "..XXX.."]);
+      break;
+    case "cowboy":
+      placeOnHead(g, head, ["...XXX...", "..XXXXX..", "YYYYYYYYY"]);
+      break;
+    case "headphones":
+      placeOnHead(g, head, [".XXXXXX.", "X......X", "YY....YY"]);
+      break;
+    case "pirate":
+      placeOnHead(g, head, ["..XXXX..", "XXXYYXXX", "XXXXXXXX"]);
+      break;
+    case "knight":
+      placeOnHead(g, head, ["..Y..", ".YYY.", "XXXXX", "XXXXX", "XXXXX"]);
+      break;
+    case "devil":
+      placeOnHead(g, head, ["X.....X", "XX...XX", ".X...X."]);
+      break;
+    case "unicornhorn":
+      placeOnHead(g, head, [".Y.", ".X.", "XYX", "XXX"]);
+      break;
+    case "flamecrown":
+      placeOnHead(g, head, ["..Y...Y..", ".YXY.YXY.", "XXXXXXXXX", "XYXYXYXYX"]);
+      break;
     case "glasses": {
-      const rings = eyes.map((e) => ({ x: e.x - (e.x & 1), y: e.y - (e.y & 1) }));
-      for (const r of rings) {
-        rect(g, r.x - 2, r.y - 2, 6, 2, "Y");
-        rect(g, r.x - 2, r.y + 2, 6, 2, "Y");
-        rect(g, r.x - 2, r.y, 2, 2, "Y");
-        rect(g, r.x + 2, r.y, 2, 2, "Y");
-      }
-      const [a, b] = rings;
-      if (a && b) {
-        const left = Math.min(a.x, b.x) + 4;
-        const right = Math.max(a.x, b.x) - 2;
-        if (right > left)
-          rect(g, left, a.y, right - left, 2, "Y");
-      }
+      const e = eyes[0];
+      if (!e)
+        break;
+      const ex = e.x - (e.x & 1);
+      const ey = e.y - (e.y & 1);
+      rect(g, ex - 2, ey - 2, 10, 2, "X");
+      rect(g, ex - 2, ey, 10, 4, "Y");
+      rect(g, ex, ey + 1, 2, 1, "X");
+      rect(g, ex - 8, ey - 2, 6, 2, "Y");
       break;
     }
     default:
@@ -1570,6 +1600,12 @@ function drawBackWings(g, acc, x, y, size) {
   const s = Math.max(0.7, size) * 1.05;
   const bx = even(x);
   const by = even(y);
+  if (acc === "wings") {
+    const rows = ["XXY....", "XXXY...", "XYXXY..", ".XXYXXY", "..XXYXX", "...XXXX"];
+    part(g, (t) => cells(t, bx - 12, Math.max(0, by - 11), rows), { outline: "k" });
+    void s;
+    return;
+  }
   part(g, (t) => {
     line(t, bx, by, bx - 9 * s, by - 3 * s, X, 3 * s);
     line(t, bx, by, bx - 7 * s, by - 8 * s, X, 3 * s);

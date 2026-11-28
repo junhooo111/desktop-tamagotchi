@@ -175,8 +175,17 @@ describe('꾸미기 뽑기', () => {
     const c = withTickets({ ...start(), accessories: ['ribbon'] }, 10);
     const unlocked = { accessories: new Set(['glasses' as const]), variants: new Set(['pastel' as const]) };
     const seen = new Set<string>();
-    for (let i = 0; i < 200; i++) {
-      const r = pullCosmetic(c, all, unlocked, () => i / 200).result;
+    for (let i = 0; i < 400; i++) {
+      // 등급과 고르기가 같은 난수에 묶이지 않게 시드마다 다른 수열(mulberry32)을 쓴다
+      let seed = Math.imul(i + 1, 2654435761) >>> 0;
+      const rng = (): number => {
+        seed = (seed + 0x6d2b79f5) >>> 0;
+        let t = seed;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+      const r = pullCosmetic(c, all, unlocked, rng).result;
       if (r.ok) seen.add(`${r.item.kind}:${r.item.id}`);
     }
     expect(seen.has('accessory:ribbon')).toBe(false);
@@ -196,12 +205,12 @@ describe('꾸미기 뽑기', () => {
     const high = pullCosmetic(c, gach, none, seq(0.999, 0));
     expect(high.result).toMatchObject({ ok: true, rarity: 'legend', item: { kind: 'accessory', id: 'wings' } });
     // 일반 구간(안 가진 것이 남은 5개 등급의 합 99 중 50)
-    expect(pullCosmetic(c, gach, none, seq(0.49, 0.99)).result).toMatchObject({ ok: true, rarity: 'common', item: { id: 'cap' } });
+    expect(pullCosmetic(c, gach, none, seq(0.49, 0.99)).result).toMatchObject({ ok: true, rarity: 'common', item: { id: 'bandana' } }); // 일반의 마지막
     expect(pullCosmetic(c, gach, none, seq(0.51, 0)).result).toMatchObject({ ok: true, rarity: 'uncommon' });
   });
 
   it('한 등급을 다 가졌으면 남은 등급끼리 다시 나눈다(이미 가진 것은 절대 다시 나오지 않는다)', () => {
-    const owned = { ...start(), tickets: 100, accessories: ['ribbon', 'sprout', 'flower', 'cap'] as never[] };
+    const owned = { ...start(), tickets: 100, accessories: ['ribbon', 'sprout', 'flower', 'cap', 'beret', 'beanie', 'bandana'] as never[] };
     const r = pullCosmetic(owned, { accessories: GACHA_ACCESSORIES, variants: VARIANTS }, none, seq(0, 0));
     expect(r.result).toMatchObject({ ok: true, rarity: 'uncommon' }); // 일반이 다 모였으니 가장 낮은 남은 등급
   });
@@ -215,7 +224,7 @@ describe('꾸미기 뽑기', () => {
     expect(before.result).toMatchObject({ ok: true, rarity: 'common' });
     expect(before.collection.cosmeticPity).toBe(COSMETIC_PITY - 1);
     // 전설을 이미 가졌으면 천장이어도 다른 등급이 나온다
-    const hasWings = { ...near, accessories: ['wings'] as never[] };
+    const hasWings = { ...near, accessories: ['wings', 'flamecrown'] as never[] };
     expect(pullCosmetic(hasWings, { accessories: GACHA_ACCESSORIES, variants: VARIANTS }, none, () => 0).result).toMatchObject({ ok: true, rarity: 'common' });
   });
 

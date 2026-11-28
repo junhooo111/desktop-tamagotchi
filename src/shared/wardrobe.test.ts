@@ -36,7 +36,7 @@ describe('해금 규칙의 짜임새', () => {
     }
     for (const a of ACHIEVEMENT_ONLY) expect(GACHA_ACCESSORIES.includes(a), `${a} 는 뽑기에 나오면 안 된다`).toBe(false);
     for (const a of GACHA_ONLY) expect(GACHA_ACCESSORIES.includes(a), `${a} 는 뽑기에 나와야 한다`).toBe(true);
-    expect(GACHA_ONLY).toHaveLength(4);
+    expect(GACHA_ONLY).toHaveLength(14);
     expect(ACHIEVEMENT_ONLY).toHaveLength(6);
     const g = emptyGrowth();
     expect(variantUnlocked(g, 'default')).toBe(true);

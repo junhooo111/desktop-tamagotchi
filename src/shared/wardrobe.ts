@@ -36,7 +36,7 @@ export const ACCESSORY_UNLOCK: Partial<Record<Accessory, string>> = {
 /** 업적으로만 얻는 장식(꾸미기 뽑기에는 나오지 않는다) */
 export const ACHIEVEMENT_ONLY: readonly Accessory[] = ['headband', 'antenna', 'bunnyears', 'eyepatch', 'monocle', 'star'];
 /** 꾸미기 뽑기로만 얻는 장식(업적이 없다) */
-export const GACHA_ONLY: readonly Accessory[] = ['cap', 'witch', 'chef', 'santa'];
+export const GACHA_ONLY: readonly Accessory[] = ['cap', 'witch', 'chef', 'santa', 'beret', 'beanie', 'bandana', 'cowboy', 'headphones', 'pirate', 'knight', 'devil', 'unicornhorn', 'flamecrown'];
 /** 꾸미기 뽑기에 나올 수 있는 장식(업적 전용은 뺀다) */
 export const GACHA_ACCESSORIES: readonly Accessory[] = ACCESSORIES.filter((a) => !ACHIEVEMENT_ONLY.includes(a));
 
@@ -61,6 +61,16 @@ export const ACCESSORY_NAMES: Record<Accessory, string> = {
   eyepatch: '안대',
   monocle: '외알 안경',
   star: '반짝 별',
+  beret: '베레모',
+  beanie: '비니',
+  bandana: '두건',
+  cowboy: '카우보이 모자',
+  headphones: '헤드폰',
+  pirate: '해적 모자',
+  knight: '기사 투구',
+  devil: '악마 뿔',
+  unicornhorn: '유니콘 뿔',
+  flamecrown: '불꽃 왕관',
 };
 
 /** 뽑기로 얻은 것과 가진 동물(Collection 에서 뽑아 넘긴다). 없으면 업적으로 연 것만 쓸 수 있다. */

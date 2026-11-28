@@ -273,12 +273,17 @@ describe('꾸미기 뽑기 (gacha_cosmetic)', () => {
 
   it(`전설이 안 나온 채 ${COSMETIC_PITY}번 뽑으면 다음은 안 가진 전설이 확정이고, 전설이 나오면 카운트가 0 으로 돌아간다`, async () => {
     const u = await signUp(db, 'cpity');
-    await setTickets(db, u, COST.cosmetic * 3);
+    await setTickets(db, u, COST.cosmetic * 4);
     await admin(db, 'update public.profiles set cosmetic_pity = $2 where user_id = $1', [u, COSMETIC_PITY]);
     const r = await as(db, u, async () => (await db.query<{ r: { item_id: string; rarity: string } }>('select public.gacha_cosmetic() as r')).rows[0]!.r);
     expect(r.rarity).toBe('legend');
-    expect(r.item_id).toBe('wings');
+    expect(['wings', 'flamecrown']).toContain(r.item_id);
     expect((await db.query<{ c: number }>('select cosmetic_pity as c from public.profiles where user_id = $1', [u])).rows[0]!.c).toBe(0);
+    // 천장이면 남은 전설이 나온다(전설은 2종뿐이라 두 번째 천장에서 나머지 하나)
+    await admin(db, 'update public.profiles set cosmetic_pity = $2 where user_id = $1', [u, COSMETIC_PITY]);
+    const r2 = await as(db, u, async () => (await db.query<{ r: { item_id: string; rarity: string } }>('select public.gacha_cosmetic() as r')).rows[0]!.r);
+    expect(r2.rarity).toBe('legend');
+    expect(['wings', 'flamecrown'].filter((x) => x !== r.item_id)).toEqual([r2.item_id]);
     // 전설을 다 가졌으면 천장이어도 다른 등급이 나온다(거절하지 않는다)
     await admin(db, 'update public.profiles set cosmetic_pity = $2 where user_id = $1', [u, COSMETIC_PITY]);
     expect((await as(db, u, async () => (await db.query<{ r: { rarity: string } }>('select public.gacha_cosmetic() as r')).rows[0]!.r)).rarity).not.toBe('legend');

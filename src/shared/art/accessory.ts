@@ -30,6 +30,16 @@ export type Accessory =
   | 'bunnyears'
   | 'eyepatch'
   | 'monocle'
+  | 'beret'
+  | 'beanie'
+  | 'bandana'
+  | 'cowboy'
+  | 'headphones'
+  | 'pirate'
+  | 'knight'
+  | 'devil'
+  | 'unicornhorn'
+  | 'flamecrown'
   | 'star';
 
 export const ACCESSORIES: readonly Accessory[] = [
@@ -52,6 +62,16 @@ export const ACCESSORIES: readonly Accessory[] = [
   'eyepatch',
   'monocle',
   'star',
+  'beret',
+  'beanie',
+  'bandana',
+  'cowboy',
+  'headphones',
+  'pirate',
+  'knight',
+  'devil',
+  'unicornhorn',
+  'flamecrown',
 ];
 
 /** 장식별 색: X 주색, Y 보조색(안경의 Y 는 짙은 렌즈 색이라 선글라스로 보인다) */
@@ -75,6 +95,16 @@ export const ACCESSORY_COLORS: Record<Accessory, { X: string; Y: string }> = {
   eyepatch: { X: '#2b2b3a', Y: '#2b2b3a' },
   monocle: { X: '#ffd04a', Y: '#8a6b1c' },
   star: { X: '#ffe14a', Y: '#ffa62e' },
+  beret: { X: '#c43a4a', Y: '#7a1f2a' },
+  beanie: { X: '#4a9bff', Y: '#ffffff' },
+  bandana: { X: '#e5484d', Y: '#ffffff' },
+  cowboy: { X: '#c8975a', Y: '#7a5230' },
+  headphones: { X: '#3a3f5a', Y: '#ff6b8b' },
+  pirate: { X: '#2b2b3a', Y: '#f2f2f2' },
+  knight: { X: '#aeb8c4', Y: '#e5484d' },
+  devil: { X: '#e5484d', Y: '#7a1f2a' },
+  unicornhorn: { X: '#ffffff', Y: '#ffd34a' },
+  flamecrown: { X: '#ff9b2e', Y: '#ffd34a' },
 };
 
 export interface HeadGeom {
@@ -215,6 +245,46 @@ export function drawHeadAccessory(g: Grid, acc: Accessory | undefined, head: Hea
       rect(g, sx + 8, Math.max(0, top - 6), 2, 2, 'Y');
       break;
     }
+    case 'beret':
+      // 베레모
+      placeOnHead(g, head, ['..Y...', '.XXXX.', 'XXXXXX']);
+      break;
+    case 'beanie':
+      // 비니
+      placeOnHead(g, head, ['..YY..', '.XXXX.', 'XXXXXX', 'YYYYYY']);
+      break;
+    case 'bandana':
+      // 두건
+      placeOnHead(g, head, ['XXXXXXX', 'XYXYXYX', '..XXX..']);
+      break;
+    case 'cowboy':
+      // 카우보이 모자
+      placeOnHead(g, head, ['...XXX...', '..XXXXX..', 'YYYYYYYYY']);
+      break;
+    case 'headphones':
+      // 헤드폰
+      placeOnHead(g, head, ['.XXXXXX.', 'X......X', 'YY....YY']);
+      break;
+    case 'pirate':
+      // 해적 모자
+      placeOnHead(g, head, ['..XXXX..', 'XXXYYXXX', 'XXXXXXXX']);
+      break;
+    case 'knight':
+      // 기사 투구
+      placeOnHead(g, head, ['..Y..', '.YYY.', 'XXXXX', 'XXXXX', 'XXXXX']);
+      break;
+    case 'devil':
+      // 악마 뿔
+      placeOnHead(g, head, ['X.....X', 'XX...XX', '.X...X.']);
+      break;
+    case 'unicornhorn':
+      // 유니콘 뿔
+      placeOnHead(g, head, ['.Y.', '.X.', 'XYX', 'XXX']);
+      break;
+    case 'flamecrown':
+      // 불꽃 왕관
+      placeOnHead(g, head, ['..Y...Y..', '.YXY.YXY.', 'XXXXXXXXX', 'XYXYXYXYX']);
+      break;
     case 'glasses': {
       // 선글라스: 눈을 통째로 가리는 짙은 렌즈 하나(옆모습), 윗테의 반짝임, 귀 쪽으로 뻗는 다리
       const e = eyes[0];

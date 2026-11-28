@@ -41,6 +41,17 @@ export const COSMETIC_ITEMS: readonly CosmeticItem[] = [
   V('mono', 'special'),
   // 전설
   A('wings', 'legend'),
+  // 새 머리 장식(2단계)
+  A('beret', 'common'),
+  A('beanie', 'common'),
+  A('bandana', 'common'),
+  A('cowboy', 'uncommon'),
+  A('headphones', 'uncommon'),
+  A('pirate', 'rare'),
+  A('knight', 'rare'),
+  A('devil', 'special'),
+  A('unicornhorn', 'special'),
+  A('flamecrown', 'legend'),
   // 업적 전용(뽑기에는 나오지 않는다)
   A('headband', 'rare', false),
   A('antenna', 'rare', false),

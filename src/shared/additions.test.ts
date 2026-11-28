@@ -8,6 +8,8 @@ import { ACCESSORY_NAMES, ACCESSORY_UNLOCK, ACHIEVEMENT_ONLY, GACHA_ACCESSORIES,
 const NOW = new Date(2026, 10, 27, 12).getTime();
 const NEW_ANIMALS = ['panda', 'bear', 'pig', 'sheep', 'owl'] as const;
 const NEW_ACCESSORIES = ['cap', 'witch', 'chef', 'santa', 'headband', 'antenna', 'bunnyears', 'eyepatch', 'monocle', 'star'] as const;
+/** 꾸미기 등급 도입 뒤에 더한 머리 장식(뽑기 전용) */
+const HEAD_ACCESSORIES = ['beret', 'beanie', 'bandana', 'cowboy', 'headphones', 'pirate', 'knight', 'devil', 'unicornhorn', 'flamecrown'] as const;
 
 describe('동물 5종 추가', () => {
   it('판다·곰·돼지·양·부엉이는 일반보다 높은 등급으로 들어와 있고, 전체는 31종이다', () => {
@@ -54,10 +56,11 @@ describe('희귀 동물 4종(수달·알파카·앵무새·너구리)', () => {
 
 describe('장식 10종 추가', () => {
   it('뽑기 전용 4종, 업적 전용 6종이고 서로 겹치지 않는다', () => {
-    expect([...GACHA_ONLY, ...ACHIEVEMENT_ONLY].sort()).toEqual([...NEW_ACCESSORIES].sort());
-    for (const a of NEW_ACCESSORIES) expect(ACCESSORIES.includes(a), a).toBe(true);
-    expect(ACCESSORIES).toHaveLength(19);
-    expect(Object.keys(ACCESSORY_NAMES)).toHaveLength(19);
+    expect([...GACHA_ONLY, ...ACHIEVEMENT_ONLY].sort()).toEqual([...NEW_ACCESSORIES, ...HEAD_ACCESSORIES].sort());
+    for (const a of [...NEW_ACCESSORIES, ...HEAD_ACCESSORIES]) expect(ACCESSORIES.includes(a), a).toBe(true);
+    expect(ACCESSORIES).toHaveLength(29);
+    expect(Object.keys(ACCESSORY_NAMES)).toHaveLength(29);
+    expect(GACHA_ONLY).toHaveLength(14); // 처음 4종 + 새 머리 장식 10종
   });
 
   it('업적 전용 장식은 꾸미기 뽑기에 나오지 않고, 뽑기 전용 장식은 업적 없이 뽑아야만 열린다', () => {
@@ -107,7 +110,7 @@ describe('장식 10종 추가', () => {
   });
 
   it('새 장식 10종 모두 모든 동물(새끼·성체)에서 그려지고 그림 밖으로 잘리지 않는다', () => {
-    for (const acc of NEW_ACCESSORIES) {
+    for (const acc of [...NEW_ACCESSORIES, ...HEAD_ACCESSORIES]) {
       for (const s of SPECIES) {
         for (const stage of ['baby', 'adult'] as const) {
           const set = spriteSet(s.id, stage, { variant: 'default', accessory: acc });
@@ -117,7 +120,7 @@ describe('장식 10종 추가', () => {
         }
       }
     }
-  });
+  }, 90_000);
 });
 
 describe('새 업적 6개', () => {
