@@ -1,6 +1,17 @@
 {
   "items": [
     {
+      "id": "v0.17.0-walk-together",
+      "date": "2026-11-28",
+      "title": "친구와 함께 걷기, 살아 움직이는 소품",
+      "body": "소품이 굴러다니고 바람에 흔들려요. 친구 펫이 인사하고 같이 졸아요. 함께 다닌 시간이 친구 카드에 쌓이고 업적도 3개 생겼어요.",
+      "en": {
+        "title": "Walking with friends, lively props",
+        "body": "Props roll around and sway in the wind. Your friend's pet says hi and naps with you. Time walked together shows on the friend card, with 3 new achievements."
+      },
+      "url": "https://github.com/junhooo111/desktop-tamagotchi/releases/tag/v0.17.0"
+    },
+    {
       "id": "v0.16.0-more-props-card",
       "date": "2026-11-28",
       "title": "소품 12종, 카드에도 소품이 나와요",
