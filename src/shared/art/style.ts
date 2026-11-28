@@ -62,9 +62,10 @@ export function tintLook(look: Look, variant: Variant): Look {
   };
 }
 
-/** 팔레트에 더할 목 장식 색(N, M) */
+/** 팔레트에 더할 목 장식 색(N, M)과 1칸 디테일 색(Q 밝은 면, R 어두운 면) */
 export function neckPalette(neck: Neck | undefined): Record<string, string> {
-  return NECK_COLORS[neck ?? 'none'];
+  const c = NECK_COLORS[neck ?? 'none'];
+  return { ...c, Q: mix(c.N, '#ffffff', 0.65), R: mix(c.N, '#2a1f33', 0.4) };
 }
 
 /** 팔레트에 더할 효과 색(U, V) */
@@ -72,7 +73,8 @@ export function effectPalette(effect: Effect | undefined): Record<string, string
   return EFFECT_COLORS[effect ?? 'none'];
 }
 
-/** 팔레트에 더할 장식 색(X, Y) */
+/** 팔레트에 더할 장식 색(X, Y)과 1칸 디테일 색(H 밝은 면, S 어두운 면) */
 export function accessoryPalette(acc: Accessory): Record<string, string> {
-  return ACCESSORY_COLORS[acc];
+  const c = ACCESSORY_COLORS[acc];
+  return { ...c, H: mix(c.X, '#ffffff', 0.65), S: mix(c.X, '#2a1f33', 0.4) };
 }

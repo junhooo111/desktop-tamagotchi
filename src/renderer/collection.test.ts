@@ -114,7 +114,7 @@ describe('뽑기·컬렉션 창', () => {
     const after = pullSpecies(base(3), 2, () => 0.75).collection;
     const { api } = await open(view(base(3)));
     // 서버 응답이 오기 전까지는 알이 흔들리며 "뽑는 중"이 보인다
-    api.pullSpecies.mockImplementation(() => new Promise((r) => setTimeout(() => r({ ok: true, message: '부엉이(이)가 새로 왔어요!', id: 'owl', isNew: true, hidden: false, count: 1, view: view(after) }), 50)));
+    api.pullSpecies.mockImplementation(() => new Promise((r) => setTimeout(() => r({ ok: true, message: '부엉이(이)가 새로 왔어요!', id: 'owl', isNew: true, hidden: false, count: 1, view: view(after) }), 600)));
     el('pull-species').click();
     await flush();
     expect(el('result').hidden).toBe(false);

@@ -8,6 +8,9 @@
  * 팔레트 글자: X = 장식의 주색, Y = 보조색(보석·매듭·테두리). 색은 ACCESSORY_COLORS.
  */
 import { blank, line, part, px, rect, triangle, type Grid } from '../pixel.js';
+import { fineDetail } from './detail.js';
+import { PITY_RESETS_ON, type Rarity } from '../rarity.js';
+import { cosmeticRarity } from '../cosmetics.js';
 
 export type Accessory =
   | 'none'
@@ -131,6 +134,10 @@ function cells(t: Grid, x: number, y: number, rows: readonly string[]): void {
  * 키 큰 모자가 얼굴을 덮었다. 이제는 빈 칸이 모자라면 가운데 줄을 빼서 키를 줄인다(아랫단·윗단은 남는다).
  * overlap: 아랫단이 머리 안으로 겹치는 칸 수(기본 2, 음수면 머리에서 떠 있다). dx: 가로로 옮기는 정도(머리 반폭 비율).
  */
+/** 특별 이상 등급의 꾸미기는 1칸 도트 디테일(밝은 면·어두운 면·보석 반짝임)을 더한다 */
+const isHighGrade = (r: Rarity): boolean => r === 'special' || PITY_RESETS_ON.includes(r);
+let fineNow = false;
+
 function placeOnHead(g: Grid, head: HeadGeom, rows: readonly string[], opts: { overlap?: number; dx?: number } = {}): void {
   const overlap = opts.overlap ?? 2;
   const bottom = even(head.cy - head.ry) + overlap;
@@ -141,6 +148,7 @@ function placeOnHead(g: Grid, head: HeadGeom, rows: readonly string[], opts: { o
   const x = even(head.cx + head.rx * (opts.dx ?? 0)) - Math.round(width / 2);
   const y = Math.max(0, bottom - fitted.length * 2);
   part(g, (t) => cells(t, x, y, fitted), { outline: 'k' });
+  if (fineNow) fineDetail(g, x, y, fitted, { hi: 'H', sh: 'S' }, 'X', 'Y');
 }
 
 /** 중심 (cx, cy) 에서 반지름이 rIn~rOut 사이인 2x2 칸을 채운다(둥근 테·머리띠용). keep 이 있으면 true 인 칸만. */
@@ -156,6 +164,7 @@ function ringBlocks(t: Grid, cx: number, cy: number, rIn: number, rOut: number, 
 
 /** 머리에 쓰는 장식: 모자류는 머리 위에, 안경류는 눈 둘레에 그린다. eyes 는 눈(2x2)의 왼쪽 위 칸이다. */
 export function drawHeadAccessory(g: Grid, acc: Accessory | undefined, head: HeadGeom, eyes: readonly { x: number; y: number }[]): void {
+  fineNow = acc !== undefined && acc !== 'none' && isHighGrade(cosmeticRarity('accessory', acc));
   switch (acc) {
     case 'crown':
       // 왕관: 뾰족한 끝 셋과 보석 셋이 박힌 띠 (14x6). 끝 사이는 4칸을 비워야 윤곽선에 묻히지 않는다.
@@ -348,6 +357,7 @@ export function drawBackWings(g: Grid, acc: WingKind | undefined, x: number, y: 
     // 꾸미기 날개: 어깨에서 위·뒤로 펼친 깃털 날개. 깃이 한 겹씩 계단처럼 늘어나고 Y 색 깃줄이 보인다(2칸 단위 도트).
     const rows = ['XXY....', 'XXXY...', 'XYXXY..', '.XXYXXY', '..XXYXX', '...XXXX'];
     part(g, (t) => cells(t, bx - 12, Math.max(0, by - 11), rows), { outline: 'k' });
+    fineDetail(g, bx - 12, Math.max(0, by - 11), rows, { hi: 'H', sh: 'S' }, 'X', 'Y'); // 날개는 전설 등급: 깃털 윗면에 밝은 줄
     void s;
     return;
   }

@@ -7,6 +7,7 @@
  * 눈·귀·무늬가 큼직한 덩어리로 보이게 한다. 결과 그림은 32x32 이지만 점 하나가 2x2 칸이다.
  */
 import { SIZE } from '../pixel.js';
+import { FINE_CHARS } from './detail.js';
 
 /** 한 블록 안에서 같은 개수일 때 먼저 이기는 글자(얼굴 점이 몸 색에 먹히지 않게) */
 const PRIORITY = ['e', 'n', 'm', 't', 'k'];
@@ -40,14 +41,17 @@ function pickOf(cells: readonly string[]): string {
 
 export function chunky(rows: readonly string[]): string[] {
   const out: string[] = [];
+  // 높은 등급 꾸미기의 1칸 디테일(FINE_CHARS)은 블록 색을 정할 때 빈 칸으로 보고, 뭉친 뒤 제자리에 다시 얹는다.
+  const fine = (c: string | undefined): c is string => c !== undefined && FINE_CHARS.includes(c);
   for (let by = 0; by < SIZE; by += 2) {
     let a = '';
     let b = '';
     for (let bx = 0; bx < SIZE; bx += 2) {
-      const cells = [rows[by]?.[bx] ?? '.', rows[by]?.[bx + 1] ?? '.', rows[by + 1]?.[bx] ?? '.', rows[by + 1]?.[bx + 1] ?? '.'];
+      const raw = [rows[by]?.[bx], rows[by]?.[bx + 1], rows[by + 1]?.[bx], rows[by + 1]?.[bx + 1]];
+      const cells = raw.map((c) => (fine(c) || c === undefined ? '.' : c));
       const ch = pickOf(cells);
-      a += ch + ch;
-      b += ch + ch;
+      a += (fine(raw[0]) ? raw[0] : ch) + (fine(raw[1]) ? raw[1] : ch);
+      b += (fine(raw[2]) ? raw[2] : ch) + (fine(raw[3]) ? raw[3] : ch);
     }
     out.push(a, b);
   }

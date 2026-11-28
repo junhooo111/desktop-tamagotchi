@@ -8,6 +8,7 @@
  * 모두 2칸 단위(짝수 좌표)로 그린다(마지막에 16칸 굵기로 뭉치는 그림과 어긋나지 않게).
  */
 import { part, rect, type Grid } from '../pixel.js';
+import { fineDetail } from './detail.js';
 
 export type Neck = 'none' | 'bell' | 'scarf' | 'bowtie' | 'pearl' | 'starpendant' | 'goldchain';
 
@@ -73,6 +74,8 @@ export function drawNeckAccessory(g: Grid, neck: Neck | undefined, head: { cx: n
   const x = even(head.cx - head.rx * 0.2) - Math.round(width / 2);
   const y = even(head.cy + head.ry * 0.72);
   part(g, (t) => cells(t, x, y, rows), { outline: 'k' });
+  // 특별·전설 목걸이는 1칸 도트로 반짝이는 면을 더한다
+  if (neck === 'starpendant' || neck === 'goldchain') fineDetail(g, x, y, rows, { hi: 'Q', sh: 'R' }, 'N', 'M');
 }
 
 // ---- 효과 ----
@@ -137,6 +140,15 @@ export function applyEffect(rows: readonly string[], effect: Effect | undefined)
         if (!near) continue;
         const ch = (bx + by) % 2 === 0 ? 'U' : 'V';
         for (let dy = 0; dy < 2; dy++) for (let dx = 0; dx < 2; dx++) grid[by * 2 + dy]![bx * 2 + dx] = ch;
+      }
+    }
+    // 전설 효과: 오라 바깥으로 1칸짜리 불똥이 튄다(뭉치지 않은 점이라 오라보다 가늘고 또렷하다)
+    for (let by = 0; by < 16; by++) {
+      for (let bx = 0; bx < 16; bx++) {
+        if (grid[by * 2]?.[bx * 2] !== '.' || (bx * 7 + by * 13) % 6 !== 0) continue;
+        let ring = false;
+        for (let dy = -1; dy <= 1 && !ring; dy++) for (let dx = -1; dx <= 1; dx++) if ((dx || dy) && 'UV'.includes(grid[(by + dy) * 2]?.[(bx + dx) * 2] ?? '.')) ring = true;
+        if (ring) grid[by * 2]![bx * 2] = 'V';
       }
     }
   }
