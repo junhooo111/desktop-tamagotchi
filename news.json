@@ -1,6 +1,17 @@
 {
   "items": [
     {
+      "id": "v0.15.0-companion-props-market",
+      "date": "2026-11-28",
+      "title": "친구 펫 동행, 소품, 꾸미기 거래",
+      "body": "친구의 펫을 내 펫 옆에 데리고 다니면 둘 다 경험치와 친밀도를 받아요. 움직이는 소품 8종이 생기고, 경매장에서 꾸미기도 미리 보고 사고팔 수 있어요.",
+      "en": {
+        "title": "Friend pet companion, props, cosmetic trading",
+        "body": "Take a friend's pet along and you both gain XP and friendship. 8 animated props are new, and the auction house now previews and trades cosmetics too."
+      },
+      "url": "https://github.com/junhooo111/desktop-tamagotchi/releases/tag/v0.15.0"
+    },
+    {
       "id": "v0.14.0-cosmetic-grades",
       "date": "2026-11-28",
       "title": "꾸미기에도 등급이 생겼어요",
