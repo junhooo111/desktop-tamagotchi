@@ -51,11 +51,11 @@ export function parseAuthCallback(raw: string): CallbackResult {
   return { kind: 'code', code };
 }
 
-/** OS 암호화 기능(safeStorage)을 흉내 낼 수 있게 줄인 모양. */
+/** OS 암호화 기능(safeStorage)을 흉내 낼 수 있게 줄인 모양. Electron 의 비동기 함수(사용 중단된 동기 함수의 후속)를 따라 모두 Promise 를 돌려준다. */
 export interface Crypto {
-  isAvailable(): boolean;
-  encrypt(text: string): Buffer;
-  decrypt(data: Buffer): string;
+  isAvailable(): Promise<boolean>;
+  encrypt(text: string): Promise<Buffer>;
+  decrypt(data: Buffer): Promise<string>;
 }
 
 /** Supabase 클라이언트가 세션을 맡기는 저장소: 한 파일에 통째로 암호화해서 둔다. 암호화를 쓸 수 없으면 아무것도 저장하지 않는다. */
@@ -66,12 +66,15 @@ export class EncryptedFileStorage {
     private readonly crypto: Crypto,
   ) {}
 
-  private load(): Record<string, string> {
+  /** 쓰기를 한 줄로 세운다(동시에 저장해도 파일이 뒤섞이지 않게). */
+  private queue: Promise<void> = Promise.resolve();
+
+  private async load(): Promise<Record<string, string>> {
     if (this.cache) return this.cache;
     let data: Record<string, string> = {};
     try {
-      if (this.crypto.isAvailable()) {
-        const parsed: unknown = JSON.parse(this.crypto.decrypt(fs.readFileSync(this.file)));
+      if (await this.crypto.isAvailable()) {
+        const parsed: unknown = JSON.parse(await this.crypto.decrypt(fs.readFileSync(this.file)));
         if (parsed && typeof parsed === 'object') {
           data = Object.fromEntries(Object.entries(parsed as Record<string, unknown>).filter(([, v]) => typeof v === 'string')) as Record<string, string>;
         }
@@ -79,28 +82,34 @@ export class EncryptedFileStorage {
     } catch {
       data = {};
     }
-    this.cache = data;
-    return data;
+    this.cache ??= data;
+    return this.cache;
   }
 
-  private flush(): void {
-    if (!this.crypto.isAvailable() || !this.cache) return;
+  private async flush(): Promise<void> {
+    if (!this.cache || !(await this.crypto.isAvailable())) return;
     fs.mkdirSync(path.dirname(this.file), { recursive: true });
     const tmp = this.file + '.tmp';
-    fs.writeFileSync(tmp, this.crypto.encrypt(JSON.stringify(this.cache)));
+    fs.writeFileSync(tmp, await this.crypto.encrypt(JSON.stringify(this.cache)));
     fs.renameSync(tmp, this.file);
   }
 
-  getItem(key: string): string | null {
-    return this.load()[key] ?? null;
+  async getItem(key: string): Promise<string | null> {
+    return (await this.load())[key] ?? null;
   }
-  setItem(key: string, value: string): void {
-    this.load()[key] = value;
-    this.flush();
+  async setItem(key: string, value: string): Promise<void> {
+    const data = await this.load();
+    data[key] = value;
+    const run = this.queue.then(() => this.flush());
+    this.queue = run.catch(() => undefined);
+    await run;
   }
-  removeItem(key: string): void {
-    delete this.load()[key];
-    this.flush();
+  async removeItem(key: string): Promise<void> {
+    const data = await this.load();
+    delete data[key];
+    const run = this.queue.then(() => this.flush());
+    this.queue = run.catch(() => undefined);
+    await run;
   }
 }
 

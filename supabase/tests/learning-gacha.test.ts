@@ -226,6 +226,43 @@ describe('동물 뽑기 (gacha_pull) — 앱 규칙(src/shared/collection.ts)과
   }, 180_000);
 });
 
+describe('앱 최소 버전 검사 (app_config.min_client_version)', () => {
+  const call = (user: string, fn: 'gacha_pull' | 'gacha_cosmetic', version: string | null) =>
+    as(db, user, async () => (await db.query(`select public.${fn}($1::text) as r`, [version])).rows[0]);
+  const setMin = (v: string) => admin(db, "update public.app_config set value = $1 where key = 'min_client_version'", [v]);
+
+  it('기본(0.0.0)은 검사하지 않아서 버전을 안 보내는 예전 앱도 뽑는다', async () => {
+    const u = await signUp(db, 'oldok');
+    await setTickets(db, u, COST.species);
+    await call(u, 'gacha_pull', null);
+    expect(await ticketsOf(db, u)).toBe(0);
+  });
+
+  it('최소 버전보다 낮거나 버전을 안 보내면 뽑기 전에 거절하고, 뽑기권은 그대로다(동물·꾸미기 모두)', async () => {
+    const u = await signUp(db, 'oldapp');
+    await setTickets(db, u, COST.species * 2 + COST.cosmetic * 2);
+    await setMin('0.14.0');
+    try {
+      for (const fn of ['gacha_pull', 'gacha_cosmetic'] as const) {
+        for (const v of [null, '', 'abc', '0.13.9', '0.9.99']) expect(await errorOf(() => call(u, fn, v)), `${fn} ${String(v)}`).toMatch(/client_outdated/);
+      }
+      expect(await ticketsOf(db, u)).toBe(COST.species * 2 + COST.cosmetic * 2);
+      await call(u, 'gacha_pull', '0.14.0');
+      await call(u, 'gacha_pull', '0.15.2-beta');
+      await call(u, 'gacha_cosmetic', '1.0.0');
+      expect(await ticketsOf(db, u)).toBe(COST.cosmetic);
+    } finally {
+      await setMin('0.0.0');
+    }
+  });
+
+  it('앱 설정 표와 버전 함수는 앱이 직접 못 본다', async () => {
+    const u = await signUp(db, 'cfg');
+    expect(await errorOf(() => as(db, u, () => db.query('select * from public.app_config')))).toMatch(/permission denied/);
+    expect(await errorOf(() => as(db, u, () => db.query("select public._require_client('0.0.1')")))).toMatch(/permission denied/);
+  });
+});
+
 describe('꾸미기 뽑기 (gacha_cosmetic)', () => {
   const cosmetic = async (user: string) =>
     as(db, user, async () => (await db.query<{ r: { kind: string; item_id: string; tickets: number } }>('select public.gacha_cosmetic() as r')).rows[0]!.r);

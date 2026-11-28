@@ -6,9 +6,9 @@ import type { Session, SupabaseClient } from '@supabase/supabase-js';
 import { AuthService, EncryptedFileStorage, LOOPBACK_PORT, isConfigured, parseAuthCallback, startLoopback, toAuthUser, type Crypto } from './auth.js';
 
 const fakeCrypto = (available = true): Crypto => ({
-  isAvailable: () => available,
-  encrypt: (t) => Buffer.from(t, 'utf8').reverse(),
-  decrypt: (b) => Buffer.from(b).reverse().toString('utf8'),
+  isAvailable: async () => available,
+  encrypt: async (t) => Buffer.from(t, 'utf8').reverse(),
+  decrypt: async (b) => Buffer.from(b).reverse().toString('utf8'),
 });
 const tmpFile = () => path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'pet-auth-')), 'auth.bin');
 
@@ -48,30 +48,38 @@ describe('parseAuthCallback', () => {
 });
 
 describe('EncryptedFileStorage', () => {
-  it('저장한 값을 다시 읽고, 파일에는 평문이 없다', () => {
+  it('저장한 값을 다시 읽고, 파일에는 평문이 없다', async () => {
     const file = tmpFile();
     const s = new EncryptedFileStorage(file, fakeCrypto());
-    s.setItem('k', 'secret-refresh-token');
-    expect(new EncryptedFileStorage(file, fakeCrypto()).getItem('k')).toBe('secret-refresh-token');
+    await s.setItem('k', 'secret-refresh-token');
+    expect(await new EncryptedFileStorage(file, fakeCrypto()).getItem('k')).toBe('secret-refresh-token');
     expect(fs.readFileSync(file, 'utf8')).not.toContain('secret-refresh-token');
   });
-  it('지운 값은 사라진다', () => {
+  it('지운 값은 사라진다', async () => {
     const file = tmpFile();
     const s = new EncryptedFileStorage(file, fakeCrypto());
-    s.setItem('k', 'v');
-    s.removeItem('k');
-    expect(new EncryptedFileStorage(file, fakeCrypto()).getItem('k')).toBeNull();
+    await s.setItem('k', 'v');
+    await s.removeItem('k');
+    expect(await new EncryptedFileStorage(file, fakeCrypto()).getItem('k')).toBeNull();
   });
-  it('암호화를 쓸 수 없으면 파일에 아무것도 쓰지 않는다', () => {
+  it('암호화를 쓸 수 없으면 파일에 아무것도 쓰지 않는다', async () => {
     const file = tmpFile();
     const s = new EncryptedFileStorage(file, fakeCrypto(false));
-    s.setItem('k', 'v');
+    await s.setItem('k', 'v');
     expect(fs.existsSync(file)).toBe(false);
   });
-  it('깨진 파일은 빈 저장소로 본다', () => {
+  it('깨진 파일은 빈 저장소로 본다', async () => {
     const file = tmpFile();
     fs.writeFileSync(file, 'garbage');
-    expect(new EncryptedFileStorage(file, fakeCrypto()).getItem('k')).toBeNull();
+    expect(await new EncryptedFileStorage(file, fakeCrypto()).getItem('k')).toBeNull();
+  });
+
+  it('동시에 여러 값을 저장해도 모두 남는다(쓰기를 한 줄로 세운다)', async () => {
+    const file = tmpFile();
+    const s = new EncryptedFileStorage(file, fakeCrypto());
+    await Promise.all([s.setItem('a', '1'), s.setItem('b', '2'), s.setItem('c', '3')]);
+    const again = new EncryptedFileStorage(file, fakeCrypto());
+    expect([await again.getItem('a'), await again.getItem('b'), await again.getItem('c')]).toEqual(['1', '2', '3']);
   });
 });
 

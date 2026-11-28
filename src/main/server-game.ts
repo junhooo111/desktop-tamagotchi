@@ -97,6 +97,7 @@ const MAX_PENDING = 100;
 
 /** 서버 오류 코드를 사용자에게 보일 문구로 바꾼다. */
 export function friendlyError(message: string): string {
+  if (/client_outdated/.test(message)) return '앱이 오래돼서 뽑을 수 없어요. 새 버전으로 업데이트해 주세요 (뽑기권은 그대로예요)';
   if (/insufficient_tickets/.test(message)) return '뽑기권이 모자라요';
   if (/not_configured/.test(message)) return '아직 GitHub 연동이 준비되지 않았어요';
   if (/github_unavailable/.test(message)) return 'GitHub 에서 기여 수를 읽지 못했어요. 잠시 뒤에 다시 시도해요';
@@ -130,6 +131,8 @@ export class ServerGame {
   constructor(
     private readonly rpc: ServerRpc,
     private readonly dir: string,
+    /** 서버에 알리는 앱 버전(서버가 최소 버전보다 낮으면 뽑기를 거절한다) */
+    private readonly clientVersion = '',
   ) {
     this.pending = this.loadPending();
   }
@@ -202,7 +205,7 @@ export class ServerGame {
   }
 
   async pullSpecies(): Promise<{ ok: true; result: PullResult } | { ok: false; message: string }> {
-    const r = await this.rpc.call<{ species_id: string; rarity: string; tickets: number }>('gacha_pull');
+    const r = await this.rpc.call<{ species_id: string; rarity: string; tickets: number }>('gacha_pull', { p_client_version: this.clientVersion });
     if (r.error || !r.data) return { ok: false, message: friendlyError(r.error?.message ?? '') };
     if (this.state) {
       this.state = { ...this.state, tickets: r.data.tickets, pity: isRarity(r.data.rarity) && PITY_RESETS_ON.includes(r.data.rarity) ? 0 : this.state.pity + 1, species: { ...this.state.species, [r.data.species_id]: this.state.species[r.data.species_id] ?? 0 } };
@@ -211,7 +214,7 @@ export class ServerGame {
   }
 
   async pullCosmetic(): Promise<{ ok: true; result: CosmeticResult } | { ok: false; message: string }> {
-    const r = await this.rpc.call<{ kind: 'accessory' | 'variant' | 'neck' | 'effect'; item_id: string; rarity?: string; tickets: number }>('gacha_cosmetic');
+    const r = await this.rpc.call<{ kind: 'accessory' | 'variant' | 'neck' | 'effect'; item_id: string; rarity?: string; tickets: number }>('gacha_cosmetic', { p_client_version: this.clientVersion });
     if (r.error || !r.data) return { ok: false, message: friendlyError(r.error?.message ?? '') };
     if (this.state) {
       const s = this.state;

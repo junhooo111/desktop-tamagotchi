@@ -2542,9 +2542,17 @@ if (!app.requestSingleInstanceLock()) {
     auth = new AuthService({
       config: { url: process.env.PET_SUPABASE_URL ?? BACKEND.url, anonKey: process.env.PET_SUPABASE_ANON_KEY ?? BACKEND.anonKey },
       storage: new EncryptedFileStorage(path.join(app.getPath('userData'), 'auth.bin'), {
-        isAvailable: () => safeStorage.isEncryptionAvailable(),
-        encrypt: (t) => safeStorage.encryptString(t),
-        decrypt: (b) => safeStorage.decryptString(b),
+        // 사용 중단된 동기 함수 대신 비동기 함수를 쓴다. 예전 버전이 동기 함수로 암호화해 둔 파일은 비동기 복호화가 못 읽으면
+        // 동기 함수로 한 번 읽고(로그아웃되지 않게), 다음 저장 때 비동기 방식으로 다시 암호화된다.
+        isAvailable: () => safeStorage.isAsyncEncryptionAvailable(),
+        encrypt: (t) => safeStorage.encryptStringAsync(t),
+        decrypt: async (b) => {
+          try {
+            return (await safeStorage.decryptStringAsync(b)).result;
+          } catch {
+            return safeStorage.decryptString(b);
+          }
+        },
       }),
       openExternal: (u) => shell.openExternal(u),
     });
@@ -2573,7 +2581,7 @@ if (!app.requestSingleInstanceLock()) {
         },
         say: (t) => say(t),
       });
-      serverGame = new ServerGame(auth.serverRpc!, app.getPath('userData'));
+      serverGame = new ServerGame(auth.serverRpc!, app.getPath('userData'), app.getVersion());
       setInterval(() => {
         if (auth?.user) void accountSync?.tick(auth.user.id);
         void flushServerGrants();

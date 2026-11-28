@@ -168,6 +168,7 @@ const RULES: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^🎟 새 기능! 뽑기권 (\d+)장을 드렸어요\.\n메뉴의 '뽑기…'에서 새 동물을 뽑아 보세요/, (m) => `🎟 New feature! You got ${m[1]} ticket(s).\nPull new animals in the menu's 'Gacha…'`],
   // 서버 오류(friendlyError)
   [/^뽑기권이 모자라요/, () => 'Not enough tickets'],
+  [/^앱이 오래돼서 뽑을 수 없어요/, () => 'Your app is too old to pull. Please update to the new version (your tickets are untouched)'],
   [/^게임머니가 모자라요/, () => 'Not enough game money'],
   [/^마지막 한 마리는 팔 수 없어요/, () => 'You cannot sell your last animal'],
   [/^이미 경매장에 올라가 있어요/, () => 'Already listed in the auction house'],
