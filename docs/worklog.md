@@ -533,3 +533,10 @@
 - **친구 방문 연출**: 25초마다 친구 펫이 통통 뛰며 음표로 인사하고, 내 펫이 졸면 같이 존다.
 - **함께 다닌 시간**: `0030_companion_hours.sql`(`friendships.companion_ticks`, `friends_list.companion_hours`). 친구 카드에 "함께 다닌 시간 N시간", 업적 3개(산책 동무 1h · 나란히 걷는 사이 24h · 평생 동무 100h, 총 37개). Edge Function `card` 재배포.
 - **그림 지문 시험**(`visual-snapshot.test.ts`)과 **CI**(`.github/workflows/ci.yml`, Windows·macOS 시험+스모크).
+
+## 2026-11-28 — 일일 미션·친구 소식·친구 소품·CI 스모크 엄격화
+
+- **일일 미션**(`0031_daily_missions.sql`, 운영 적용): 쓰다듬기 3·돌봄 5·지식 1·친구와 함께 1 → 뽑기권 1장(+연속 보너스 3일 +1, 7일 +2, 14일부터 7일마다 +3). 앱이 진행을 보고하고(`mission_report`) 서버가 상한·보상을 정한다. 우클릭 `온라인 → 오늘의 미션`. 시험 `supabase/tests/missions.test.ts`.
+- **친구 소식**(`0032_friend_highlights.sql`): 친구가 얻은 전설·히든 동물·꾸미기를 5분마다 확인해 펫이 알려 준다(`checkFriendHighlights`, 기록은 market-seen.json 의 `<사용자>:fr`). 동물 종 이름은 안 알린다.
+- **친구 소품**: 동행하는 친구가 낀 소품도 절반 크기로 친구 펫 곁에 보인다(`drawPropHalf`).
+- **CI**: 맥 러너에서도 앱 스모크(SMOKE_OK)가 통과함을 확인해 스모크 단계를 필수로 바꿨다.

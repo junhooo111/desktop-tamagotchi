@@ -171,6 +171,19 @@ When logged in you can buy and sell pets with other players. Right-click → **`
 - **Sale alerts**: when one of your pets sells, the pet tells you who bought it and for how much (checked every 5 minutes). Grades are shown in listings too.
 - GitHub contributions are checked right after login and every hour (`☁ your name` → `Check GitHub contributions now`). It uses the GitHub contribution calendar, so pull requests and issues count too.
 
+## Daily missions
+
+When logged in you get four missions each (UTC) day. Right-click → **`Online` tab → `Daily missions`** shows your progress.
+
+| Mission | Goal |
+|---|---|
+| Pet it | 3 times |
+| Care (feed, play, wash, stroll) | 5 times |
+| Read an FE tip | 1 |
+| With a friend (wave, gift, walk) | 1 time |
+
+Finish all four for **1 ticket**, with streak bonuses (+1 on day 3, +2 on day 7, +3 every 7 days from day 14). Once a day; the server decides the amount.
+
 ## Friends and friendship levels
 
 When logged in you can become **friends** with other players. Right-click → **`Online` tab → `👥 Friends…`** (a number badge appears when you have incoming requests).
@@ -203,6 +216,7 @@ Press **`🐾 Take along`** on a friend's card and their featured pet follows yo
 - Turn it off under `Settings → Friend pet` (the bonus stops too), or press `🐾 Send home` on the friend's card.
 
 - A pair can earn at most **40** friendship a day (anti-abuse).
+- **Friend news**: your pet tells you when a friend gets a Legendary or Hidden animal or cosmetic (checked every 5 minutes; animal names stay secret, only the grade is shown).
 - Friendship needed per level: 0 · 20 · 60 · 120 · 200 · 320 · 480 · 700 · 1000 · 1400.
 - **Both of you get tickets at every level-up**: Lv2 and 3 = 1, Lv4 to 6 = 2, Lv7 and 8 = 3, Lv9 = 4, Lv10 = 5. Each level pays once, and one person can receive at most **100** tickets from friend levels in total.
 - Your friend's featured pet (species and level) shows on their card.

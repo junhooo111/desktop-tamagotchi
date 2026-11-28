@@ -69,6 +69,29 @@ export interface CompanionTick {
   reason?: string;
 }
 
+export interface FriendHighlight {
+  login: string;
+  kind: string;
+  item_id: string;
+  rarity: string;
+  at: string;
+}
+
+export type MissionKind = 'pet' | 'care' | 'learn' | 'social';
+/** 오늘의 일일 미션 현황(서버가 알려 준다) */
+export interface MissionState {
+  pet: number;
+  care: number;
+  learn: number;
+  social: number;
+  goals: Record<MissionKind, number>;
+  completed: boolean;
+  /** 연속으로 모두 채운 날 수 */
+  streak: number;
+  /** 이번 보고로 받은 뽑기권(없으면 0) */
+  reward: number;
+}
+
 export interface CosmeticSaleRow {
   listing_id: string;
   price: number;
@@ -380,6 +403,24 @@ export class ServerGame {
     const r = await this.rpc.call<FriendActionResult>('friend_gift_cosmetic', { p_friendship: id, p_kind: kind, p_item: item });
     if (r.error || !r.data) return { ok: false, message: friendlyError(r.error?.message ?? '') };
     return { ok: true, message: '', result: r.data };
+  }
+
+  /** since 이후 친구가 얻은 전설·히든(최근 순, 최대 10개). */
+  async friendHighlights(since: string): Promise<FriendHighlight[] | null> {
+    const r = await this.rpc.call<FriendHighlight[]>('friend_highlights', { p_since: since });
+    return r.error || !Array.isArray(r.data) ? null : r.data;
+  }
+
+  /** 오늘의 일일 미션 현황. */
+  async missionState(): Promise<MissionState | null> {
+    const r = await this.rpc.call<MissionState>('mission_state');
+    return r.error || !r.data ? null : r.data;
+  }
+
+  /** 일일 미션 진행을 한 번 올린다. 모두 채우면 서버가 뽑기권을 준다. */
+  async missionReport(kind: MissionKind): Promise<MissionState | null> {
+    const r = await this.rpc.call<MissionState>('mission_report', { p_kind: kind });
+    return r.error || !r.data ? null : r.data;
   }
 
   /** 데리고 다닐 친구를 고른다(null 이면 그만둔다). */

@@ -8,7 +8,7 @@ import type { StatusBubble } from '../shared/status.js';
 import type { NoticeBubble, NoticeMessage, PetView, TipBubble } from '../shared/view.js';
 import { localize, setUiLang, startUiLocalization } from './dom-i18n.js';
 import { PROP_MOTION } from '../shared/art/props.js';
-import { drawProp, propSize } from './prop-draw.js';
+import { drawProp, drawPropHalf, propSize } from './prop-draw.js';
 
 interface PetApi {
   getView(): Promise<PetView>;
@@ -296,6 +296,15 @@ function drawCompanion(v: PetView, pose: ReturnType<typeof resolvePose>, rect: {
       ctx.fillStyle = color;
       ctx.fillRect(x0 + px * cell, y0 + y * cell, cell, cell);
     }
+  }
+  // 친구가 낀 소품도 절반 크기로 친구 펫 곁에 둔다(친구 펫 뒤쪽 바닥, 떠 있는 소품은 머리 옆)
+  if (c.prop && c.prop !== 'none') {
+    const { w, h } = propSize(c.prop);
+    const pw = Math.ceil(w / 2) * cell;
+    const ph = Math.ceil(h / 2) * cell;
+    const px0 = x0 + (behind > 0 ? size + 2 * cell : -pw - 2 * cell);
+    const py0 = PROP_MOTION[c.prop] === 'float' ? y0 - ph * 0.4 + Math.sin(now / 450) * cell : WINDOW.height - ph;
+    drawPropHalf(ctx, c.prop, px0, py0, cell, Math.floor(now / 420) % 2 === 0 ? 0 : 1);
   }
   // 내 펫이 졸면 친구 펫도 같이 존다
   if (pose.zzz) drawZzz({ x: x0, y: y0, size }, now);

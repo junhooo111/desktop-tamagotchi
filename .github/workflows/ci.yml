@@ -1,6 +1,6 @@
 # 푸시·PR 마다 Windows 와 macOS 에서 시험을 돌리고, 앱을 실제로 띄워 보는 스모크(--smoke)도 시도한다.
 # 맥이 없는 개발 환경이라, 맥에서 깨지는 것(경로·네이티브 모듈·창)을 여기서 잡는다.
-# 스모크는 GitHub 러너의 화면 환경 차이로 실패할 수 있어 "실패해도 표시만 하고" 넘어간다(시험은 반드시 통과해야 한다).
+# 맥 러너에서도 앱 스모크(SMOKE_OK)가 통과함을 확인했다(2026-11-28).
 name: ci
 
 on:
@@ -25,6 +25,5 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npx vitest run
-      - name: App smoke (best effort)
-        continue-on-error: true
+      - name: App smoke
         run: npm run smoke

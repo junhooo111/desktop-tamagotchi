@@ -15,7 +15,7 @@ import { scanLocalPages, type Finding } from '../inspect/scan.js';
 import { renderProfileCard } from '../shared/card.js';
 import { BACKEND, cardMarkdown } from '../shared/backend.js';
 import { AccountSync, type Choice, type ConflictInfo } from './account-sync.js';
-import { ServerGame, applyServerPull, friendlyError, mirrorCollection, type CompanionInfo, type FriendRow, type Grant } from './server-game.js';
+import { ServerGame, applyServerPull, friendlyError, mirrorCollection, type CompanionInfo, type FriendRow, type Grant, type MissionKind, type MissionState } from './server-game.js';
 import { companionStage } from '../shared/companion.js';
 import { AUTH_SCHEME, AuthService, EncryptedFileStorage } from './auth.js';
 import { applyEvent, buildCodex, emptyGrowth, localDay, type Growth, type GrowthEvent } from '../shared/growth.js';
@@ -95,7 +95,7 @@ import { cosmeticCollection } from '../shared/wardrobe.js';
 import { COSMETIC_ITEMS, cosmeticRarity, type CosmeticKind } from '../shared/cosmetics.js';
 import { cosmeticName } from '../shared/cosmetic-names.js';
 import { isEffect, isNeck } from '../shared/art/extras.js';
-import { isProp } from '../shared/art/props.js';
+import { isProp, type Prop } from '../shared/art/props.js';
 import { loadCollection, saveCollection } from './collection-store.js';
 import type { PetView, TipBubble } from '../shared/view.js';
 import { debugProfileDir, findBrowser, launchArgs, type BrowserEnv } from './browser.js';
@@ -262,17 +262,59 @@ const randomSpecies = (): SpeciesId => {
   return (pick ?? SPECIES[0]!).id;
 };
 
+// ---- 일일 미션: 쓰다듬기 3 · 돌봄 5 · 지식 1 · 친구와 함께 1 을 모두 채우면 뽑기권(연속이면 보너스) ----
+let missions: MissionState | null = null;
+
+/** 미션 진행을 서버에 알린다(로그인했을 때만). 다 채워 보상을 받으면 펫이 알려 준다. */
+function missionReport(kind: MissionKind): void {
+  const game = serverGame;
+  if (!serverOn() || !game) return;
+  void game.missionReport(kind).then(async (m) => {
+    if (!m) return;
+    missions = m;
+    if (m.reward > 0) {
+      await game.refresh();
+      if (game.state) {
+        collection = mirrorCollection(collection, game.state, Date.now());
+        saveCollectionSafe();
+        refreshCollection();
+      }
+      say(L(`📋 오늘의 미션 완료! 뽑기권 +${m.reward}장 (연속 ${m.streak}일)`, `📋 Daily missions done! +${m.reward} ticket(s) (${m.streak}-day streak)`));
+    }
+  });
+}
+
+async function loadMissions(): Promise<void> {
+  if (!serverOn() || !serverGame) return;
+  missions = await serverGame.missionState();
+}
+
+/** 우클릭 메뉴의 미션 목록(서버를 못 읽었으면 빈 값) */
+function missionMenuItems(): Array<{ id: string; label: string; enabled: false; hint?: string }> {
+  const m = missions;
+  if (!m) return [{ id: 'mission:none', label: L('아직 불러오지 못했어요', 'Not loaded yet'), enabled: false }];
+  const row = (id: string, ko: string, en: string, n: number, goal: number) => ({ id: `mission:${id}`, label: L(ko, en), enabled: false as const, hint: n >= goal ? '✓' : `${n}/${goal}` });
+  return [
+    row('pet', '쓰다듬기', 'Pet it', m.pet, m.goals.pet),
+    row('care', '돌봄(먹이·놀기·씻기·산책)', 'Care (feed, play, wash, stroll)', m.care, m.goals.care),
+    row('learn', 'FE 지식 읽기', 'Read an FE tip', m.learn, m.goals.learn),
+    row('social', '친구와 함께(인사·선물·동행)', 'With a friend (wave, gift, walk)', m.social, m.goals.social),
+    { id: 'mission:streak', label: L(`연속 ${m.streak}일 · 3일째 +1, 7일째 +2장`, `${m.streak}-day streak · +1 at 3, +2 at 7`), enabled: false },
+  ];
+}
+
 /** 지금 데리고 다니는 친구 펫(서버 기준). 로그인하지 않았거나 설정을 끄면 쓰지 않는다. */
 let companion: CompanionInfo | null = null;
 
 /** 친구가 꾸민 모습(서버가 허용 목록으로 걸러 둔 값이지만 한 번 더 확인한다). */
-function companionLook(extras: Record<string, unknown> | null | undefined): { variant?: Variant; accessory?: Accessory; neck?: Neck; effect?: Effect } {
+function companionLook(extras: Record<string, unknown> | null | undefined): { variant?: Variant; accessory?: Accessory; neck?: Neck; effect?: Effect; prop?: Prop } {
   const e = extras ?? {};
   return {
     ...(isVariant(e['variant']) ? { variant: e['variant'] } : {}),
     ...(isAccessory(e['accessory']) ? { accessory: e['accessory'] } : {}),
     ...(isNeck(e['neck']) ? { neck: e['neck'] } : {}),
     ...(isEffect(e['effect']) ? { effect: e['effect'] } : {}),
+    ...(isProp(e['prop']) && e['prop'] !== 'none' ? { prop: e['prop'] } : {}),
   };
 }
 
@@ -340,6 +382,7 @@ function confirmTip(): void {
   const current = pendingTip;
   if (!current) return;
   const firstRead = !progress.tipsSeen.includes(current.tip.id);
+  missionReport('learn');
   if (firstRead) {
     const result = learn(applyElapsedInPlace(), 'tip');
     pet = result.pet;
@@ -1052,7 +1095,10 @@ async function companionLoop(): Promise<void> {
   let notes = '';
   if (companion && settings.showCompanion) {
     const t = await game.companionTick();
-    if (t?.granted) xp += t.pet_xp;
+    if (t?.granted) {
+      xp += t.pet_xp;
+      missionReport('social');
+    }
   }
   // 친구가 나를 데리고 다닌 몫(설정과 상관없이 받아 간다. 이미 서버가 상한을 지켜 쌓았다)
   xp += await game.companionClaim();
@@ -1583,6 +1629,7 @@ function act(type: 'touch' | 'feed' | 'play' | 'wash'): ActionResult {
   if (result.ok) {
     persist();
     recordGrowth({ kind: 'care', care: type });
+    missionReport(type === 'touch' ? 'pet' : 'care');
   }
   return result;
 }
@@ -1840,6 +1887,8 @@ async function activateServer(): Promise<void> {
   setTimeout(() => void checkSales(), 20_000);
   setTimeout(() => void checkCosmeticTrades(), 26_000);
   setTimeout(() => void companionLoop(), 34_000);
+  setTimeout(() => void checkFriendHighlights(), 40_000);
+  setTimeout(() => void loadMissions(), 14_000);
   setTimeout(() => void refreshFriends(), 6_000);
   setTimeout(() => void pushCardExtras(), 12_000);
 }
@@ -1936,6 +1985,49 @@ async function checkSales(): Promise<void> {
  * 내 꾸미기가 팔렸는지, 친구가 꾸미기를 선물했는지 서버에 물어서 펫이 말해 준다(5분마다).
  * 어디까지 알렸는지는 펫 판매와 같은 market-seen.json 에 열쇠(<사용자>:cos, <사용자>:gift)로 적는다. 처음에는 지금부터 시작한다.
  */
+/**
+ * 친구가 전설·히든 동물이나 꾸미기를 새로 얻으면 펫이 알려 준다(5분마다 확인).
+ * 어디까지 알렸는지는 market-seen.json 에 열쇠 <사용자>:fr 로 적는다. 처음에는 지금부터 시작한다.
+ */
+async function checkFriendHighlights(): Promise<void> {
+  const game = serverGame;
+  const user = auth?.user;
+  if (!serverOn() || !game || !user) return;
+  const file = path.join(app.getPath('userData'), 'market-seen.json');
+  let seen: Record<string, string> = {};
+  try {
+    seen = JSON.parse(fs.readFileSync(file, 'utf8')) as Record<string, string>;
+  } catch {
+    seen = {};
+  }
+  const key = `${user.id}:fr`;
+  const mark = (iso: string): void => {
+    try {
+      let latest: Record<string, string> = {};
+      try {
+        latest = JSON.parse(fs.readFileSync(file, 'utf8')) as Record<string, string>;
+      } catch {
+        latest = {};
+      }
+      fs.writeFileSync(file, JSON.stringify({ ...latest, [key]: iso }));
+    } catch (error) {
+      console.error('친구 소식 기록 저장 실패', error);
+    }
+  };
+  if (!seen[key]) return mark(new Date().toISOString());
+  const rows = await game.friendHighlights(seen[key]);
+  if (!rows || rows.length === 0) return;
+  mark(rows[0]!.at);
+  const text = (r: (typeof rows)[number]): string => {
+    const grade = r.rarity === 'hidden' ? L('히든', 'Hidden') : L('전설', 'Legendary');
+    if (r.kind === 'pet') return L(`${r.login} 님이 ${grade} 동물을 얻었어요!`, `${r.login} got a ${grade} animal!`);
+    const name = cosmeticName(r.kind as CosmeticKind, r.item_id);
+    return L(`${r.login} 님이 ${grade} 꾸미기 '${name}'(을)를 얻었어요!`, `${r.login} got the ${grade} cosmetic '${nameEn(name)}'!`);
+  };
+  const more = rows.length > 1 ? L(` (외 ${rows.length - 1}건)`, ` (+${rows.length - 1} more)`) : '';
+  say(`🎉 ${text(rows[0]!)}${more}`);
+}
+
 async function checkCosmeticTrades(): Promise<void> {
   const game = serverGame;
   const user = auth?.user;
@@ -2214,6 +2306,7 @@ function buildMenuModel(): MenuModel {
         items: [
           { id: on('friends', () => openFriends()), label: L('친구…', 'Friends…'), icon: 'friends', enabled: logged, ...(pendingFriendRequests() > 0 ? { badge: String(pendingFriendRequests()) } : {}), ...(logged ? {} : { hint: needLogin }) },
           { id: on('market', () => openMarket()), label: L('경매장…', 'Auction house…'), icon: 'shop', enabled: logged, ...(logged ? {} : { hint: needLogin }) },
+          { id: 'missions', label: L('오늘의 미션', 'Daily missions'), icon: 'list', enabled: logged, ...(logged ? { children: missionMenuItems(), ...(missions ? { badge: `${[missions.pet >= 3, missions.care >= 5, missions.learn >= 1, missions.social >= 1].filter(Boolean).length}/4` } : {}) } : { hint: needLogin }) },
           { id: on('ranking', () => openRanking()), label: L('랭킹…', 'Rankings…'), icon: 'trophy', enabled: logged, ...(logged ? {} : { hint: needLogin }) },
           account,
         ],
@@ -2451,6 +2544,7 @@ function updateStroll(now: number): void {
   }
   if (wasStrolling && !strolling && behavior.strollUntil === 0) {
     const result = finishStroll(applyElapsed(pet, now));
+    missionReport('care');
     pet = result.pet;
     say(result.message);
     persist();
@@ -2630,6 +2724,7 @@ function setupIpc(): void {
     isUuid(id)
       ? friendsAct(async (g) => {
           const r = await g.friendWave(id);
+          if (r.ok) missionReport('social');
           return r.ok && r.result ? { ok: true, message: friendReward(r.result, L('👋 인사했어요!', '👋 Waved!')) } : { ok: false, message: r.message };
         })
       : badFriendReq(),
@@ -2638,6 +2733,7 @@ function setupIpc(): void {
     isUuid(id)
       ? friendsAct(async (g) => {
           const r = await g.friendGift(id);
+          if (r.ok) missionReport('social');
           return r.ok && r.result ? { ok: true, message: friendReward(r.result, L('🎟️ 뽑기권을 선물했어요!', '🎟️ Ticket sent!')) } : { ok: false, message: r.message };
         })
       : badFriendReq(),
@@ -2791,6 +2887,8 @@ if (!app.requestSingleInstanceLock()) {
       setInterval(() => void checkSales(), 5 * 60_000);
       setInterval(() => void checkCosmeticTrades(), 5 * 60_000);
       setInterval(() => void companionLoop(), 10 * 60_000);
+      setInterval(() => void checkFriendHighlights(), 5 * 60_000);
+      setInterval(() => void loadMissions(), 10 * 60_000); // 날짜가 바뀌면 새 미션을 읽어 온다
       setInterval(() => void refreshFriends(true), 5 * 60_000);
       setInterval(() => void pushCardExtras(), 6 * 3_600_000); // 날짜가 바뀌면 다시 보낸다
     }

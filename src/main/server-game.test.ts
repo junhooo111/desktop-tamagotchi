@@ -283,3 +283,42 @@ describe('friendlyError', () => {
     expect(friendlyError('weird')).toContain('weird');
   });
 });
+
+describe('ServerGame 일일 미션·동행', () => {
+  const state = { pet: 1, care: 0, learn: 0, social: 0, goals: { pet: 3, care: 5, learn: 1, social: 1 }, completed: false, streak: 0, reward: 0 };
+
+  it('미션 현황과 진행 보고를 서버 함수로 부르고, 오류면 null 을 돌려준다', async () => {
+    const { rpc, calls } = fakeRpc({ mission_state: () => ok(state), mission_report: () => ok({ ...state, pet: 2 }) });
+    const g = new ServerGame(rpc, tmpDir());
+    expect(await g.missionState()).toMatchObject({ pet: 1 });
+    expect(await g.missionReport('pet')).toMatchObject({ pet: 2 });
+    expect(calls.find((c) => c.fn === 'mission_report')?.args).toEqual({ p_kind: 'pet' });
+    const bad = new ServerGame(fakeRpc({ mission_state: () => fail('x'), mission_report: () => fail('x') }).rpc, tmpDir());
+    expect(await bad.missionState()).toBeNull();
+    expect(await bad.missionReport('care')).toBeNull();
+  });
+
+  it('친구 소식: since 를 넘겨 부르고 오류면 null', async () => {
+    const { rpc, calls } = fakeRpc({ friend_highlights: () => ok([{ login: 'kim', kind: 'pet', item_id: '', rarity: 'legend', at: '2026-01-01T00:00:00Z' }]) });
+    expect(await new ServerGame(rpc, tmpDir()).friendHighlights('2025-01-01T00:00:00Z')).toHaveLength(1);
+    expect(calls[0]?.args).toEqual({ p_since: '2025-01-01T00:00:00Z' });
+    expect(await new ServerGame(fakeRpc({ friend_highlights: () => fail('x') }).rpc, tmpDir()).friendHighlights('x')).toBeNull();
+  });
+
+  it('동행: 고르기·현황·틱·몫 가져오기', async () => {
+    const { rpc } = fakeRpc({
+      set_companion: () => ok(null),
+      companion_current: () => ok([{ friendship_id: 'f', friend_id: 'u', login: 'kim', species_id: 'cat', pet_xp: 10, friend_level: 2 }]),
+      companion_tick: () => ok({ granted: true, pet_xp: 6 }),
+      companion_claim: () => ok(12),
+    });
+    const g = new ServerGame(rpc, tmpDir());
+    expect((await g.setCompanion('f')).ok).toBe(true);
+    expect(await g.companionCurrent()).toMatchObject({ login: 'kim' });
+    expect(await g.companionTick()).toMatchObject({ granted: true });
+    expect(await g.companionClaim()).toBe(12);
+    const bad = new ServerGame(fakeRpc({ set_companion: () => fail('not_found'), companion_claim: () => fail('x') }).rpc, tmpDir());
+    expect((await bad.setCompanion('f')).ok).toBe(false);
+    expect(await bad.companionClaim()).toBe(0);
+  });
+});

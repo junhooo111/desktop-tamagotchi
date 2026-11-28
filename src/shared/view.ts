@@ -30,7 +30,7 @@ export interface PetView {
   /** 더러워서 냄새가 난다(청결이 낮다) */
   dirty?: boolean;
   /** 내 펫 옆을 따라다니는 친구의 펫(절반 크기). 없으면 그리지 않는다. */
-  companion?: { speciesId: SpeciesId; stage: 'baby' | 'adult' | 'legend'; variant?: Variant; accessory?: Accessory; neck?: Neck; effect?: Effect };
+  companion?: { speciesId: SpeciesId; stage: 'baby' | 'adult' | 'legend'; variant?: Variant; accessory?: Accessory; neck?: Neck; effect?: Effect; prop?: Prop };
 }
 
 /** 펫이 찾아 알린 문제의 말풍선. 무엇이 문제인지, 어디인지, 어떻게 고치는지를 함께 보여 준다. */

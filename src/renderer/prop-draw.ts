@@ -31,3 +31,26 @@ export function paintProp(canvas: HTMLCanvasElement, prop: Prop): void {
   const unit = Math.max(1, Math.floor(Math.min(canvas.width / (w + 2), canvas.height / (h + 2))));
   drawProp(ctx, prop, (canvas.width - w * unit) / 2, (canvas.height - h * unit) / 2, unit);
 }
+
+/** 절반 크기로 그린다(친구 펫 곁의 소품). 2x2 칸마다 먼저 보이는 색 하나를 쓴다. */
+export function drawPropHalf(ctx: CanvasRenderingContext2D, prop: Prop, x: number, y: number, unit: number, phase: 0 | 1 = 0): void {
+  if (prop === 'none') return;
+  const colors = PROP_COLORS[prop];
+  const rows = propFrames(prop)[phase] ?? propRows(prop);
+  for (let ry = 0; ry < rows.length; ry += 2) {
+    for (let rx = 0; rx < (rows[0]?.length ?? 0); rx += 2) {
+      let ch = '.';
+      for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]] as const) {
+        const got = rows[ry + dy]?.[rx + dx];
+        if (got && got !== '.') {
+          ch = got;
+          break;
+        }
+      }
+      const color = ch === '.' ? undefined : colors[ch];
+      if (!color) continue;
+      ctx.fillStyle = color;
+      ctx.fillRect(Math.round(x + (rx / 2) * unit), Math.round(y + (ry / 2) * unit), unit, unit);
+    }
+  }
+}
