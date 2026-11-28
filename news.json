@@ -1,6 +1,17 @@
 {
   "items": [
     {
+      "id": "v0.18.0-daily-missions",
+      "date": "2026-11-28",
+      "title": "오늘의 미션과 친구 소식",
+      "body": "매일 미션 4개를 채우면 뽑기권을 받고, 연속으로 채우면 보너스가 붙어요. 친구가 전설·히든을 얻으면 펫이 알려 주고, 친구 펫의 소품도 함께 보여요.",
+      "en": {
+        "title": "Daily missions and friend news",
+        "body": "Finish 4 daily missions for a ticket, with streak bonuses. Your pet tells you when a friend gets a Legendary or Hidden, and the friend pet's prop shows too."
+      },
+      "url": "https://github.com/junhooo111/desktop-tamagotchi/releases/tag/v0.18.0"
+    },
+    {
       "id": "v0.17.0-walk-together",
       "date": "2026-11-28",
       "title": "친구와 함께 걷기, 살아 움직이는 소품",
