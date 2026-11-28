@@ -6,7 +6,7 @@ import { pathToFileURL } from 'node:url';
 
 const root = process.cwd();
 const load = (p) => import(pathToFileURL(path.join(root, 'dist', p)).href);
-const { SPECIES, HIDDEN_SPECIES, spriteSet, ACCESSORIES } = await load('shared/species.js');
+const { SPECIES, HIDDEN_SPECIES, spriteSet, ACCESSORIES, VARIANTS, NECKS, EFFECTS } = await load('shared/species.js');
 // 이름과 모습을 드러내는 동물(히든 빼고 전부: 일반·고급·희귀·특별·전설)
 const COMMON_SPECIES = SPECIES.filter((s) => s.rarity !== 'hidden');
 const { giftSvg } = await load('shared/gift.js');
@@ -18,7 +18,7 @@ const { ACCESSORY_NAMES } = await load('shared/wardrobe.js');
 
 const out = path.join(root, 'docs', 'images');
 fs.rmSync(out, { recursive: true, force: true });
-for (const d of ['animals', 'accessories', 'grades']) fs.mkdirSync(path.join(out, d), { recursive: true });
+for (const d of ['animals', 'accessories', 'variants', 'necks', 'effects', 'grades']) fs.mkdirSync(path.join(out, d), { recursive: true });
 const write = (name, svg) => fs.writeFileSync(path.join(out, name), svg + '\n', 'utf8');
 
 /** 도트 그림(문자 격자)을 같은 색 가로 줄 단위의 rect 로 바꾼다. */
@@ -104,6 +104,10 @@ for (const a of ACCESSORIES) {
   if (a === 'none') continue;
   write(`accessories/${a}.svg`, svgWrap(128, 128, petParts('cat', 'adult', { variant: 'default', accessory: a }, 4)));
 }
+
+for (const v of VARIANTS) if (v !== 'default') write(`variants/${v}.svg`, svgWrap(128, 128, petParts('cat', 'adult', { variant: v, accessory: 'none' }, 4)));
+for (const n of NECKS) if (n !== 'none') write(`necks/${n}.svg`, svgWrap(128, 128, petParts('cat', 'adult', { variant: 'default', accessory: 'none', neck: n }, 4)));
+for (const e of EFFECTS) if (e !== 'none') write(`effects/${e}.svg`, svgWrap(128, 128, petParts('cat', 'adult', { variant: 'default', accessory: 'none', effect: e }, 4)));
 
 // ---- 선물 상자·응가(크게) ----
 const scaleSvg = (svg, k) => svg.replace(/width="(\d+)" height="(\d+)"/, (_m, w, h) => `width="${w * k}" height="${h * k}" viewBox="0 0 ${w} ${h}"`);

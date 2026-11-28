@@ -7,7 +7,7 @@ For developers there is a bonus: the pet looks at the `localhost` pages you are 
 
 ![Pets wandering the desktop: 26 animals from common to legendary, and the silhouettes of 5 hidden animals you can only meet through gacha](docs/images/hero.svg)
 
-> 🐣 **v0.13.1** · Windows 10/11 · macOS (preview) · Free (MIT) · [Get the latest version](https://github.com/junhooo111/desktop-tamagotchi/releases/latest)
+> 🐣 **v0.14.0** · Windows 10/11 · macOS (preview) · Free (MIT) · [Get the latest version](https://github.com/junhooo111/desktop-tamagotchi/releases/latest)
 
 ## Put your pet on your GitHub profile (1 minute)
 
@@ -30,7 +30,7 @@ Log in with your GitHub account and **your pet moves on your GitHub profile.** I
 |---|---|
 | What it is | A pet that wanders the screen, hangs from your mouse, and climbs walls. It starts as an egg and grows into a baby, then an adult |
 | Collecting | Collect 31 animals through gacha in 6 rarity grades (Common, Uncommon, Rare, Special, Legendary, Hidden). A roulette spins and stops on your pull (5 hidden animals keep even their names secret) |
-| Dressing up | 18 accessories and 3 colors, earned through achievements or gacha. A closet-style screen lets you try them on |
+| Dressing up | 28 accessories, 6 neck items, 5 effects and 3 colors in 6 rarity grades, earned through achievements or gacha. A closet-style screen lets you try them on |
 | Together | Add friends by GitHub username, wave and gift tickets to raise your **friendship level**, and both of you get tickets at every level-up. Buy and sell pets in the auction house |
 | Platforms | **Windows 10/11 (64-bit)**, macOS (preview) |
 | Requirements | Just install it (no admin rights, no Node.js) |
@@ -201,7 +201,32 @@ Each friend has a **friendship Lv** (1 to 10) with a level badge (its color chan
 
 ## Customize
 
-Right-click → **`My pet` tab → `Customize…`**. The **preview and name field stay pinned at the top** while the list below scrolls, so you always see what your pet is wearing. Colors and accessories appear as closet tiles, each showing **your pet wearing it**. Hats now sit on top of the head **in the adult form too**. Achievements unlock colors and accessories (the codex unlocks the crown, fixing many problems unlocks wings, a streak unlocks the flower and halo). You can also pull cosmetics with tickets. You can name your pet there, and **names you give are never translated**.
+Right-click → **`My pet` tab → `Customize…`**. The **preview and name field stay pinned at the top** while the list below scrolls, so you always see what your pet is wearing. Everything appears as closet tiles, each showing **your pet wearing it**, with a **grade-colored line** under each tile. Hats sit on top of the head **in the adult form too**. You can name your pet there, and **names you give are never translated**.
+
+- **Color**: pastel / deep / mono (body color only).
+- **Accessories** (28): hats, glasses, wings and more. Achievements unlock some, and the rest come only from cosmetic gacha.
+- **Neck items** (6): bell collar, scarf, bow tie, pearl necklace, star necklace, gold chain.
+- **Effects** (5): sparkles, hearts, music notes, snowflakes, and a **flame aura** that wraps around your pet's outline.
+
+### Cosmetic gacha and grades
+
+A cosmetic pull costs **2 tickets**, and cosmetics have the same **6 grades** as animals (Common, Uncommon, Rare, Special, Legendary, Hidden). 36 cosmetics can come out of gacha (6 achievement-only accessories are excluded).
+
+- **Only items you do not own come out.** Nothing repeats, and once you own all of them you cannot pull more.
+- A grade is chosen first **among the grades that still have items you do not own** (Common 50 · Uncommon 24 · Rare 15 · Special 7 · Legendary 3 · Hidden 1), then one item of that grade. Once you finish a grade, the rest share the odds.
+- **Pity**: if no Legendary appears, the 25th pull always gives an unowned Legendary (unless you own them all).
+- The roulette spins here too: passing cells glow in their grade color, and the result reads like **"Got Witch hat! (Rare)"**. Legendary and Hidden results show an **animated aura**.
+- **Special and above** get extra **1-pixel detail** (bright and dark faces, gem sparkles, sparks).
+
+| Grade | Items |
+|---|---|
+| <img src="docs/images/grades/common-en.svg" height="22" alt="Common"> | Ribbon · Sprout · Flower · Cap · Beret · Beanie · Bandana · Bell collar · Scarf |
+| <img src="docs/images/grades/uncommon-en.svg" height="22" alt="Uncommon"> | Party hat · Sunglasses · Chef hat · Santa hat · Cowboy hat · Headphones · Pastel color · Bow tie · Sparkles · Hearts |
+| <img src="docs/images/grades/rare-en.svg" height="22" alt="Rare"> | Wizard hat · Halo · Pirate hat · Knight helmet · Deep color · Pearl necklace · Music notes · Snowflakes |
+| <img src="docs/images/grades/special-en.svg" height="22" alt="Special"> | Crown · Devil horns · Unicorn horn · Mono color · Star necklace |
+| <img src="docs/images/grades/legend-en.svg" height="22" alt="Legendary"> | Wings · Flame crown · Gold chain · Flame aura |
+
+Achievements unlock colors and accessories (the codex unlocks the crown, fixing many problems unlocks wings, a streak unlocks the flower and halo).
 
 ## Inspecting your pages (for developers)
 

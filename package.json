@@ -1,6 +1,6 @@
 {
   "name": "desktop-tamagotchi",
-  "version": "0.13.1",
+  "version": "0.14.0",
   "description": "바탕화면에 띄워 두고 키우는 다마고치형 데스크톱 펫",
   "private": true,
   "type": "module",

@@ -1,6 +1,17 @@
 {
   "items": [
     {
+      "id": "v0.14.0-cosmetic-grades",
+      "date": "2026-11-28",
+      "title": "꾸미기에도 등급이 생겼어요",
+      "body": "꾸미기 뽑기에 6등급이 생기고 새 머리 장식 10종, 목 장식, 효과가 들어왔어요. 전설·히든은 룰렛과 결과에 아우라가 나와요.",
+      "en": {
+        "title": "Cosmetics have rarity grades now",
+        "body": "Cosmetic gacha has 6 grades, with 10 new head items, neck items and effects. Legendary and Hidden get an aura in the roulette and the result."
+      },
+      "url": "https://github.com/junhooo111/desktop-tamagotchi/releases/tag/v0.14.0"
+    },
+    {
       "id": "v0.13.1-roulette-aura",
       "date": "2026-11-28",
       "title": "뽑기 룰렛이 더 근사해졌어요",

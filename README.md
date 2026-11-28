@@ -7,7 +7,7 @@
 
 ![바탕화면을 돌아다니는 펫들: 일반·고급·희귀·특별·전설 동물 26종과, 뽑기에서만 만날 수 있는 히든 동물 5종의 실루엣](docs/images/hero.svg)
 
-> 🐣 **v0.13.1** · Windows 10/11 · macOS 시험판 · 무료(MIT) · [최신 버전 받기](https://github.com/junhooo111/desktop-tamagotchi/releases/latest)
+> 🐣 **v0.14.0** · Windows 10/11 · macOS 시험판 · 무료(MIT) · [최신 버전 받기](https://github.com/junhooo111/desktop-tamagotchi/releases/latest)
 
 ## 내 펫을 GitHub 프로필에 붙이기 (1분)
 
@@ -51,7 +51,7 @@ GitHub 계정으로 로그인하면 **내가 키우는 펫이 GitHub 프로필�
 |---|---|
 | 이런 앱이에요 | 화면을 돌아다니고, 마우스에 매달리고, 벽을 타는 펫을 키웁니다. 알에서 시작해 새끼 → 성체로 자랍니다 |
 | 모으는 재미 | 뽑기로 동물 31종을 모읍니다. 일반·고급·희귀·특별·전설·히든 6등급이 있고, 룰렛이 돌다가 멈추며 뽑혀요(히든 5종은 이름도 비밀) |
-| 꾸미는 재미 | 모자·안경·날개 등 장식 18종과 색 3종. 업적으로 받거나 뽑기로 얻고, 옷장 화면에서 입혀 보며 고릅니다 |
+| 꾸미는 재미 | 모자·안경·날개 등 장식 28종, 목 장식 6종, 효과 5종, 색 3종. 꾸미기에도 6등급이 있어요. 업적으로 받거나 뽑기로 얻고, 옷장 화면에서 입혀 보며 고릅니다 |
 | 함께하는 재미 | GitHub 아이디로 친구를 맺고 인사·선물로 **친밀도 Lv**을 쌓아요. 레벨이 오르면 둘 다 뽑기권을 받아요. 경매장에서 펫을 사고팔 수 있어요 |
 | 지원 환경 | **Windows 10/11 (64비트)**, macOS(시험판) |
 | 필요한 것 | 설치만 하면 됩니다(관리자 권한·Node.js 불필요) |
@@ -302,16 +302,18 @@ FE 문제를 하나도 안 고쳐도 모입니다.
 
 - **이름**: 지금 키우는 동물에게 이름을 지어 줘요(12자까지). 메뉴 머리말과 프로필 카드에 나와요.
 - **색**: 파스텔 / 진하게 / 흑백. 몸 색만 바뀌고 윤곽선과 눈은 그대로예요.
-- **장식**: 아래 18종. 걷고 앉고 자는 모든 모습에서 머리나 등을 따라다녀요.
+- **장식**: 아래 28종. 걷고 앉고 자는 모든 모습에서 머리나 등을 따라다녀요.
+- **목 장식**: 방울 목줄·스카프·나비넥타이·진주 목걸이·별 목걸이·황금 목걸이(6종). 턱 밑에 걸려요.
+- **효과**: 반짝이·하트·음표·눈송이·불꽃 오라(5종). 펫 둘레에 떠 있고, 불꽃 오라는 펫 모양을 따라 둘레를 감싸요.
 - **모습(성장 단계)**: 이미 지나온 단계로만 되돌릴 수 있어요. 성체를 **새끼 모습**으로 돌렸다가 다시 성체로 바꿀 수도 있어요(알 단계는 고를 수 없어요). 경험치와 레벨은 그대로고 모습만 바뀌어요. 다른 동물로 바꾸면 `자동`으로 돌아가요.
 - **프로필 카드에 보여 줄 펫**: 가진 동물 중에서 골라요. 아직 못 뽑은 히든 동물은 이름이 ??? 로 가려져 있어요.
 - 모자류는 **어른 모습에서도 머리 맨 위에 얹혀요.** 어른은 머리가 위쪽에 있어서 키 큰 모자는 가운데를 줄여 낮게 그려요.
 
 아직 못 연 장식은 점선과 자물쇠로 보이고, 눌러 보면 여는 방법을 알려 줘요. 업적으로 장식을 받으면 아무것도 안 달고 있을 때 바로 달아 줘요.
 
-### 장식 18종 얻는 방법
+### 장식 얻는 방법
 
-장식은 세 종류예요: ① **업적 또는 뽑기**로 얻는 것(8종), ② **뽑기 전용**(4종, 업적 없음), ③ **업적 전용**(6종, 뽑기에는 안 나옴).
+장식은 세 종류예요: ① **업적 또는 뽑기**로 얻는 것(8종), ② **뽑기 전용**(14종, 업적 없음 — 처음 4종과 새 머리 장식 10종), ③ **업적 전용**(6종, 뽑기에는 나오지 않음). 아래 표에는 업적과 관련된 장식을 적었어요. 뽑기 전용 장식은 다음 "꾸미기 뽑기와 등급"에 있어요.
 
 | 모습 | 이름 | 얻는 방법 |
 |---|---|---|
@@ -335,6 +337,49 @@ FE 문제를 하나도 안 고쳐도 모입니다.
 | <img src="docs/images/accessories/star.svg" width="56" alt=""> | 반짝 별 | **업적 전용** — 업적 '전설의 만남'(뽑기에는 없음) |
 
 색은 `파스텔`(업적 '첫 수정'), `진하게`('열심히 배우는 중'), `흑백`('일주일 연속')으로 열리거나 꾸미기 뽑기로 얻어요.
+
+### 꾸미기 뽑기와 등급
+
+꾸미기 뽑기(**뽑기권 2장**)에도 동물처럼 **등급**이 있어요. 뽑기에 나오는 꾸미기는 모두 **36종**이에요(업적 전용 6종 제외).
+
+- **안 가진 것만 나와요.** 같은 것이 두 번 나오지 않아서 뽑을수록 모으는 재미가 커지고, 다 모으면 더 뽑을 수 없어요.
+- 먼저 **안 가진 것이 남은 등급 중에서** 등급을 고르고(일반 50 · 고급 24 · 희귀 15 · 특별 7 · 전설 3 · 히든 1의 비율), 그 등급에서 하나를 골라요. 한 등급을 다 모으면 남은 등급끼리 나눠요.
+- **천장**: 전설이 안 나온 채 25번 뽑으면 다음은 안 가진 전설이 나와요(전설을 다 모았으면 해당 없음).
+- 룰렛도 돌아요. 지나가는 칸이 등급 색으로 빛나고, 결과는 "마법사 모자를 얻었어요! (희귀)"처럼 등급 이름에 색이 입혀져요. 전설·히든은 결과 칸에 **아우라 애니메이션**이 나와요.
+- 꾸미기 창의 칸 아래쪽에도 **등급 색 줄**이 그어져 있어요.
+- **특별 이상 등급**은 몸보다 세밀한 **1칸 도트 디테일**(밝은 면·어두운 면·보석의 반짝임·불똥)이 더해져요.
+
+**<img src="docs/images/grades/common.svg" height="22" alt="일반">**
+
+| | | | | | | | |
+|---|---|---|---|---|---|---|---|
+| <img src="docs/images/accessories/ribbon.svg" width="56" alt="리본"><br>리본 | <img src="docs/images/accessories/sprout.svg" width="56" alt="새싹"><br>새싹 | <img src="docs/images/accessories/flower.svg" width="56" alt="꽃"><br>꽃 | <img src="docs/images/accessories/cap.svg" width="56" alt="야구모자"><br>야구모자 | <img src="docs/images/accessories/beret.svg" width="56" alt="베레모"><br>베레모 | <img src="docs/images/accessories/beanie.svg" width="56" alt="비니"><br>비니 | <img src="docs/images/accessories/bandana.svg" width="56" alt="두건"><br>두건 | <img src="docs/images/necks/bell.svg" width="56" alt="방울 목줄"><br>방울 목줄 |
+| <img src="docs/images/necks/scarf.svg" width="56" alt="스카프"><br>스카프 |  |  |  |  |  |  |  |
+
+**<img src="docs/images/grades/uncommon.svg" height="22" alt="고급">**
+
+| | | | | | | | |
+|---|---|---|---|---|---|---|---|
+| <img src="docs/images/accessories/partyhat.svg" width="56" alt="파티 모자"><br>파티 모자 | <img src="docs/images/accessories/glasses.svg" width="56" alt="선글라스"><br>선글라스 | <img src="docs/images/accessories/chef.svg" width="56" alt="요리사 모자"><br>요리사 모자 | <img src="docs/images/accessories/santa.svg" width="56" alt="산타 모자"><br>산타 모자 | <img src="docs/images/accessories/cowboy.svg" width="56" alt="카우보이 모자"><br>카우보이 모자 | <img src="docs/images/accessories/headphones.svg" width="56" alt="헤드폰"><br>헤드폰 | <img src="docs/images/variants/pastel.svg" width="56" alt="파스텔 색"><br>파스텔 색 | <img src="docs/images/necks/bowtie.svg" width="56" alt="나비넥타이"><br>나비넥타이 |
+| <img src="docs/images/effects/sparkles.svg" width="56" alt="반짝이"><br>반짝이 | <img src="docs/images/effects/hearts.svg" width="56" alt="하트"><br>하트 |  |  |  |  |  |  |
+
+**<img src="docs/images/grades/rare.svg" height="22" alt="희귀">**
+
+| | | | | | | | |
+|---|---|---|---|---|---|---|---|
+| <img src="docs/images/accessories/witch.svg" width="56" alt="마법사 모자"><br>마법사 모자 | <img src="docs/images/accessories/halo.svg" width="56" alt="천사 고리"><br>천사 고리 | <img src="docs/images/accessories/pirate.svg" width="56" alt="해적 모자"><br>해적 모자 | <img src="docs/images/accessories/knight.svg" width="56" alt="기사 투구"><br>기사 투구 | <img src="docs/images/variants/deep.svg" width="56" alt="진하게 색"><br>진하게 색 | <img src="docs/images/necks/pearl.svg" width="56" alt="진주 목걸이"><br>진주 목걸이 | <img src="docs/images/effects/notes.svg" width="56" alt="음표"><br>음표 | <img src="docs/images/effects/snow.svg" width="56" alt="눈송이"><br>눈송이 |
+
+**<img src="docs/images/grades/special.svg" height="22" alt="특별">**
+
+| | | | | | | | |
+|---|---|---|---|---|---|---|---|
+| <img src="docs/images/accessories/crown.svg" width="56" alt="왕관"><br>왕관 | <img src="docs/images/accessories/devil.svg" width="56" alt="악마 뿔"><br>악마 뿔 | <img src="docs/images/accessories/unicornhorn.svg" width="56" alt="유니콘 뿔"><br>유니콘 뿔 | <img src="docs/images/variants/mono.svg" width="56" alt="흑백 색"><br>흑백 색 | <img src="docs/images/necks/starpendant.svg" width="56" alt="별 목걸이"><br>별 목걸이 |  |  |  |
+
+**<img src="docs/images/grades/legend.svg" height="22" alt="전설">**
+
+| | | | | | | | |
+|---|---|---|---|---|---|---|---|
+| <img src="docs/images/accessories/wings.svg" width="56" alt="날개"><br>날개 | <img src="docs/images/accessories/flamecrown.svg" width="56" alt="불꽃 왕관"><br>불꽃 왕관 | <img src="docs/images/necks/goldchain.svg" width="56" alt="황금 목걸이"><br>황금 목걸이 | <img src="docs/images/effects/flameaura.svg" width="56" alt="불꽃 오라"><br>불꽃 오라 |  |  |  |  |
 
 ## 업적과 도감
 
