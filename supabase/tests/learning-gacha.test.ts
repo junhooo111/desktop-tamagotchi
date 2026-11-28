@@ -310,16 +310,16 @@ describe('꾸미기 뽑기 (gacha_cosmetic)', () => {
 
   it(`전설이 안 나온 채 ${COSMETIC_PITY}번 뽑으면 다음은 안 가진 전설이 확정이고, 전설이 나오면 카운트가 0 으로 돌아간다`, async () => {
     const u = await signUp(db, 'cpity');
-    await setTickets(db, u, COST.cosmetic * 9);
+    await setTickets(db, u, COST.cosmetic * 10);
     await admin(db, 'update public.profiles set cosmetic_pity = $2 where user_id = $1', [u, COSMETIC_PITY]);
     const r = await as(db, u, async () => (await db.query<{ r: { item_id: string; rarity: string } }>('select public.gacha_cosmetic() as r')).rows[0]!.r);
     expect(r.rarity).toBe('legend');
-    const legends = ['wings', 'flamecrown', 'goldchain', 'flameaura', 'dragonegg'];
+    const legends = ['wings', 'flamecrown', 'goldchain', 'flameaura', 'dragonegg', 'lantern'];
     expect(legends).toContain(r.item_id);
     expect((await db.query<{ c: number }>('select cosmetic_pity as c from public.profiles where user_id = $1', [u])).rows[0]!.c).toBe(0);
-    // 천장이면 남은 전설이 나온다(전설은 5종이라 천장마다 하나씩, 안 가진 것으로)
+    // 천장이면 남은 전설이 나온다(전설은 6종이라 천장마다 하나씩, 안 가진 것으로)
     const got = [r.item_id];
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 5; i++) {
       await admin(db, 'update public.profiles set cosmetic_pity = $2 where user_id = $1', [u, COSMETIC_PITY]);
       const next = await as(db, u, async () => (await db.query<{ r: { item_id: string; rarity: string } }>('select public.gacha_cosmetic() as r')).rows[0]!.r);
       expect(next.rarity).toBe('legend');

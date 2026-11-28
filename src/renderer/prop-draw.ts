@@ -1,5 +1,5 @@
 /** 소품 그리기: 펫 창·옷장·뽑기 결과·경매장이 같은 그림을 쓴다. */
-import { PROP_COLORS, propRows, type Prop } from '../shared/art/props.js';
+import { PROP_COLORS, propFrames, propRows, type Prop } from '../shared/art/props.js';
 
 /** 소품 그림의 크기(칸 수) */
 export function propSize(prop: Prop): { w: number; h: number } {
@@ -7,11 +7,11 @@ export function propSize(prop: Prop): { w: number; h: number } {
   return { w: rows[0]?.length ?? 0, h: rows.length };
 }
 
-/** (x, y)에 소품을 unit 픽셀 크기의 칸으로 그린다. */
-export function drawProp(ctx: CanvasRenderingContext2D, prop: Prop, x: number, y: number, unit: number): void {
+/** (x, y)에 소품을 unit 픽셀 크기의 칸으로 그린다. phase 는 움직임 두 장 중 어느 쪽인지(0 | 1). */
+export function drawProp(ctx: CanvasRenderingContext2D, prop: Prop, x: number, y: number, unit: number, phase: 0 | 1 = 0): void {
   if (prop === 'none') return;
   const colors = PROP_COLORS[prop];
-  propRows(prop).forEach((row, ry) => {
+  (propFrames(prop)[phase] ?? propRows(prop)).forEach((row, ry) => {
     [...row].forEach((ch, rx) => {
       const color = ch === '.' ? undefined : colors[ch];
       if (!color) return;

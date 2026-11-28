@@ -307,10 +307,13 @@ function drawPropNear(v: PetView, pose: ReturnType<typeof resolvePose>, rect: { 
     x = centerX + frontSign * (rect.size * 0.5 + 2 * scale) - (frontSign < 0 ? w * scale : 0);
     y = WINDOW.height - h * scale - bounce;
   } else {
-    x = centerX + frontSign * (rect.size * 0.42) - (w * scale) / 2;
-    y = figureTop(v) - h * scale * 0.4 + Math.sin(now / 450) * 3 * scale;
+    // 머리와 겹치지 않게 펫 옆(앞쪽 위)에 띄운다
+    x = centerX + frontSign * (rect.size * 0.62) - (w * scale) / 2;
+    y = figureTop(v) + rect.size * 0.1 - h * scale * 0.5 + Math.sin(now / 450) * 3 * scale;
   }
-  drawProp(ctx, prop, x, y, scale);
+  // 소품은 조금씩 움직인다: 두 장을 번갈아(나비는 빠르게 팔랑)
+  const period = prop === 'butterfly' ? 180 : prop === 'lantern' ? 260 : 420;
+  drawProp(ctx, prop, x, y, scale, Math.floor(now / period) % 2 === 0 ? 0 : 1);
 }
 
 const statusEl = document.getElementById('status') as HTMLElement;

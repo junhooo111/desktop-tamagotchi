@@ -231,7 +231,7 @@ describe('꾸미기 뽑기', () => {
   it('소품도 뽑히고, 이미 가진 소품은 다시 나오지 않는다', () => {
     const c = withTickets({ ...start(), accessories: ACCESSORIES.filter((a) => a !== 'none'), variants: VARIANTS.filter((v) => v !== 'default'), necks: NECKS.filter((n) => n !== 'none'), effects: EFFECTS.filter((e) => e !== 'none'), props: ['ball'] as never[] }, 10);
     const r = pullCosmetic(c, { accessories: ACCESSORIES, variants: VARIANTS }, none, () => 0);
-    expect(r.result).toMatchObject({ ok: true, rarity: 'common', item: { kind: 'prop', id: 'bone' } });
+    expect(r.result).toMatchObject({ ok: true, rarity: 'uncommon', item: { kind: 'prop', id: 'bone' } });
     expect(r.collection.props).toEqual(['ball', 'bone']);
   });
 

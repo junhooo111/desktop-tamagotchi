@@ -1,17 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { PROPS, PROP_COLORS, PROP_MOTION, propRows } from './props.js';
+import { PROPS, PROP_COLORS, PROP_MOTION, propFrames, propRows } from './props.js';
 
 describe('소품 그림', () => {
   it.each(PROPS.filter((p) => p !== 'none'))('%s: 16칸 안에 들어가고, 쓰는 글자마다 색이 있다', (p) => {
     const rows = propRows(p);
     expect(rows.length).toBeGreaterThan(5);
-    expect(rows.length).toBeLessThanOrEqual(16);
+    expect(rows.length).toBeLessThanOrEqual(18);
     const width = rows[0]!.length;
-    expect(width).toBeLessThanOrEqual(16);
+    expect(width).toBeLessThanOrEqual(18);
     for (const r of rows) expect(r).toHaveLength(width);
     const used = new Set(rows.join('').replaceAll('.', ''));
     for (const ch of used) expect(PROP_COLORS[p][ch], `${p}:${ch}`).toBeDefined();
     expect(PROP_MOTION[p]).toMatch(/ground|float/);
+    // 움직임 두 장은 같은 크기이고 서로 다르다(조금씩 움직인다)
+    const [a, b] = propFrames(p);
+    expect(b!.length).toBe(a!.length);
+    expect(b!.join('')).not.toBe(a!.join(''));
   });
 
   it('none 은 그림이 없다', () => {

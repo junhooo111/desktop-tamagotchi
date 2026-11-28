@@ -69,13 +69,14 @@ export const COSMETIC_ITEMS: readonly CosmeticItem[] = [
   N('goldchain', 'legend'),
   E('flameaura', 'legend'),
   // 소품(4단계): 펫 곁을 따라다니는 물건(모두 꾸미기 뽑기 전용)
-  P('ball', 'common'),
-  P('bone', 'common'),
-  P('fish', 'uncommon'),
-  P('balloon', 'uncommon'),
-  P('pot', 'rare'),
-  P('butterfly', 'rare'),
-  P('lantern', 'special'),
+  // 움직이는 물건이라 장식보다 한 단계 높은 등급이다(일반 소품은 없다)
+  P('ball', 'uncommon'),
+  P('bone', 'uncommon'),
+  P('fish', 'rare'),
+  P('balloon', 'rare'),
+  P('pot', 'special'),
+  P('butterfly', 'special'),
+  P('lantern', 'legend'),
   P('dragonegg', 'legend'),
   // 업적 전용(뽑기에는 나오지 않는다)
   A('headband', 'rare', false),
