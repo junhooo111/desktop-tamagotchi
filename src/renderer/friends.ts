@@ -19,6 +19,7 @@ export interface FriendRow {
   they_waved_today: boolean;
   species_id: string | null;
   pet_xp: number | null;
+  companion_hours?: number;
 }
 export interface FriendsView {
   ok: boolean;
@@ -113,7 +114,7 @@ function friendItem(f: FriendRow, tickets: number, companionId: string | null): 
   const lv = text('span', `lv t${tierOf(f.level)}`, `Lv.${f.level}`);
   const info = document.createElement('div');
   info.className = 'info';
-  info.append(text('div', 'name', f.login), text('div', 'sub', `함께한 지 ${days(f.since)}일${f.they_waved_today ? ' · 오늘 인사를 받았어요' : ''}`));
+  info.append(text('div', 'name', f.login), text('div', 'sub', `함께한 지 ${days(f.since)}일${(f.companion_hours ?? 0) > 0 ? ` · 함께 다닌 시간 ${f.companion_hours}시간` : ''}${f.they_waved_today ? ' · 오늘 인사를 받았어요' : ''}`));
   top.append(info, lv);
 
   const bar = document.createElement('div');

@@ -133,6 +133,7 @@ function drawGlyph(rows: readonly string[], x: number, y: number, unit: number, 
   ctx.globalAlpha = 1;
 }
 
+const NOTE = ['..##', '..#.', '..#.', '##..', '##..'];
 const HEART = ['.##.##.', '#######', '#######', '.#####.', '..###..', '...#...'];
 const BERRY = ['..G..', '.###.', '#####', '#####', '.###.'];
 
@@ -271,7 +272,9 @@ function drawCompanion(v: PetView, pose: ReturnType<typeof resolvePose>, rect: {
   companionX += (target - companionX) * 0.18;
   // 내 펫이 쓰다듬어 좋아하면 친구 펫도 같이 좋아서 통통 뛰고 하트를 띄운다
   const happy = pose.hearts;
-  const hop = v.mode === 'walk' ? -Math.abs(Math.round(Math.sin(now / 130 + 1) * 2)) : happy ? -Math.abs(Math.round(Math.sin(now / 110) * 3)) : 0;
+  // 25초마다 3초 동안 친구 펫이 신나서 통통 뛰며 음표를 띄운다("안녕!")
+  const greeting = now % 25_000 < 3_000 && v.mode === 'idle';
+  const hop = v.mode === 'walk' ? -Math.abs(Math.round(Math.sin(now / 130 + 1) * 2)) : happy || greeting ? -Math.abs(Math.round(Math.sin(now / 110) * 3)) : 0;
   const x0 = Math.round(rect.x + rect.size / 2 + companionX - size / 2);
   const y0 = WINDOW.height - size + hop * scale;
   const cell = Math.max(1, scale);
@@ -294,6 +297,9 @@ function drawCompanion(v: PetView, pose: ReturnType<typeof resolvePose>, rect: {
       ctx.fillRect(x0 + px * cell, y0 + y * cell, cell, cell);
     }
   }
+  // 내 펫이 졸면 친구 펫도 같이 존다
+  if (pose.zzz) drawZzz({ x: x0, y: y0, size }, now);
+  if (greeting && !happy) drawGlyph(NOTE, Math.round(x0 + size / 2 - 3 * cell), Math.round(y0 - 8 * cell - ((now / 300) % 1) * 4), cell, '#7a5cff');
   if (happy) drawHearts(x0 + size / 2, y0 + 2 * cell, now, Math.max(1, Math.floor(scale / 2) || 1));
 }
 
@@ -307,14 +313,19 @@ function drawPropNear(v: PetView, pose: ReturnType<typeof resolvePose>, rect: { 
   const motion = PROP_MOTION[prop];
   let x: number;
   let y: number;
+  // 9초마다 3초 동안 "굴러가고 돌아온다"(펫이 툭 건드린 듯): 앞으로 나갔다 되돌아오며 통통 튄다. 쓰다듬어 좋아할 때는 크게 뛴다.
+  const t = (now % 9000) - 6000;
+  const kick = t > 0 ? Math.sin((t / 3000) * Math.PI) : 0;
+  const joy = pose.hearts ? Math.abs(Math.sin(now / 120)) * 6 * scale : 0;
   if (motion === 'ground') {
-    const bounce = v.mode === 'walk' ? Math.abs(Math.sin(now / 160)) * 4 * scale : Math.abs(Math.sin(now / 700)) * 2 * scale;
-    x = centerX + frontSign * (rect.size * 0.5 + 2 * scale) - (frontSign < 0 ? w * scale : 0);
-    y = WINDOW.height - h * scale - bounce;
+    const bounce = v.mode === 'walk' ? Math.abs(Math.sin(now / 160)) * 4 * scale : Math.abs(Math.sin(now / 700)) * 2 * scale + kick * Math.abs(Math.sin(t / 3000 * Math.PI * 3)) * 6 * scale;
+    x = centerX + frontSign * (rect.size * 0.5 + 2 * scale + kick * 20 * scale) - (frontSign < 0 ? w * scale : 0);
+    y = WINDOW.height - h * scale - bounce - joy;
   } else {
-    // 머리와 겹치지 않게 펫 옆(앞쪽 위)에 띄운다
-    x = centerX + frontSign * (rect.size * 0.62) - (w * scale) / 2;
-    y = figureTop(v) + rect.size * 0.1 - h * scale * 0.5 + Math.sin(now / 450) * 3 * scale;
+    // 머리와 겹치지 않게 펫 옆(앞쪽 위)에 띄운다. 걸을 때는 바람에 뒤로 기울고, 좋아할 때는 높이 뜬다.
+    const drift = v.mode === 'walk' ? -frontSign * 4 * scale : 0;
+    x = centerX + frontSign * (rect.size * 0.62) + drift - (w * scale) / 2;
+    y = figureTop(v) + rect.size * 0.1 - h * scale * 0.5 + Math.sin(now / 450) * 3 * scale - joy * 1.5;
   }
   // 소품은 조금씩 움직인다: 두 장을 번갈아(나비는 빠르게 팔랑)
   const period = prop === 'butterfly' ? 180 : prop === 'lantern' ? 260 : 420;

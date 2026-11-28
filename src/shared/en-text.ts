@@ -22,7 +22,7 @@ export const NAMES_EN: Record<string, string> = {
   '도감 완성': 'Codex complete', '지식 수집가': 'Knowledge collector', '지식 박사': 'Knowledge master', '사흘 연속': 'Three-day streak',
   '일주일 연속': 'One-week streak', '한 달 연속': 'One-month streak', '다정한 친구': 'Kind friend', '금손 집사': 'Golden-hand keeper',
   깔끔쟁이: 'Neat freak', '산책 친구': 'Walking buddy', '동물 수집가': 'Animal collector', '뽑기 단골': 'Gacha regular', '전설의 만남': 'Legendary encounter',
-  '첫 친구': 'First friend', '친구 부자': 'Friend collector', 단짝: 'Best buddies', 절친: 'Close friends', '영혼의 단짝': 'Soul mates', '옷장 채우기': 'Filling the closet', 패셔니스타: 'Fashionista', '전설의 옷장': 'Legendary closet', '옷장 완성': 'Closet complete', '첫 소품': 'First prop', '소품 수집가': 'Prop collector',
+  '첫 친구': 'First friend', '친구 부자': 'Friend collector', 단짝: 'Best buddies', 절친: 'Close friends', '영혼의 단짝': 'Soul mates', '옷장 채우기': 'Filling the closet', 패셔니스타: 'Fashionista', '전설의 옷장': 'Legendary closet', '옷장 완성': 'Closet complete', '산책 동무': 'Walking buddy', '나란히 걷는 사이': 'Side by side', '평생 동무': 'Lifelong companion', '첫 소품': 'First prop', '소품 수집가': 'Prop collector',
   // 등급·단계
   경험치: 'XP', 배부름: 'Fullness', 기분: 'Mood', 청결: 'Clean',
   새내기: 'Newbie', 숙련: 'Skilled', 베테랑: 'Veteran', 달인: 'Master', 명인: 'Grandmaster', 신화: 'Mythic',
@@ -63,6 +63,9 @@ export const ACH_DESC_EN: Record<string, string> = {
   '친구와 친밀도 레벨 10이 되었어요': 'You reached friendship level 10 with a friend',
   '꾸미기를 5개 모았어요': 'You collected 5 cosmetics',
   '꾸미기를 15개 모았어요': 'You collected 15 cosmetics',
+  '친구 펫과 1시간 함께 다녔어요': 'You walked with a friend pet for 1 hour',
+  '한 친구와 24시간 함께 다녔어요': 'You walked with one friend for 24 hours',
+  '한 친구와 100시간 함께 다녔어요': 'You walked with one friend for 100 hours',
   '소품을 처음 얻었어요': 'You got your first prop',
   '소품을 모두 모았어요': 'You collected every prop',
   '전설 꾸미기를 얻었어요': 'You got a legendary cosmetic',

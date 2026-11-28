@@ -130,7 +130,7 @@ describe('새 업적 6개', () => {
   it('업적 전용 장식이 걸린 업적이 모두 실제로 있다', () => {
     for (const id of ids) expect(find(id), id).toBeDefined();
     for (const a of ACHIEVEMENT_ONLY) expect(ACHIEVEMENTS.some((x) => x.id === ACCESSORY_UNLOCK[a]), a).toBe(true);
-    expect(ACHIEVEMENTS).toHaveLength(34);
+    expect(ACHIEVEMENTS).toHaveLength(37);
   });
 
   it('씻기면 씻은 횟수가, 산책하면 산책 횟수(와 돌봄)가 오른다', () => {

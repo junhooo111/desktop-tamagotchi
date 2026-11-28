@@ -260,7 +260,7 @@ export const UI_RULES: Array<[RegExp, (m: RegExpMatchArray) => string]> = [
   [/^([\d,]+) 게임머니$/, (m) => `${m[1]} game money`],
   [/^판매자 (.+)$/, (m) => `seller ${m[1]}`],
   [/^내 뽑기권: (\d+)장$/, (m) => `My tickets: ${m[1]}`],
-  [/^함께한 지 (\d+)일(?: · 오늘 인사를 받았어요)?$/, (m) => `Friends for ${m[1]} day(s)${m[0].includes('인사') ? ' · waved at you today' : ''}`],
+  [/^함께한 지 (\d+)일(?: · 함께 다닌 시간 (\d+)시간)?(?: · 오늘 인사를 받았어요)?$/, (m) => `Friends for ${m[1]} day(s)${m[2] ? ` · walked together ${m[2]} h` : ''}${m[0].includes('인사') ? ' · waved at you today' : ''}`],
   [/^친밀도 (\d+) \/ (\d+) \(다음 레벨까지\)$/, (m) => `Intimacy ${m[1]} / ${m[2]} (to next level)`],
   [/^친밀도 (\d+) · 최고 레벨이에요!$/, (m) => `Intimacy ${m[1]} · max level!`],
   [/^(\d+)위$/, (m) => `#${m[1]}`],

@@ -35,6 +35,8 @@ export interface FriendRow {
   they_waved_today: boolean;
   species_id: string | null;
   pet_xp: number | null;
+  /** 함께 데리고 다닌 시간(시간 단위). 서버가 오래된 버전이면 없다. */
+  companion_hours?: number;
 }
 
 /** 인사/선물 결과 */

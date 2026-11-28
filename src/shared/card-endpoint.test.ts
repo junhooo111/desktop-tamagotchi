@@ -50,7 +50,7 @@ describe('renderCardFromRow: 서버의 extras(꾸미기·연속일·도감)', ()
     const { svg } = renderCardFromRow({ ...base, extras }, now);
     expect(svg).toContain('5D');
     expect(svg).toContain('9/50');
-    expect(svg).toContain('11/34');
+    expect(svg).toContain('11/37');
     expect(svg).toContain('>12<');
     expect(svg).toContain('>7<');
     expect(svg).toContain('30/');

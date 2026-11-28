@@ -92,7 +92,7 @@ export function streakOf(days: readonly string[], today: string): { current: num
 
 // ---- 업적 ----
 
-export type Metric = 'confirms' | 'fixes' | 'quizCorrect' | 'rulesLearned' | 'tipsSeen' | 'streak' | 'care' | 'washes' | 'strolls' | 'collected' | 'pulls' | 'hiddenOwned' | 'friends' | 'friendLevel' | 'cosmetics' | 'legendCosmetics' | 'props';
+export type Metric = 'confirms' | 'fixes' | 'quizCorrect' | 'rulesLearned' | 'tipsSeen' | 'streak' | 'care' | 'washes' | 'strolls' | 'collected' | 'pulls' | 'hiddenOwned' | 'friends' | 'friendLevel' | 'cosmetics' | 'legendCosmetics' | 'props' | 'companionHours';
 
 export interface Achievement {
   id: string;
@@ -136,6 +136,9 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   { id: 'cos-5', name: '옷장 채우기', description: '꾸미기를 5개 모았어요', metric: 'cosmetics', goal: 5, xp: 20 },
   { id: 'cos-15', name: '패셔니스타', description: '꾸미기를 15개 모았어요', metric: 'cosmetics', goal: 15, xp: 50 },
   { id: 'cos-legend', name: '전설의 옷장', description: '전설 꾸미기를 얻었어요', metric: 'legendCosmetics', goal: 1, xp: 80 },
+  { id: 'walk-1', name: '산책 동무', description: '친구 펫과 1시간 함께 다녔어요', metric: 'companionHours', goal: 1, xp: 15 },
+  { id: 'walk-24', name: '나란히 걷는 사이', description: '한 친구와 24시간 함께 다녔어요', metric: 'companionHours', goal: 24, xp: 60 },
+  { id: 'walk-100', name: '평생 동무', description: '한 친구와 100시간 함께 다녔어요', metric: 'companionHours', goal: 100, xp: 150 },
   { id: 'prop-1', name: '첫 소품', description: '소품을 처음 얻었어요', metric: 'props', goal: 1, xp: 20 },
   { id: 'prop-all', name: '소품 수집가', description: '소품을 모두 모았어요', metric: 'props', goal: COSMETIC_ITEMS.filter((i) => i.kind === 'prop').length, xp: 100 },
   { id: 'cos-all', name: '옷장 완성', description: '뽑기에 나오는 꾸미기를 모두 모았어요', metric: 'cosmetics', goal: COSMETIC_ITEMS.filter((i) => i.gacha).length, xp: 200 },
@@ -153,6 +156,8 @@ export interface GrowthContext {
   legendCosmetics?: number;
   /** 가진 소품 수 */
   props?: number;
+  /** 한 친구와 함께 다닌 가장 긴 시간(시간 단위) */
+  companionHours?: number;
   cosmeticProgress?: CosmeticProgress;
   /** 친구 수와 가장 높은 친밀도 레벨(서버의 친구 목록에서 온다). 모르면 0 으로 본다. */
   friends?: number;
@@ -199,6 +204,8 @@ export function metricValue(g: Growth, ctx: GrowthContext, metric: Metric, today
       return ctx.legendCosmetics ?? 0;
     case 'props':
       return ctx.props ?? 0;
+    case 'companionHours':
+      return ctx.companionHours ?? 0;
   }
 }
 

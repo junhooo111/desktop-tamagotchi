@@ -1185,6 +1185,9 @@ var ACHIEVEMENTS = [
   { id: "cos-5", name: "\uC637\uC7A5 \uCC44\uC6B0\uAE30", description: "\uAFB8\uBBF8\uAE30\uB97C 5\uAC1C \uBAA8\uC558\uC5B4\uC694", metric: "cosmetics", goal: 5, xp: 20 },
   { id: "cos-15", name: "\uD328\uC154\uB2C8\uC2A4\uD0C0", description: "\uAFB8\uBBF8\uAE30\uB97C 15\uAC1C \uBAA8\uC558\uC5B4\uC694", metric: "cosmetics", goal: 15, xp: 50 },
   { id: "cos-legend", name: "\uC804\uC124\uC758 \uC637\uC7A5", description: "\uC804\uC124 \uAFB8\uBBF8\uAE30\uB97C \uC5BB\uC5C8\uC5B4\uC694", metric: "legendCosmetics", goal: 1, xp: 80 },
+  { id: "walk-1", name: "\uC0B0\uCC45 \uB3D9\uBB34", description: "\uCE5C\uAD6C \uD3AB\uACFC 1\uC2DC\uAC04 \uD568\uAED8 \uB2E4\uB154\uC5B4\uC694", metric: "companionHours", goal: 1, xp: 15 },
+  { id: "walk-24", name: "\uB098\uB780\uD788 \uAC77\uB294 \uC0AC\uC774", description: "\uD55C \uCE5C\uAD6C\uC640 24\uC2DC\uAC04 \uD568\uAED8 \uB2E4\uB154\uC5B4\uC694", metric: "companionHours", goal: 24, xp: 60 },
+  { id: "walk-100", name: "\uD3C9\uC0DD \uB3D9\uBB34", description: "\uD55C \uCE5C\uAD6C\uC640 100\uC2DC\uAC04 \uD568\uAED8 \uB2E4\uB154\uC5B4\uC694", metric: "companionHours", goal: 100, xp: 150 },
   { id: "prop-1", name: "\uCCAB \uC18C\uD488", description: "\uC18C\uD488\uC744 \uCC98\uC74C \uC5BB\uC5C8\uC5B4\uC694", metric: "props", goal: 1, xp: 20 },
   { id: "prop-all", name: "\uC18C\uD488 \uC218\uC9D1\uAC00", description: "\uC18C\uD488\uC744 \uBAA8\uB450 \uBAA8\uC558\uC5B4\uC694", metric: "props", goal: COSMETIC_ITEMS.filter((i) => i.kind === "prop").length, xp: 100 },
   { id: "cos-all", name: "\uC637\uC7A5 \uC644\uC131", description: "\uBF51\uAE30\uC5D0 \uB098\uC624\uB294 \uAFB8\uBBF8\uAE30\uB97C \uBAA8\uB450 \uBAA8\uC558\uC5B4\uC694", metric: "cosmetics", goal: COSMETIC_ITEMS.filter((i) => i.gacha).length, xp: 200 }
@@ -1228,6 +1231,8 @@ function metricValue(g, ctx, metric, today) {
       return ctx.legendCosmetics ?? 0;
     case "props":
       return ctx.props ?? 0;
+    case "companionHours":
+      return ctx.companionHours ?? 0;
   }
 }
 function buildCodex(g, ctx, now) {

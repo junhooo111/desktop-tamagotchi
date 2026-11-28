@@ -91,3 +91,18 @@ describe('동행 친구 펫의 꾸민 모습', () => {
     expect(rows[0]!.extras).toMatchObject({ variant: 'pastel', neck: 'scarf' });
   });
 });
+
+describe('함께 다닌 시간', () => {
+  it('보너스를 받을 때마다 친구 목록의 companion_hours 가 오른다', async () => {
+    const { ua, ub, id } = await friends('co-hr-a', 'co-hr-b');
+    await givePet(db, ub, 'cat');
+    await set(ua, id);
+    await tick(ua);
+    await nextHour(ua);
+    await tick(ua);
+    const rows = await as(db, ua, async () => (await db.query<{ companion_hours: number }>('select * from public.friends_list()')).rows);
+    expect(rows[0]!.companion_hours).toBe(2);
+    const theirs = await as(db, ub, async () => (await db.query<{ companion_hours: number }>('select * from public.friends_list()')).rows);
+    expect(theirs[0]!.companion_hours).toBe(2); // 친구 쪽에도 같은 시간이 보인다
+  });
+});

@@ -714,7 +714,7 @@ function ruleIdOfKey(key: string): RuleId | null {
 }
 
 /** 업적 계산에 쓰는 바깥 정보: 읽은 지식 수와 컬렉션 현황 */
-function growthCtx(): { tipsSeen: number; collected: number; pulls: number; hiddenOwned: number; friends: number; friendLevel: number; cosmetics: number; legendCosmetics: number; props: number; cosmeticProgress: CosmeticProgress } {
+function growthCtx(): { tipsSeen: number; collected: number; pulls: number; hiddenOwned: number; friends: number; friendLevel: number; cosmetics: number; legendCosmetics: number; props: number; companionHours: number; cosmeticProgress: CosmeticProgress } {
   const owned = collection ? ownedIds(collection) : [];
   const cos = collection ? cosmeticCollection(growth, wardrobeExtra()) : [];
   const cosProgress: CosmeticProgress = {
@@ -727,6 +727,7 @@ function growthCtx(): { tipsSeen: number; collected: number; pulls: number; hidd
     cosmetics: cosProgress.owned,
     legendCosmetics: cos.filter((c) => c.owned && (c.rarity === 'legend' || c.rarity === 'hidden')).length,
     props: cos.filter((c) => c.kind === 'prop' && c.owned).length,
+    companionHours: mates.reduce((m, f) => Math.max(m, f.companion_hours ?? 0), 0),
     cosmeticProgress: cosProgress,
     friends: mates.length,
     friendLevel: mates.reduce((m, f) => Math.max(m, f.level), 0),
