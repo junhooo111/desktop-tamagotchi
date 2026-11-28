@@ -69,6 +69,7 @@ h2 {
 }
 
 .result {
+  overflow: hidden;
   margin-top: 10px;
   padding: 10px;
   text-align: center;
@@ -482,4 +483,110 @@ footer button {
 .cell.final.reveal.legend canvas {
   animation: pop 0.5s ease-out forwards;
   filter: brightness(1) drop-shadow(0 0 6px var(--glow));
+}
+
+/* ---- 결과 칸의 아우라: 전설은 금빛 후광과 돌아가는 빛살, 히든은 무지개가 돌고 반짝이가 튄다 ---- */
+.aura-wrap {
+  position: relative;
+  display: inline-block;
+  width: 128px;
+  height: 128px;
+}
+
+.aura-wrap:has(> canvas[hidden]) {
+  display: none;
+}
+
+.aura-wrap canvas {
+  position: relative;
+  z-index: 2;
+}
+
+.aura-wrap::before,
+.aura-wrap::after {
+  content: '';
+  position: absolute;
+  z-index: 1;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0;
+}
+
+/* 전설 */
+.result.win-legend .aura-wrap::before {
+  inset: -22px;
+  opacity: 1;
+  background: radial-gradient(circle, rgba(255, 224, 120, 0.95) 0%, rgba(255, 150, 40, 0.7) 45%, rgba(255, 110, 0, 0) 72%);
+  filter: blur(7px);
+  animation: aura-breathe 1.4s ease-in-out infinite;
+}
+
+.result.win-legend .aura-wrap::after {
+  inset: -46px;
+  opacity: 0.85;
+  background: repeating-conic-gradient(from 0deg, rgba(255, 210, 90, 0.55) 0deg 7deg, rgba(255, 210, 90, 0) 7deg 22deg);
+  -webkit-mask-image: radial-gradient(circle, #000 28%, transparent 68%);
+  mask-image: radial-gradient(circle, #000 28%, transparent 68%);
+  animation: aura-rays 9s linear infinite;
+}
+
+/* 히든 */
+.result.win-hidden .aura-wrap::before {
+  inset: -30px;
+  opacity: 1;
+  background: conic-gradient(from 0deg, #ff4f4f, #ffb02e, #fff04a, #4be06a, #3ec6ff, #7a5cff, #ff5fd2, #ff4f4f);
+  filter: blur(11px);
+  animation: aura-rays 3s linear infinite, aura-breathe 1.1s ease-in-out infinite;
+}
+
+.result.win-hidden .aura-wrap::after {
+  inset: -42px;
+  opacity: 1;
+  border-radius: 0;
+  background:
+    radial-gradient(circle at 12% 22%, #fff 0 2px, transparent 3px),
+    radial-gradient(circle at 86% 18%, #ffe14a 0 2px, transparent 3px),
+    radial-gradient(circle at 22% 82%, #7be0ff 0 2px, transparent 3px),
+    radial-gradient(circle at 80% 78%, #ff9be6 0 2px, transparent 3px),
+    radial-gradient(circle at 50% 6%, #fff 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 6% 52%, #ffe14a 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 94% 56%, #fff 0 1.5px, transparent 2.5px),
+    radial-gradient(circle at 52% 94%, #7be0ff 0 1.5px, transparent 2.5px);
+  animation: aura-twinkle 0.9s steps(2, end) infinite;
+}
+
+@keyframes aura-breathe {
+  0%,
+  100% {
+    scale: 0.88;
+    opacity: 0.7;
+  }
+  50% {
+    scale: 1.12;
+    opacity: 1;
+  }
+}
+
+@keyframes aura-rays {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes aura-twinkle {
+  0% {
+    opacity: 1;
+    scale: 1;
+  }
+  100% {
+    opacity: 0.35;
+    scale: 1.06;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .result .aura-wrap::before,
+  .result .aura-wrap::after {
+    animation: none;
+  }
 }
