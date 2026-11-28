@@ -1,6 +1,17 @@
 {
   "items": [
     {
+      "id": "v0.16.0-more-props-card",
+      "date": "2026-11-28",
+      "title": "소품 12종, 카드에도 소품이 나와요",
+      "body": "털실뭉치·연·눈사람·비구름 소품이 늘었어요. 프로필 카드에 소품이 나오고, 친구 펫이 꾸민 모습 그대로 따라오며 같이 좋아해요. 경매장에 정렬이 생겼어요.",
+      "en": {
+        "title": "12 props, props on your profile card",
+        "body": "4 new props: yarn, kite, snowman, rain cloud. Props show on your profile card, the friend pet follows with its own look and shares your joy. The auction house can sort now."
+      },
+      "url": "https://github.com/junhooo111/desktop-tamagotchi/releases/tag/v0.16.0"
+    },
+    {
       "id": "v0.15.0-companion-props-market",
       "date": "2026-11-28",
       "title": "친구 펫 동행, 소품, 꾸미기 거래",
