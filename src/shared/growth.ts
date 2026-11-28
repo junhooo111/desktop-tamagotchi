@@ -6,6 +6,8 @@
  */
 import { LESSONS, RULE_IDS, type RuleId } from './lessons.js';
 import { TIPS } from './tips.js';
+import { COSMETIC_ITEMS } from './cosmetics.js';
+import type { Rarity } from './rarity.js';
 
 export type CareKind = 'touch' | 'feed' | 'play' | 'wash';
 
@@ -90,7 +92,7 @@ export function streakOf(days: readonly string[], today: string): { current: num
 
 // ---- 업적 ----
 
-export type Metric = 'confirms' | 'fixes' | 'quizCorrect' | 'rulesLearned' | 'tipsSeen' | 'streak' | 'care' | 'washes' | 'strolls' | 'collected' | 'pulls' | 'hiddenOwned' | 'friends' | 'friendLevel';
+export type Metric = 'confirms' | 'fixes' | 'quizCorrect' | 'rulesLearned' | 'tipsSeen' | 'streak' | 'care' | 'washes' | 'strolls' | 'collected' | 'pulls' | 'hiddenOwned' | 'friends' | 'friendLevel' | 'cosmetics' | 'legendCosmetics';
 
 export interface Achievement {
   id: string;
@@ -131,6 +133,10 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   { id: 'friendship-3', name: '단짝', description: '친구와 친밀도 레벨 3이 되었어요', metric: 'friendLevel', goal: 3, xp: 25 },
   { id: 'friendship-5', name: '절친', description: '친구와 친밀도 레벨 5가 되었어요', metric: 'friendLevel', goal: 5, xp: 50 },
   { id: 'friendship-10', name: '영혼의 단짝', description: '친구와 친밀도 레벨 10이 되었어요', metric: 'friendLevel', goal: 10, xp: 150 },
+  { id: 'cos-5', name: '옷장 채우기', description: '꾸미기를 5개 모았어요', metric: 'cosmetics', goal: 5, xp: 20 },
+  { id: 'cos-15', name: '패셔니스타', description: '꾸미기를 15개 모았어요', metric: 'cosmetics', goal: 15, xp: 50 },
+  { id: 'cos-legend', name: '전설의 옷장', description: '전설 꾸미기를 얻었어요', metric: 'legendCosmetics', goal: 1, xp: 80 },
+  { id: 'cos-all', name: '옷장 완성', description: '뽑기에 나오는 꾸미기를 모두 모았어요', metric: 'cosmetics', goal: COSMETIC_ITEMS.filter((i) => i.gacha).length, xp: 200 },
 ];
 
 /** 업적 계산에 필요한 바깥 정보(읽은 지식 수는 progress 가 갖고 있다) */
@@ -140,6 +146,10 @@ export interface GrowthContext {
   collected?: number;
   pulls?: number;
   hiddenOwned?: number;
+  /** 꾸미기 수집: 가진 수와 그중 전설 이상의 수, 그리고 등급별 현황(도감 창) */
+  cosmetics?: number;
+  legendCosmetics?: number;
+  cosmeticProgress?: CosmeticProgress;
   /** 친구 수와 가장 높은 친밀도 레벨(서버의 친구 목록에서 온다). 모르면 0 으로 본다. */
   friends?: number;
   friendLevel?: number;
@@ -179,6 +189,10 @@ export function metricValue(g: Growth, ctx: GrowthContext, metric: Metric, today
       return ctx.friends ?? 0;
     case 'friendLevel':
       return ctx.friendLevel ?? 0;
+    case 'cosmetics':
+      return ctx.cosmetics ?? 0;
+    case 'legendCosmetics':
+      return ctx.legendCosmetics ?? 0;
   }
 }
 
@@ -249,7 +263,15 @@ export interface CodexAchievement {
   goal: number;
 }
 
+/** 꾸미기 수집 현황(등급별 가진 수 / 전체 수) */
+export interface CosmeticProgress {
+  owned: number;
+  total: number;
+  byGrade: Array<{ rarity: Rarity; owned: number; total: number }>;
+}
+
 export interface CodexView {
+  cosmetics?: CosmeticProgress;
   streak: { current: number; best: number; totalDays: number };
   counters: Growth['counters'];
   rulesLearned: number;
@@ -270,6 +292,7 @@ export function buildCodex(g: Growth, ctx: GrowthContext, now: number): CodexVie
     rulesTotal: RULE_IDS.length,
     tipsSeen: ctx.tipsSeen,
     tipsTotal: TIPS.length,
+    ...(ctx.cosmeticProgress ? { cosmetics: ctx.cosmeticProgress } : {}),
     rules: RULE_IDS.map((id) => {
       const stat = g.rules[id] ?? { confirms: 0, fixes: 0 };
       const status = stat.fixes > 0 ? 'fixed' : stat.confirms > 0 ? 'learned' : 'unseen';

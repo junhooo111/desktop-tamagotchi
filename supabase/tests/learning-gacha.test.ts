@@ -272,7 +272,7 @@ describe('꾸미기 뽑기 (gacha_cosmetic)', () => {
     await setTickets(db, u, 5);
     const r = await cosmetic(u);
     expect(r.tickets).toBe(5 - COST.cosmetic);
-    expect(['accessory', 'variant']).toContain(r.kind);
+    expect(['accessory', 'variant', 'neck', 'effect']).toContain(r.kind);
     expect((await db.query('select kind, item_id from public.cosmetics where user_id = $1', [u])).rows).toEqual([{ kind: r.kind, item_id: r.item_id }]);
     expect((await db.query("select delta, currency from public.ledger where user_id = $1 and reason = 'gacha_cosmetic'", [u])).rows).toEqual([{ delta: -COST.cosmetic, currency: 'ticket' }]);
   });

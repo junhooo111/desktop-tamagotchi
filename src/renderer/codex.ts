@@ -5,6 +5,8 @@
 import type { Lang } from '../shared/i18n.js';
 import { startUiLocalization } from './dom-i18n.js';
 import type { CodexView } from '../shared/growth.js';
+import { RARITY_NAME, RARITY_NAME_EN } from '../shared/rarity.js';
+import { currentUiLang } from './dom-i18n.js';
 
 interface CodexApi {
   get(): Promise<CodexView>;
@@ -47,6 +49,27 @@ function render(v: CodexView): void {
     tile(`${v.tipsSeen}/${v.tipsTotal}`, '읽은 지식'),
     tile(String(v.counters.fixes), '고친 문제'),
   );
+
+  // 꾸미기 수집: 등급별로 가진 수/전체 수와 막대(메인이 값을 주지 않으면 이 칸은 숨긴다)
+  const cos = v.cosmetics;
+  $('cosmetics-box').hidden = !cos;
+  if (cos) {
+    $('cos-count').textContent = `${cos.owned} / ${cos.total}`;
+    const grades = $('cos-grades');
+    grades.textContent = '';
+    for (const g of cos.byGrade) {
+      const li = make('li');
+      li.dataset['complete'] = String(g.owned === g.total);
+      const tag = make('span', `grade-tag grade-${g.rarity}`, currentUiLang() === 'en' ? RARITY_NAME_EN[g.rarity] : RARITY_NAME[g.rarity]);
+      tag.setAttribute('data-no-translate', '');
+      const bar = make('div', 'bar');
+      const fill = make('i');
+      fill.style.width = `${Math.round((g.owned / g.total) * 100)}%`;
+      bar.append(fill);
+      li.append(tag, bar, make('span', 'num', `${g.owned}/${g.total}`));
+      grades.append(li);
+    }
+  }
 
   $('rules-count').textContent = `${v.rulesLearned} / ${v.rulesTotal}`;
   const rules = $('rules');

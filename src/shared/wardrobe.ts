@@ -6,6 +6,8 @@
 import { ACHIEVEMENTS, type Growth } from './growth.js';
 import { sanitizePetName } from './settings.js';
 import { isDisplayStage, reachedStages, type DisplayStage, type Stage } from './pet.js';
+import { COSMETIC_ITEMS, type CosmeticKind } from './cosmetics.js';
+import type { Rarity } from './rarity.js';
 import { ACCESSORIES, SPECIES, hasLegendForm, type Accessory, type Effect, type Neck, type SpeciesId, type Variant } from './species.js';
 
 export const VARIANT_UNLOCK: Partial<Record<Variant, string>> = {
@@ -113,6 +115,29 @@ export const accessoryUnlocked = (g: Growth, a: Accessory, extra: Extra = NO_EXT
   const requires = ACCESSORY_UNLOCK[a];
   return (requires !== undefined && isDone(g, requires)) || extra.accessories.includes(a);
 };
+
+/** 꾸미기 수집 현황: 뽑기에 나오는 꾸미기마다 지금 가졌는지(업적으로 열었거나 뽑았거나) */
+export interface CosmeticStatus {
+  kind: CosmeticKind;
+  id: string;
+  rarity: Rarity;
+  owned: boolean;
+}
+export function cosmeticCollection(g: Growth, extra: Extra = NO_EXTRA): CosmeticStatus[] {
+  return COSMETIC_ITEMS.filter((i) => i.gacha).map((i) => ({
+    kind: i.kind,
+    id: i.id,
+    rarity: i.rarity,
+    owned:
+      i.kind === 'accessory'
+        ? accessoryUnlocked(g, i.id as Accessory, extra)
+        : i.kind === 'variant'
+          ? variantUnlocked(g, i.id as Variant, extra)
+          : i.kind === 'neck'
+            ? neckUnlocked(i.id as Neck, extra)
+            : effectUnlocked(i.id as Effect, extra),
+  }));
+}
 
 /** 목 장식과 효과는 뽑아야만 열린다("없음"은 늘 쓴다) */
 export const neckUnlocked = (n: Neck, extra: Extra = NO_EXTRA): boolean => n === 'none' || (extra.necks ?? []).includes(n);

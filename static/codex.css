@@ -164,3 +164,52 @@ footer button {
 footer button:hover {
   background: #fff3c4;
 }
+
+/* 꾸미기 수집: 등급 이름표와 가진 비율 막대 */
+.grades {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.grades li {
+  display: grid;
+  grid-template-columns: 64px 1fr 44px;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+}
+.grades .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+}
+.grades li[data-complete='true'] .num {
+  font-weight: 800;
+  color: #2f9a3b;
+}
+.grade-tag {
+  display: inline-block;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: #2b2f4d;
+  text-align: center;
+  font-size: 12px;
+  font-weight: 800;
+}
+.grade-common { color: #ffffff; }
+.grade-uncommon { color: #5fd16a; }
+.grade-rare { color: #4a9bff; }
+.grade-special { color: #b36bff; }
+.grade-legend { color: #ff9b2e; }
+.grade-hidden {
+  color: transparent;
+  background-image: linear-gradient(90deg, #ff5f5f, #ffb84a, #fff24a, #5fe06a, #4ab8ff, #a06bff, #ff5f5f);
+  background-color: #2b2f4d;
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: codex-rainbow 2s linear infinite;
+}
+@keyframes codex-rainbow {
+  to { background-position: -200% 0; }
+}

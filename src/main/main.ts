@@ -85,7 +85,9 @@ import {
   syncActive,
   type Collection,
 } from '../shared/collection.js';
-import { isRarity } from '../shared/rarity.js';
+import { RARITIES, isRarity } from '../shared/rarity.js';
+import type { CosmeticProgress } from '../shared/growth.js';
+import { cosmeticCollection } from '../shared/wardrobe.js';
 import { COSMETIC_ITEMS, cosmeticRarity, type CosmeticKind } from '../shared/cosmetics.js';
 import { cosmeticName } from '../shared/cosmetic-names.js';
 import { isEffect, isNeck } from '../shared/art/extras.js';
@@ -688,10 +690,19 @@ function ruleIdOfKey(key: string): RuleId | null {
 }
 
 /** 업적 계산에 쓰는 바깥 정보: 읽은 지식 수와 컬렉션 현황 */
-function growthCtx(): { tipsSeen: number; collected: number; pulls: number; hiddenOwned: number; friends: number; friendLevel: number } {
+function growthCtx(): { tipsSeen: number; collected: number; pulls: number; hiddenOwned: number; friends: number; friendLevel: number; cosmetics: number; legendCosmetics: number; cosmeticProgress: CosmeticProgress } {
   const owned = collection ? ownedIds(collection) : [];
+  const cos = collection ? cosmeticCollection(growth, wardrobeExtra()) : [];
+  const cosProgress: CosmeticProgress = {
+    owned: cos.filter((c) => c.owned).length,
+    total: cos.length,
+    byGrade: RARITIES.map((rarity) => ({ rarity, owned: cos.filter((c) => c.rarity === rarity && c.owned).length, total: cos.filter((c) => c.rarity === rarity).length })).filter((r) => r.total > 0),
+  };
   const mates = friendsCache.filter((f) => f.status === 'friend');
   return {
+    cosmetics: cosProgress.owned,
+    legendCosmetics: cos.filter((c) => c.owned && (c.rarity === 'legend' || c.rarity === 'hidden')).length,
+    cosmeticProgress: cosProgress,
     friends: mates.length,
     friendLevel: mates.reduce((m, f) => Math.max(m, f.level), 0),
     tipsSeen: progress.tipsSeen.length,
