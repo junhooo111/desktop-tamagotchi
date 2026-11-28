@@ -48,6 +48,23 @@ export interface FriendActionResult {
 }
 
 /** 경매장에서 팔린 내 꾸미기 한 건(my_cosmetic_sales) */
+export interface CompanionInfo {
+  friendship_id: string;
+  friend_id: string;
+  login: string;
+  species_id: string;
+  pet_xp: number;
+  friend_level: number;
+}
+export interface CompanionTick {
+  granted: boolean;
+  pet_xp: number;
+  friendship_xp?: number;
+  level?: number;
+  leveled_up?: boolean;
+  reason?: string;
+}
+
 export interface CosmeticSaleRow {
   listing_id: string;
   price: number;
@@ -356,6 +373,30 @@ export class ServerGame {
     const r = await this.rpc.call<FriendActionResult>('friend_gift_cosmetic', { p_friendship: id, p_kind: kind, p_item: item });
     if (r.error || !r.data) return { ok: false, message: friendlyError(r.error?.message ?? '') };
     return { ok: true, message: '', result: r.data };
+  }
+
+  /** 데리고 다닐 친구를 고른다(null 이면 그만둔다). */
+  async setCompanion(friendshipId: string | null): Promise<{ ok: boolean; message: string }> {
+    const r = await this.rpc.call<null>('set_companion', { p_friendship: friendshipId });
+    return r.error ? { ok: false, message: friendlyError(r.error.message ?? '') } : { ok: true, message: '' };
+  }
+
+  /** 지금 데리고 다니는 친구와 그 친구의 대표 펫(없으면 null). */
+  async companionCurrent(): Promise<CompanionInfo | null> {
+    const r = await this.rpc.call<CompanionInfo[]>('companion_current');
+    return r.error || !Array.isArray(r.data) ? null : (r.data[0] ?? null);
+  }
+
+  /** 한 시간에 한 번 부르는 동행 보너스. 서버가 정한 양만 돌려준다. */
+  async companionTick(): Promise<CompanionTick | null> {
+    const r = await this.rpc.call<CompanionTick>('companion_tick');
+    return r.error || !r.data ? null : r.data;
+  }
+
+  /** 친구가 나를 데리고 다닌 덕에 쌓인 내 펫 경험치를 가져간다. */
+  async companionClaim(): Promise<number> {
+    const r = await this.rpc.call<number>('companion_claim');
+    return r.error || typeof r.data !== 'number' ? 0 : r.data;
   }
 
   /** 학습 이벤트(배움 카드 확인·고침·지식 읽기)를 서버에 보고한다. 게임머니는 서버가 정한 양만큼 받는다. */

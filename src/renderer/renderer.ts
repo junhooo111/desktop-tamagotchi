@@ -234,6 +234,7 @@ function draw(now: number): void {
   if (pose.alert) drawAlert(centerX, top, Math.floor(now / 300) % 2 === 0 ? 0 : -2);
   if (pose.hearts) drawHearts(centerX, top, now, scale);
   if (pose.dizzy) drawDizzy(centerX, top, now, scale);
+  drawCompanion(view, pose, rect, scale, now);
   if (view.stage === 'legend') drawAura({ x: offsetX, y: offsetY, size: rect.size }, now);
   if (pose.bubbles) drawBubbles({ x: offsetX, y: offsetY, size: rect.size }, now, centerX, top, scale);
   if (view.dirty && !pose.bubbles) drawStink(centerX, top, now);
@@ -241,6 +242,50 @@ function draw(now: number): void {
     // 먹이는 바라보는 쪽(앞) 바닥에 놓는다.
     const front = pose.orientation.flip ? figure.x0 - 5 * scale - 1 : figure.x1 + 1;
     drawGlyph(BERRY, Math.round(front), Math.round(rect.y + rect.size - 5 * scale - 1), scale, '#e8504a');
+  }
+}
+
+// ---- 친구 펫: 내 펫 뒤를 절반 크기로 따라다닌다 ----
+/** 친구 펫의 가로 위치(내 펫 가운데에서 얼마나 떨어졌는지). 목표를 향해 천천히 따라온다. */
+let companionX = 0;
+let companionKey = '';
+
+/** 2x2 로 뭉친 그림이라 절반 크기는 칸을 건너뛰어 그리면 된다(2x2 블록에서 먼저 보이는 색을 쓴다). */
+function drawCompanion(v: PetView, pose: ReturnType<typeof resolvePose>, rect: { x: number; size: number }, scale: number, now: number): void {
+  const c = v.companion;
+  if (!c || v.surface !== 'floor' || v.mode === 'hang') return;
+  const sheet = spriteSet(c.speciesId, c.stage, { variant: 'default', accessory: 'none', neck: 'none', effect: 'none' });
+  const rows = sheet.frames[pose.frame] ?? sheet.frames.idleA;
+  const size = rect.size / 2;
+  // 내 펫이 바라보는 쪽의 반대편(뒤)에 선다. 처음 나타날 때는 바로 그 자리에서 시작한다.
+  const behind = pose.orientation.flip ? 1 : -1;
+  const target = behind * (rect.size * 0.5 + size * 0.45);
+  const key = `${c.speciesId}|${c.stage}`;
+  if (key !== companionKey) {
+    companionKey = key;
+    companionX = target;
+  }
+  companionX += (target - companionX) * 0.18;
+  const hop = v.mode === 'walk' ? -Math.abs(Math.round(Math.sin(now / 130 + 1) * 2)) : 0;
+  const x0 = Math.round(rect.x + rect.size / 2 + companionX - size / 2);
+  const y0 = WINDOW.height - size + hop * scale;
+  const cell = Math.max(1, scale);
+  for (let y = 0; y < 16; y++) {
+    for (let x = 0; x < 16; x++) {
+      let ch = '.';
+      for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1]] as const) {
+        const got = rows[y * 2 + dy]?.[x * 2 + dx];
+        if (got && got !== '.') {
+          ch = got;
+          break;
+        }
+      }
+      const color = ch === '.' ? undefined : sheet.palette[ch];
+      if (!color) continue;
+      const px = pose.orientation.flip ? 15 - x : x; // 내 펫과 같은 방향을 본다
+      ctx.fillStyle = color;
+      ctx.fillRect(x0 + px * cell, y0 + y * cell, cell, cell);
+    }
   }
 }
 

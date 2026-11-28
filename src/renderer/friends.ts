@@ -25,6 +25,8 @@ export interface FriendsView {
   message?: string;
   tickets: number;
   rows: FriendRow[];
+  /** 지금 내 펫 옆에 데리고 다니는 친구의 friendship_id */
+  companionId?: string | null;
 }
 export interface GiftableCosmetic {
   kind: string;
@@ -45,6 +47,7 @@ interface FriendsApi {
   remove(id: string): Promise<ActionResult>;
   wave(id: string): Promise<ActionResult>;
   gift(id: string): Promise<ActionResult>;
+  companion?(id: string | null): Promise<ActionResult>;
   cosmetics?(): Promise<GiftableCosmetic[]>;
   giftCosmetic?(id: string, kind: string, item: string): Promise<ActionResult>;
   close(): void;
@@ -103,7 +106,7 @@ function days(since: string): number {
   return Number.isNaN(t) ? 0 : Math.max(0, Math.floor((Date.now() - t) / 86_400_000));
 }
 
-function friendItem(f: FriendRow, tickets: number): HTMLLIElement {
+function friendItem(f: FriendRow, tickets: number, companionId: string | null): HTMLLIElement {
   const li = document.createElement('li');
   const top = document.createElement('div');
   top.className = 'top';
@@ -131,6 +134,7 @@ function friendItem(f: FriendRow, tickets: number): HTMLLIElement {
   actions.append(
     button(f.waved_today ? '인사 완료' : '👋 인사하기', () => void act(window.friendsApi.wave(f.friendship_id)), f.waved_today),
     button('🎟️ 뽑기권 선물', () => void act(window.friendsApi.gift(f.friendship_id)), tickets < 1),
+    button(companionId === f.friendship_id ? '🐾 돌려보내기' : '🐾 데리고 다니기', () => void act(window.friendsApi.companion?.(companionId === f.friendship_id ? null : f.friendship_id) ?? Promise.reject(new Error('no companion'))), f.species_id === null),
     button('🎀 꾸미기 선물', () => void openGift(f, actions)),
     button('친구 끊기', () => {
       if (window.confirm(`${f.login} 님과 친구를 끊을까요? 친밀도도 사라져요.`)) void act(window.friendsApi.remove(f.friendship_id));
@@ -205,7 +209,7 @@ export function render(v: FriendsView): void {
       simpleItem(f, [button('수락', () => void act(window.friendsApi.respond(f.friendship_id, true))), button('거절', () => void act(window.friendsApi.respond(f.friendship_id, false)))]),
     );
   }
-  for (const f of mates) friends.append(friendItem(f, v.tickets));
+  for (const f of mates) friends.append(friendItem(f, v.tickets, v.companionId ?? null));
   if (mates.length === 0) {
     const li = document.createElement('li');
     li.className = 'sub';

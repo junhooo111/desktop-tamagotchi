@@ -191,6 +191,16 @@ Each friend has a **friendship Lv** (1 to 10) with a level badge (its color chan
 | **👋 Wave** | Once a day each. +3, +1 more per 30 days of friendship (up to +3 more), and +2 if you both wave the same day |
 | **🎟️ Gift a ticket** | Sending 1 ticket gives +5. Once per friend per day, and three times a day in total |
 | **🏪 Auction trade** | +10 when friends trade a pet |
+| **🐾 Take along** | +3 once an hour (up to 6 a day) |
+| **🎀 Gift a cosmetic** | +5, up to 3 a day |
+
+### 🐾 Taking a friend's pet along
+
+Press **`🐾 Take along`** on a friend's card and their featured pet follows your pet at **half size** (one friend at a time). No consent is needed from the friend; only the species and level (look) are read.
+
+- While together, **once an hour** (up to 6 a day): +6 XP for your pet, +6 XP for the friend's pet (collected when they open the app) and +3 friendship. The server decides the amounts and the count.
+- The pet hides while yours climbs a wall or hangs from the mouse.
+- Turn it off under `Settings → Friend pet` (the bonus stops too), or press `🐾 Send home` on the friend's card.
 
 - A pair can earn at most **40** friendship a day (anti-abuse).
 - Friendship needed per level: 0 · 20 · 60 · 120 · 200 · 320 · 480 · 700 · 1000 · 1400.

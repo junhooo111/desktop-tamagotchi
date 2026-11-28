@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('friendsApi', {
   request: (login) => ipcRenderer.invoke('friends:request', login),
   respond: (id, accept) => ipcRenderer.invoke('friends:respond', id, accept),
   remove: (id) => ipcRenderer.invoke('friends:remove', id),
+  companion: (id) => ipcRenderer.invoke('friends:companion', id),
   wave: (id) => ipcRenderer.invoke('friends:wave', id),
   gift: (id) => ipcRenderer.invoke('friends:gift', id),
   cosmetics: () => ipcRenderer.invoke('friends:cosmetics'),

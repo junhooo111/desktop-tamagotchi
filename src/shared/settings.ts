@@ -26,6 +26,8 @@ export interface Settings {
   autoUpdate: boolean;
   /** 저장소의 공지(news.json)를 가끔 읽어 와서 새 공지를 알리는지 */
   showNews: boolean;
+  /** 친구의 펫을 내 펫 옆에 보여 주는지(끄면 데리고 다니기가 멈추고 보너스도 없다) */
+  showCompanion: boolean;
   /** 검사하지 않을 규칙(꺼 둔 규칙은 알리지 않는다) */
   disabledRules: RuleId[];
   /** 무시한 문제의 키(주소|규칙|요소 경로). 다시 알리지 않는다. */
@@ -63,6 +65,7 @@ export const DEFAULT_SETTINGS: Settings = {
   tipMinutes: 20,
   autoUpdate: true,
   showNews: true,
+  showCompanion: true,
   disabledRules: [],
   ignored: [],
   variant: 'default',
@@ -111,6 +114,7 @@ export function sanitizeSettings(raw: unknown): Settings {
     tipMinutes: pick(r['tipMinutes'], SETTING_CHOICES.tipMinutes, DEFAULT_SETTINGS.tipMinutes),
     autoUpdate: bool(r['autoUpdate'], DEFAULT_SETTINGS.autoUpdate),
     showNews: bool(r['showNews'], DEFAULT_SETTINGS.showNews),
+    showCompanion: bool(r['showCompanion'], DEFAULT_SETTINGS.showCompanion),
     disabledRules: ruleList(r['disabledRules']),
     ignored: keyList(r['ignored']),
     variant: isVariant(r['variant']) ? r['variant'] : DEFAULT_SETTINGS.variant,

@@ -173,6 +173,19 @@ describe('그림 그리기', () => {
     expect(fillStyles).not.toContain(PINK);
   });
 
+  it('친구 펫이 있으면 내 펫 옆에 절반 크기로 그리고, 벽에 붙으면 그리지 않는다', async () => {
+    const wolf = spriteSet('fox', 'adult', { variant: 'default', accessory: 'none', neck: 'none', effect: 'none' }).palette;
+    const h = await start(view({ speciesId: 'cat', stage: 'adult', companion: { speciesId: 'fox', stage: 'adult' } }));
+    await vi.advanceTimersByTimeAsync(100);
+    expect(fillStyles).toContain(wolf['f']);
+    const sizes = new Set(fillRect.mock.calls.map((c) => c[2]));
+    expect(sizes.has(1)).toBe(true);
+    fillStyles.length = 0;
+    h.emitView(view({ speciesId: 'cat', stage: 'adult', surface: 'wallL', companion: { speciesId: 'fox', stage: 'adult' } }));
+    await vi.advanceTimersByTimeAsync(100);
+    expect(fillStyles).not.toContain(wolf['f']);
+  });
+
   it('장식·색을 바꾸면 바로 새 모습으로 그린다(같은 자세의 옛 그림을 재사용하지 않는다)', async () => {
     const h = await start(view({ speciesId: 'cat', accessory: 'none', variant: 'default' }));
     expect(fillStyles).not.toContain('#5ab8ff'); // 파티 모자 색

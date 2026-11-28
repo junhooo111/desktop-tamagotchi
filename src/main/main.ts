@@ -15,7 +15,8 @@ import { scanLocalPages, type Finding } from '../inspect/scan.js';
 import { renderProfileCard } from '../shared/card.js';
 import { BACKEND, cardMarkdown } from '../shared/backend.js';
 import { AccountSync, type Choice, type ConflictInfo } from './account-sync.js';
-import { ServerGame, applyServerPull, friendlyError, mirrorCollection, type FriendRow, type Grant } from './server-game.js';
+import { ServerGame, applyServerPull, friendlyError, mirrorCollection, type CompanionInfo, type FriendRow, type Grant } from './server-game.js';
+import { companionStage } from '../shared/companion.js';
 import { AUTH_SCHEME, AuthService, EncryptedFileStorage } from './auth.js';
 import { applyEvent, buildCodex, emptyGrowth, localDay, type Growth, type GrowthEvent } from '../shared/growth.js';
 import { LESSONS, RULE_IDS, type RuleId } from '../shared/lessons.js';
@@ -259,6 +260,9 @@ const randomSpecies = (): SpeciesId => {
   return (pick ?? SPECIES[0]!).id;
 };
 
+/** 지금 데리고 다니는 친구 펫(서버 기준). 로그인하지 않았거나 설정을 끄면 쓰지 않는다. */
+let companion: CompanionInfo | null = null;
+
 function currentView(): PetView {
   return {
     speciesId: pet.speciesId,
@@ -277,6 +281,9 @@ function currentView(): PetView {
     neck: settings.neck,
     effect: settings.effect,
     dirty: isDirty(pet),
+    ...(companion && settings.showCompanion && serverOn() && isSpeciesId(companion.species_id)
+      ? { companion: { speciesId: companion.species_id, stage: companionStage(companion.species_id, companion.pet_xp) } }
+      : {}),
   };
 }
 
@@ -670,6 +677,7 @@ function applySettings(patch: unknown): Settings {
   }
   if (settings.language !== before.language && win && !win.isDestroyed()) win.webContents.send('pet:lang', currentLang());
   if (settings.variant !== before.variant || settings.accessory !== before.accessory || settings.neck !== before.neck || settings.effect !== before.effect || settings.petName !== before.petName || settings.displayStage !== before.displayStage || settings.cardSpecies !== before.cardSpecies) scheduleCardPush();
+  if (settings.showCompanion !== before.showCompanion) void refreshCompanion();
   if (settings.scanSeconds !== before.scanSeconds) scheduleScan();
   queue = visibleFindings(queue, settings);
   if (notice && isMuted(notice, settings)) setNotice(null, false);
@@ -1005,6 +1013,38 @@ interface FriendsView {
   message?: string;
   tickets: number;
   rows: FriendRow[];
+  /** 지금 데리고 다니는 친구의 friendship_id(없으면 null) */
+  companionId?: string | null;
+}
+
+/** 데리고 다니는 친구를 서버에서 다시 읽어 화면에 반영한다. */
+async function refreshCompanion(): Promise<void> {
+  const before = companion?.species_id + ':' + companion?.pet_xp + ':' + companion?.friendship_id;
+  companion = serverOn() && serverGame && settings.showCompanion ? await serverGame.companionCurrent() : null;
+  if (before !== companion?.species_id + ':' + companion?.pet_xp + ':' + companion?.friendship_id) sendView();
+}
+
+/** 동행 보너스: 서버가 한 시간에 한 번 정해 준 만큼 내 펫이 경험치를 받고, 친구가 쌓아 준 몫도 가져온다. */
+async function companionLoop(): Promise<void> {
+  const game = serverGame;
+  if (!serverOn() || !game) return;
+  await refreshCompanion();
+  let xp = 0;
+  let notes = '';
+  if (companion && settings.showCompanion) {
+    const t = await game.companionTick();
+    if (t?.granted) xp += t.pet_xp;
+  }
+  // 친구가 나를 데리고 다닌 몫(설정과 상관없이 받아 간다. 이미 서버가 상한을 지켜 쌓았다)
+  xp += await game.companionClaim();
+  if (xp <= 0) return;
+  const gained = gainXp(applyElapsedInPlace(), xp);
+  pet = gained.pet;
+  notes = gained.note;
+  persist();
+  updateTray();
+  sendView();
+  say(L(`🐾 친구 펫과 함께해서 경험치 +${xp}${notes ? ' · ' + notes : ''}`, `🐾 Time with a friend's pet: +${xp} XP${notes ? ' · ' + notes : ''}`));
 }
 
 function pendingFriendRequests(): number {
@@ -1036,7 +1076,7 @@ async function friendsData(): Promise<FriendsView> {
   if (!serverOn() || !serverGame) return { ok: false, message: L('로그인하면 친구를 사귈 수 있어요', 'Log in to make friends'), tickets: 0, rows: [] };
   const [ok] = await Promise.all([refreshFriends(), serverGame.refresh()]);
   if (!ok) return { ok: false, message: L('친구 목록을 불러오지 못했어요', 'Could not load your friends'), tickets: 0, rows: [] };
-  return { ok: true, tickets: serverGame.state?.tickets ?? 0, rows: friendsCache };
+  return { ok: true, tickets: serverGame.state?.tickets ?? 0, rows: friendsCache, companionId: companion?.friendship_id ?? null };
 }
 
 async function friendsAct(run: (g: ServerGame) => Promise<{ ok: boolean; message: string }>): Promise<{ ok: boolean; message: string; view: FriendsView }> {
@@ -1777,6 +1817,7 @@ async function activateServer(): Promise<void> {
   setTimeout(() => void syncGithubCommits(false), 8_000);
   setTimeout(() => void checkSales(), 20_000);
   setTimeout(() => void checkCosmeticTrades(), 26_000);
+  setTimeout(() => void companionLoop(), 34_000);
   setTimeout(() => void refreshFriends(), 6_000);
   setTimeout(() => void pushCardExtras(), 12_000);
 }
@@ -2548,6 +2589,18 @@ function setupIpc(): void {
   const badFriendReq = async (): Promise<{ ok: false; message: string; view: FriendsView }> => ({ ok: false, message: L('잘못된 요청이에요', 'Invalid request'), view: await friendsData() });
   ipcMain.handle('friends:get', () => friendsData());
   ipcMain.handle('friends:request', (_e, login: unknown) => (typeof login === 'string' && login.length > 0 && login.length <= 40 ? friendsAct((g) => g.friendRequest(login)) : badFriendReq()));
+  ipcMain.handle('friends:companion', (_e, id: unknown) =>
+    id === null || isUuid(id)
+      ? friendsAct(async (g) => {
+          const r = await g.setCompanion(id);
+          if (r.ok) {
+            await refreshCompanion();
+            if (id) setTimeout(() => void companionLoop(), 2_000);
+          }
+          return r.ok ? { ok: true, message: id ? L('🐾 이제 친구 펫이 내 펫 옆을 따라다녀요', "🐾 The friend's pet now follows your pet") : L('친구 펫을 돌려보냈어요', "The friend's pet went home") } : r;
+        })
+      : badFriendReq(),
+  );
   ipcMain.handle('friends:respond', (_e, id: unknown, accept: unknown) => (isUuid(id) ? friendsAct((g) => g.friendRespond(id, accept === true)) : badFriendReq()));
   ipcMain.handle('friends:remove', (_e, id: unknown) => (isUuid(id) ? friendsAct((g) => g.friendRemove(id)) : badFriendReq()));
   ipcMain.handle('friends:wave', (_e, id: unknown) =>
@@ -2714,6 +2767,7 @@ if (!app.requestSingleInstanceLock()) {
       setInterval(() => void syncGithubCommits(false), 60 * 60_000);
       setInterval(() => void checkSales(), 5 * 60_000);
       setInterval(() => void checkCosmeticTrades(), 5 * 60_000);
+      setInterval(() => void companionLoop(), 10 * 60_000);
       setInterval(() => void refreshFriends(true), 5 * 60_000);
       setInterval(() => void pushCardExtras(), 6 * 3_600_000); // 날짜가 바뀌면 다시 보낸다
     }

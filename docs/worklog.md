@@ -501,3 +501,9 @@
 
 - 서버 `0023_cosmetic_market.sql`(운영 적용): `cosmetic_items.tradable`(뽑기 전용 25종만 true, 업적으로도 열리는 11종은 false), `cosmetic_listings`, `create/cancel/buy_cosmetic_listing`, `cosmetic_listings_active`, `my_cosmetics`, `my_cosmetic_sales`, `friend_gift_cosmetic`(하루 3번, +5), `cosmetic_gifts_received`. 친구끼리 거래 +10. 수수료 없음. 테스트 `supabase/tests/cosmetic-market.test.ts`.
 - 앱: 경매장을 동물/꾸미기 × 사기/팔기 + 등급 필터로 개편하고 줄마다 미리보기 캔버스. 꾸미기 판매 알림·받은 선물 알림(5분마다), 친구 창 꾸미기 선물. 클라이언트 `cosmeticTradable()` 은 서버 `tradable` 과 같아야 한다(양쪽 목록 동기화 필요).
+
+## 2026-11-28 — 친구 펫 동행
+
+- 서버 `0024_companion.sql`(운영 적용): `profiles.companion_friend`, `set_companion`·`companion_current`·`companion_tick`(시간대 1번, 하루 6번, 친밀도 +3, 내 펫 +6, 친구 몫 +6 은 `companion_pending` 에 쌓음)·`companion_claim`. 시험 `supabase/tests/companion.test.ts`.
+- 앱: 친구 카드 `🐾 데리고 다니기`, 설정 `showCompanion`(기본 켜짐). `PetView.companion` → 렌더러가 절반 크기(2x2 블록에서 먼저 보이는 색)로 내 펫 뒤에 따라온다. 메인 `companionLoop` 가 10분마다 서버 틱·몫 가져오기를 한다(서버가 시간대 중복을 거른다).
+- 한계: 친구 펫의 꾸미기(장식 등)는 보이지 않는다(종류·레벨만).
