@@ -14,6 +14,7 @@ import { sanitizePetName } from './settings.js';
 import { DEFAULT_STYLE, hasLegendForm, isSpeciesId, type PetStyle } from './species.js';
 import { isAccessory, isVariant } from './art/style.js';
 import { isEffect, isNeck } from './art/extras.js';
+import { isProp, type Prop } from './art/props.js';
 
 /** public_card_data() 가 돌려주는 모양. */
 export interface CardRow {
@@ -41,6 +42,7 @@ const num = (v: unknown, max: number): number => (typeof v === 'number' && Numbe
 
 export interface CardExtras {
   style: PetStyle;
+  prop?: Prop;
   name: string;
   stage?: Stage;
   codex: CodexView;
@@ -76,7 +78,8 @@ export function readExtras(raw: unknown, speciesId: string | null, now: number):
     g.achievements[a.id] = now;
   });
   const codex = buildCodex(g, { tipsSeen: num(e['tips'], 1000) }, now);
-  return { style, name, ...(stage ? { stage } : {}), codex };
+  const prop = isProp(e['prop']) && e['prop'] !== 'none' ? e['prop'] : undefined;
+  return { style, name, ...(prop ? { prop } : {}), ...(stage ? { stage } : {}), codex };
 }
 
 export function renderCardFromRow(row: CardRow | null | undefined, now = Date.now()): { svg: string; status: CardStatus } {
@@ -88,6 +91,7 @@ export function renderCardFromRow(row: CardRow | null | undefined, now = Date.no
   const svg = renderProfileCard({
     pet,
     style: extras?.style ?? DEFAULT_STYLE,
+    ...(extras?.prop ? { prop: extras.prop } : {}),
     ...(extras ? { codex: extras.codex, ...(extras.name ? { name: extras.name } : {}), ...(extras.stage ? { stage: extras.stage } : {}) } : {}),
   });
   return { svg, status: species ? 'ok' : 'empty' };

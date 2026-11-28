@@ -93,3 +93,18 @@ describe('경매장 화면', () => {
     expect(document.querySelector('#note')!.textContent).toBe('로그인하면 볼 수 있어요');
   });
 });
+
+describe('경매장 정렬', () => {
+  it('싼 순·비싼 순·등급 높은 순으로 줄 세운다', async () => {
+    const { sortListings } = await import('./market.js');
+    const items = [
+      { price: 50, rarity: 'rare' },
+      { price: 10, rarity: 'common' },
+      { price: 30, rarity: 'legend' },
+      { price: 20, rarity: 'rare' },
+    ];
+    expect(sortListings(items, 'cheap').map((i) => i.price)).toEqual([10, 20, 30, 50]);
+    expect(sortListings(items, 'pricey').map((i) => i.price)).toEqual([50, 30, 20, 10]);
+    expect(sortListings(items, 'grade').map((i) => i.price)).toEqual([30, 20, 50, 10]);
+  });
+});

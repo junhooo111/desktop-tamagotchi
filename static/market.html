@@ -17,7 +17,11 @@
       <div class="tabs" id="modes" role="tablist">
         <button type="button" role="tab" data-mode="buy" aria-selected="true">사기</button>
         <button type="button" role="tab" data-mode="sell" aria-selected="false">팔기</button>
-        <span id="filter-box"><select id="grade-filter" aria-label="등급"><option value="all">모든 등급</option></select></span>
+        <span id="filter-box">
+          <select id="sort" aria-label="정렬"><option value="cheap">싼 순</option><option value="pricey">비싼 순</option><option value="grade">등급 높은 순</option></select>
+          <select id="grade-filter" aria-label="등급"><option value="all">모든 등급</option></select>
+          <label class="check"><input id="only-new" type="checkbox" /> 안 가진 것만</label>
+        </span>
       </div>
       <ul class="list" id="list"></ul>
       <p class="hint" id="note"></p>

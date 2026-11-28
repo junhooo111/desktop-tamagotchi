@@ -203,8 +203,21 @@ const nameOfCosmetic = (kind: CosmeticKind, item: string): string => {
   return currentUiLang() === 'en' ? nameEn(ko) : ko;
 };
 
+/** 정렬: 싼 순(기본)·비싼 순·등급 높은 순(같으면 싼 순) */
+export function sortListings<T extends { price: number; rarity: string }>(items: readonly T[], how: string): T[] {
+  const rank = (r: string): number => RARITIES.indexOf(rarityOf(r));
+  const out = [...items];
+  if (how === 'pricey') out.sort((a, b) => b.price - a.price);
+  else if (how === 'grade') out.sort((a, b) => rank(b.rarity) - rank(a.rarity) || a.price - b.price);
+  else out.sort((a, b) => a.price - b.price);
+  return out;
+}
+const sortHow = (): string => $<HTMLSelectElement>('sort').value;
+const onlyNew = (): boolean => $<HTMLInputElement>('only-new').checked;
+
 function renderPetsBuy(v: MarketView, list: HTMLElement, filter: Rarity | 'all'): string {
-  const shown = v.listings.filter((l) => filter === 'all' || rarityOf(l.rarity) === filter);
+  const have = new Set(v.pets.map((p) => p.species_id));
+  const shown = sortListings(v.listings.filter((l) => (filter === 'all' || rarityOf(l.rarity) === filter) && (!onlyNew() || !have.has(l.species_id))), sortHow());
   for (const l of shown) {
     const action = l.is_mine ? button('내가 올림', () => undefined, true) : button('사기', () => void act(window.marketApi.buy(l.listing_id)), v.coins < l.price);
     list.append(row(preview(l.species_id, stageForLevel(l.species_id, l.level)), `${l.species_name} Lv.${l.level}`, [gradeTag(rarityOf(l.rarity))], `판매자 ${l.seller_login}`, [priceTag(l.price), action]));
@@ -234,7 +247,7 @@ function renderPetsSell(v: MarketView, list: HTMLElement): string {
 
 function renderCosmeticsBuy(v: MarketView, list: HTMLElement, filter: Rarity | 'all'): string {
   const ownedIds = new Set((v.myCosmetics ?? []).map((c) => `${c.kind}:${c.item_id}`));
-  const shown = (v.cosmeticListings ?? []).filter((l) => filter === 'all' || rarityOf(l.rarity) === filter);
+  const shown = sortListings((v.cosmeticListings ?? []).filter((l) => (filter === 'all' || rarityOf(l.rarity) === filter) && (!onlyNew() || !ownedIds.has(`${l.kind}:${l.item_id}`))), sortHow());
   for (const l of shown) {
     const owned = ownedIds.has(`${l.kind}:${l.item_id}`);
     const action = l.is_mine
@@ -300,6 +313,8 @@ function init(): void {
     select.append(o);
   }
   select.addEventListener('change', () => view && render(view));
+  $('sort').addEventListener('change', () => view && render(view));
+  $('only-new').addEventListener('change', () => view && render(view));
   for (const b of $('cats').querySelectorAll('button')) {
     b.addEventListener('click', () => {
       cat = b.dataset['cat'] === 'cosmetics' ? 'cosmetics' : 'pets';

@@ -15,6 +15,7 @@
 import { buildCodex, emptyGrowth, type CodexView } from './growth.js';
 import { levelOf, levelTier, stageOf, type PetState, type Stage } from './pet.js';
 import { spriteSet, type PetStyle, type SpeciesId } from './species.js';
+import { PROP_COLORS, PROP_MOTION, propFrames, type Prop } from './art/props.js';
 
 export interface CardInput {
   pet: PetState;
@@ -25,6 +26,8 @@ export interface CardInput {
   name?: string;
   /** 보여 줄 단계(꾸미기에서 지나온 단계로 되돌렸을 때). 없으면 지금 단계. */
   stage?: Stage;
+  /** 펫 곁을 따라다니는 소품 */
+  prop?: Prop;
 }
 
 /** 지금 레벨 안에서의 경험치 진행: into/need. 레벨 n 은 경험치 10*(n-1)^2 부터다. */
@@ -213,7 +216,15 @@ export function renderProfileCard(input: CardInput): string {
   const sit = (['sitA', 'sitB'] as const).map((n) => set.frames[n]);
   const sleep = (['sleepA', 'sleepB'] as const).map((n) => set.frames[n]);
 
+  const prop = input.prop && input.prop !== 'none' ? input.prop : null;
+  const propSet = prop ? propFrames(prop) : [];
+  const propH = propSet[0]?.length ?? 0;
+  const propW = propSet[0]?.[0]?.length ?? 0;
+  /** 소품(두 장을 번갈아 보여 준다). x 는 그림 칸 기준 가로 자리, 땅 소품은 발 높이, 뜨는 소품은 머리 옆 */
+  const propAt = (x: number): string =>
+    prop ? `<g transform="translate(${x},${prop && PROP_MOTION[prop] === 'float' ? 4 : CELL - propH})"><use class="pr0" href="#p1" opacity="0"/><use class="pr1" href="#p2" opacity="0"/></g>` : '';
   const defs = [
+    ...propSet.map((rows, i) => `<g id="p${i + 1}">${spriteRects(rows, prop ? PROP_COLORS[prop as Exclude<Prop, 'none'>] : {})}</g>`),
     ...walk.map((rows, i) => `<g id="w${i + 1}">${spriteRects(rows, set.palette)}</g>`),
     ...sit.map((rows, i) => `<g id="s${i + 1}">${spriteRects(rows, set.palette)}</g>`),
     ...sleep.map((rows, i) => `<g id="z${i + 1}">${spriteRects(rows, set.palette)}</g>`),
@@ -246,6 +257,7 @@ export function renderProfileCard(input: CardInput): string {
     // 앉기·졸기 프레임: 숨 쉬듯 두 장을 번갈아
     ...[0, 1].map((i) => `.st${i}{animation:on2 1.2s step-end infinite;animation-delay:${(i * 0.6).toFixed(1)}s}`),
     ...[0, 1].map((i) => `.sl${i}{animation:on2 2.4s step-end infinite;animation-delay:${(i * 1.2).toFixed(1)}s}`),
+    '.pr0{animation:on2 0.8s step-end infinite}.pr1{animation:on2 0.8s step-end infinite;animation-delay:0.4s}',
     '@keyframes on2{0%{opacity:1}50%{opacity:0}100%{opacity:0}}',
     // 걷는 구간 셋(올라가기·내려가기·돌아오기)과 쉬는 구간 둘(앉기·졸기)
     `.mUp,.mDown,.mBack{opacity:0}.mUp{animation:mvUp ${loop}s linear infinite}.mDown{animation:mvDown ${loop}s linear infinite}.mBack{animation:mvBack ${loop}s linear infinite}`,
@@ -263,7 +275,7 @@ export function renderProfileCard(input: CardInput): string {
     '.zz2{animation-delay:1.2s}',
     '@keyframes zfloat{0%{opacity:0;transform:translate(0,0)}30%{opacity:1}100%{opacity:0;transform:translate(7px,-14px)}}',
     // 움직임을 줄이는 설정이면 멈춘 채 출발 자리에 서 있는다
-    '@media (prefers-reduced-motion:reduce){*{animation:none!important}.wk0{opacity:1!important}.mUp{opacity:1!important}}',
+    '@media (prefers-reduced-motion:reduce){*{animation:none!important}.wk0,.pr0{opacity:1!important}.mUp{opacity:1!important}}',
   ].join('');
 
   const standAt = (pt: Pt): string => `translate(${pt[0]},${GROUND - 31 - pt[1] + 0})`;
@@ -305,11 +317,11 @@ export function renderProfileCard(input: CardInput): string {
     `<g class="houseZ"><text class="zz" x="${326 + 52}" y="${GROUND - 36}" font-size="11" font-weight="700" fill="${COLORS.violet}">Z</text><text class="zz zz2" x="${326 + 60}" y="${GROUND - 44}" font-size="9" font-weight="700" fill="${COLORS.violet}">z</text></g>`,
     // 펫: 올라가기 / 위에서 앉기 / 내려가서 집으로 / 돌아오기 / 왼쪽 끝에서 졸기
     `<g transform="translate(${START_X},${TOP})">`,
-    `<g class="mUp">${walkFrames(false)}</g>`,
-    `<g class="mDown">${walkFrames(false)}</g>`,
-    `<g class="mBack">${walkFrames(true)}</g>`,
+    `<g class="mUp">${walkFrames(false)}${propAt(CELL - 4)}</g>`,
+    `<g class="mDown">${walkFrames(false)}${propAt(CELL - 4)}</g>`,
+    `<g class="mBack">${walkFrames(true)}${propAt(4 - propW)}</g>`,
     `</g>`,
-    `<g transform="${standAt(SIT_AT)}"><g class="sitG">${sitFrames(false)}</g></g>`,
+    `<g transform="${standAt(SIT_AT)}"><g class="sitG">${sitFrames(false)}${propAt(CELL - 4)}</g></g>`,
     `<g transform="${standAt([START_X, 0])}"><g class="sleepG">${sleepFrames(true)}<text class="zz" x="${CELL - 6}" y="12" font-size="9" font-weight="700" fill="${COLORS.violet}">Z</text><text class="zz zz2" x="${CELL}" y="4" font-size="7" font-weight="700" fill="${COLORS.violet}">z</text></g></g>`,
     // 정보줄
     rect(0, STRIP_Y, W, 2, COLORS.line),

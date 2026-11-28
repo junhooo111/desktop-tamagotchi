@@ -55,7 +55,7 @@ import {
   type ActionResult,
   type PetState,
 } from '../shared/pet.js';
-import { ACCESSORIES, COMMON_SPECIES, SPECIES, VARIANTS, frameToRgba, getSpecies, isAccessory, isHiddenSpecies, isSpeciesId, isVariant, spriteSet, type SpeciesId } from '../shared/species.js';
+import { ACCESSORIES, COMMON_SPECIES, SPECIES, VARIANTS, frameToRgba, getSpecies, isAccessory, isHiddenSpecies, isSpeciesId, isVariant, spriteSet, type Accessory, type Effect, type Neck, type SpeciesId, type Variant } from '../shared/species.js';
 import {
   ACCESSORY_NAMES,
   GACHA_ACCESSORIES,
@@ -265,6 +265,17 @@ const randomSpecies = (): SpeciesId => {
 /** 지금 데리고 다니는 친구 펫(서버 기준). 로그인하지 않았거나 설정을 끄면 쓰지 않는다. */
 let companion: CompanionInfo | null = null;
 
+/** 친구가 꾸민 모습(서버가 허용 목록으로 걸러 둔 값이지만 한 번 더 확인한다). */
+function companionLook(extras: Record<string, unknown> | null | undefined): { variant?: Variant; accessory?: Accessory; neck?: Neck; effect?: Effect } {
+  const e = extras ?? {};
+  return {
+    ...(isVariant(e['variant']) ? { variant: e['variant'] } : {}),
+    ...(isAccessory(e['accessory']) ? { accessory: e['accessory'] } : {}),
+    ...(isNeck(e['neck']) ? { neck: e['neck'] } : {}),
+    ...(isEffect(e['effect']) ? { effect: e['effect'] } : {}),
+  };
+}
+
 function currentView(): PetView {
   return {
     speciesId: pet.speciesId,
@@ -285,7 +296,7 @@ function currentView(): PetView {
     prop: settings.prop,
     dirty: isDirty(pet),
     ...(companion && settings.showCompanion && serverOn() && isSpeciesId(companion.species_id)
-      ? { companion: { speciesId: companion.species_id, stage: companionStage(companion.species_id, companion.pet_xp) } }
+      ? { companion: { speciesId: companion.species_id, stage: companionStage(companion.species_id, companion.pet_xp), ...companionLook(companion.extras) } }
       : {}),
   };
 }
@@ -703,7 +714,7 @@ function ruleIdOfKey(key: string): RuleId | null {
 }
 
 /** 업적 계산에 쓰는 바깥 정보: 읽은 지식 수와 컬렉션 현황 */
-function growthCtx(): { tipsSeen: number; collected: number; pulls: number; hiddenOwned: number; friends: number; friendLevel: number; cosmetics: number; legendCosmetics: number; cosmeticProgress: CosmeticProgress } {
+function growthCtx(): { tipsSeen: number; collected: number; pulls: number; hiddenOwned: number; friends: number; friendLevel: number; cosmetics: number; legendCosmetics: number; props: number; cosmeticProgress: CosmeticProgress } {
   const owned = collection ? ownedIds(collection) : [];
   const cos = collection ? cosmeticCollection(growth, wardrobeExtra()) : [];
   const cosProgress: CosmeticProgress = {
@@ -715,6 +726,7 @@ function growthCtx(): { tipsSeen: number; collected: number; pulls: number; hidd
   return {
     cosmetics: cosProgress.owned,
     legendCosmetics: cos.filter((c) => c.owned && (c.rarity === 'legend' || c.rarity === 'hidden')).length,
+    props: cos.filter((c) => c.kind === 'prop' && c.owned).length,
     cosmeticProgress: cosProgress,
     friends: mates.length,
     friendLevel: mates.reduce((m, f) => Math.max(m, f.level), 0),
@@ -931,6 +943,7 @@ async function exportCard(): Promise<void> {
     stage: cardId === collection.active ? effectiveStage(stageOf(current), settings.displayStage) : undefined,
     name: cardId === collection.active ? settings.petName : (entry?.name ?? ''),
     style: { variant: settings.variant, accessory: settings.accessory, neck: settings.neck, effect: settings.effect },
+    prop: settings.prop,
     codex: buildCodex(growth, growthCtx(), Date.now()),
   });
   const result = await dialog.showSaveDialog({
@@ -1854,6 +1867,7 @@ async function pushCardExtras(): Promise<void> {
     accessory: settings.accessory,
     neck: settings.neck,
     effect: settings.effect,
+    prop: settings.prop,
     name: settings.petName,
     streak: codex.streak.current,
     fixes: codex.counters.fixes,

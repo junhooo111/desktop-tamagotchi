@@ -3,11 +3,11 @@
  * 펫 그림과 따로 그려서(펫의 몸이 바뀌어도 그대로) 렌더러가 펫 옆에 얹는다.
  * 그림은 16x16 안에 그린 뒤 윤곽선을 두르고 빈 둘레를 잘라 낸 문자 그림이다. 색은 소품마다 PROP_COLORS 의 글자(a~d)로 칠한다.
  */
-import { blank, ellipse, line, outline, px, rect, type Grid } from '../pixel.js';
+import { blank, ellipse, line, outline, px, rect, triangle, type Grid } from '../pixel.js';
 
-export type Prop = 'none' | 'ball' | 'bone' | 'fish' | 'balloon' | 'pot' | 'butterfly' | 'lantern' | 'dragonegg';
+export type Prop = 'none' | 'ball' | 'bone' | 'fish' | 'balloon' | 'pot' | 'butterfly' | 'lantern' | 'dragonegg' | 'yarn' | 'kite' | 'snowman' | 'cloud';
 
-export const PROPS: readonly Prop[] = ['none', 'ball', 'bone', 'fish', 'balloon', 'pot', 'butterfly', 'lantern', 'dragonegg'];
+export const PROPS: readonly Prop[] = ['none', 'ball', 'bone', 'fish', 'balloon', 'pot', 'butterfly', 'lantern', 'dragonegg', 'yarn', 'kite', 'snowman', 'cloud'];
 
 export const isProp = (v: unknown): v is Prop => typeof v === 'string' && (PROPS as readonly string[]).includes(v);
 
@@ -21,6 +21,10 @@ export const PROP_MOTION: Record<Exclude<Prop, 'none'>, 'ground' | 'float'> = {
   butterfly: 'float',
   lantern: 'float',
   dragonegg: 'ground',
+  yarn: 'ground',
+  kite: 'float',
+  snowman: 'ground',
+  cloud: 'float',
 };
 
 /** 글자 a~d 의 색(k 는 윤곽선, w 는 하이라이트) */
@@ -33,6 +37,10 @@ export const PROP_COLORS: Record<Exclude<Prop, 'none'>, Record<string, string>> 
   butterfly: { a: '#7a5cff', b: '#b8a8ff', w: '#ffffff', k: '#3b2f2f' },
   lantern: { a: '#ff9b2e', b: '#ffe14a', w: '#fff6c8', k: '#3b2f2f' },
   dragonegg: { a: '#7a5cff', b: '#ffd34a', w: '#c9b8ff', k: '#3b2f2f' },
+  yarn: { a: '#ff8bd0', b: '#ffc2e6', w: '#c2418f', k: '#3b2f2f' },
+  kite: { a: '#4a9bff', b: '#ffd34a', w: '#ffffff', k: '#3b2f2f' },
+  snowman: { a: '#ffffff', b: '#ff9b2e', w: '#e5484d', k: '#3b2f2f' },
+  cloud: { a: '#e8f4ff', b: '#4a9bff', w: '#ffe14a', k: '#3b2f2f' },
 };
 
 /** 2장짜리 움직임: 0 과 1 을 번갈아 보여 준다(소품이 조금씩 움직인다). */
@@ -163,6 +171,58 @@ const DRAW: Record<Exclude<Prop, 'none'>, Draw> = {
       px(g, 8 + o, 6, 'b');
       px(g, 9 + o, 6, 'b');
     }
+  },
+  // 털실뭉치: 실 끝이 꼬물꼬물
+  yarn: (g, ph) => {
+    ellipse(g, 6, 7, 5.5, 5.5, 'a');
+    line(g, 2, 5, 10, 3, 'b');
+    line(g, 1, 8, 11, 6, 'b');
+    line(g, 2, 11, 10, 10, 'b');
+    line(g, 4, 2, 7, 12, 'w');
+    // 풀려 나온 실
+    const t = ph === 0 ? 0 : 1;
+    line(g, 10, 11, 12, 12 + t, 'a');
+    line(g, 12, 12 + t, 14, 11 - t, 'a');
+  },
+  // 연: 꼬리가 바람에 펄럭
+  kite: (g, ph) => {
+    triangle(g, 7, 0, 1, 5, 13, 5, 'a');
+    triangle(g, 1, 5, 13, 5, 7, 11, 'b');
+    line(g, 7, 0, 7, 11, 'w');
+    line(g, 1, 5, 13, 5, 'w');
+    const s = ph === 0 ? 0 : 1;
+    line(g, 7, 11, 6 + s, 13, 'w');
+    rect(g, 5 + s, 13, 2, 1, 'a');
+    line(g, 6 + s, 14, 8 - s, 15, 'w');
+  },
+  // 눈사람: 팔이 까딱
+  snowman: (g, ph) => {
+    ellipse(g, 7, 11, 5, 4.5, 'a');
+    ellipse(g, 7, 5, 3.6, 3.6, 'a');
+    rect(g, 4, 8, 7, 1, 'w'); // 목도리
+    rect(g, 9, 9, 2, 3, 'w');
+    px(g, 6, 4, 'k');
+    px(g, 9, 4, 'k');
+    px(g, 7, 6, 'b');
+    px(g, 8, 6, 'b');
+    rect(g, 5, 11, 1, 1, 'k');
+    rect(g, 5, 13, 1, 1, 'k');
+    // 나뭇가지 팔
+    const a = ph === 0 ? 0 : 1;
+    line(g, 2, 10 - a, 0, 8 - a, 'k');
+    line(g, 12, 10 + a, 14, 8 + a, 'k');
+  },
+  // 구름: 빗방울이 떨어지고 번개가 깜빡
+  cloud: (g, ph) => {
+    ellipse(g, 4, 5, 3, 3, 'a');
+    ellipse(g, 8, 4, 4, 4, 'a');
+    ellipse(g, 12, 5.5, 3, 3, 'a');
+    rect(g, 3, 5, 11, 3, 'a');
+    const d = ph === 0 ? 0 : 2;
+    rect(g, 4, 10 + d, 1, 2, 'b');
+    rect(g, 8, 11 - d + 2, 1, 2, 'b');
+    rect(g, 12, 10 + d, 1, 2, 'b');
+    if (ph === 1) px(g, 8, 9, 'w');
   },
 };
 

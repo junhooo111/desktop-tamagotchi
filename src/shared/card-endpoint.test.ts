@@ -50,7 +50,7 @@ describe('renderCardFromRow: 서버의 extras(꾸미기·연속일·도감)', ()
     const { svg } = renderCardFromRow({ ...base, extras }, now);
     expect(svg).toContain('5D');
     expect(svg).toContain('9/50');
-    expect(svg).toContain('11/32');
+    expect(svg).toContain('11/34');
     expect(svg).toContain('>12<');
     expect(svg).toContain('>7<');
     expect(svg).toContain('30/');
@@ -83,3 +83,15 @@ describe('renderCardFromRow: 서버의 extras(꾸미기·연속일·도감)', ()
   });
 });
 
+
+describe('카드의 소품', () => {
+  it('extras 의 소품이 카드에 그려지고, 모르는 값은 무시한다', async () => {
+    const { renderCardFromRow } = await import('./card-endpoint.js');
+    const row = (prop: unknown) => ({ found: true, github_login: 'a', species_id: 'cat', xp: 300, species_count: 1, extras: { variant: 'default', accessory: 'none', prop, day: '2026-11-27' } });
+    const withProp = renderCardFromRow(row('fish') as never, Date.now()).svg;
+    expect(withProp).toContain('id="p1"');
+    expect(withProp).toContain('class="pr0"');
+    expect(renderCardFromRow(row('nonsense') as never, Date.now()).svg).not.toContain('id="p1"');
+    expect(renderCardFromRow(row('none') as never, Date.now()).svg).not.toContain('id="p1"');
+  });
+});

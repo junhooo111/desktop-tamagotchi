@@ -107,4 +107,6 @@ footer {
 .grade-hidden { color: #ff8bd0; }
 #filter-box { margin-left: auto; }
 #filter-box select { border: 1px solid #d9c9a8; border-radius: 6px; padding: 2px 4px; background: #fff; }
+#filter-box select, #filter-box label { margin-left: 4px; }
+#filter-box .check { font-size: 12px; }
 #filter-box[hidden] { display: none; }

@@ -21,7 +21,7 @@ describe('카드 꾸미기 값 (set_card_extras)', () => {
     expect((await card('ann'))['extras']).toBeUndefined();
     const day = await today();
     await set(u, { variant: 'pastel', accessory: 'crown', name: '콩이', stage: 'adult', species: 'cat', streak: 5, fixes: 12, quiz: 7, rules: 9, tips: 30, badges: 11, day });
-    expect((await card('ann'))['extras']).toEqual({ variant: 'pastel', accessory: 'crown', neck: 'none', effect: 'none', name: '콩이', stage: 'adult', species: 'cat', streak: 5, fixes: 12, quiz: 7, rules: 9, tips: 30, badges: 11, day });
+    expect((await card('ann'))['extras']).toEqual({ variant: 'pastel', accessory: 'crown', neck: 'none', effect: 'none', prop: 'none', name: '콩이', stage: 'adult', species: 'cat', streak: 5, fixes: 12, quiz: 7, rules: 9, tips: 30, badges: 11, day });
   });
 
   it('허용하지 않는 값은 기본값으로, 숫자는 범위 안으로, 이름은 다듬는다', async () => {

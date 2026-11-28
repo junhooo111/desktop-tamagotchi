@@ -217,7 +217,7 @@ Right-click → **`My pet` tab → `Customize…`**. The **preview and name fiel
 - **Accessories** (28): hats, glasses, wings and more. Achievements unlock some, and the rest come only from cosmetic gacha.
 - **Neck items** (6): bell collar, scarf, bow tie, pearl necklace, star necklace, gold chain.
 - **Effects** (5): sparkles, hearts, music notes, snowflakes, and a **flame aura** that wraps around your pet's outline.
-- **Props** (8): ball, bone, fish, balloon, flower pot, butterfly, lantern, dragon egg. Pull-only and tradable. Ground props (ball, bone, fish, pot, dragon egg) bounce in front of your pet; the balloon, butterfly and lantern float at head height. They hide while your pet climbs a wall or hangs from the mouse.
+- **Props** (12): ball, bone, fish, balloon, flower pot, butterfly, lantern, dragon egg, ball of yarn, kite, snowman, rain cloud. Pull-only and tradable. Ground props (ball, bone, fish, pot, dragon egg) bounce in front of your pet; the balloon, butterfly and lantern float at head height. They hide while your pet climbs a wall or hangs from the mouse.
 
 ### Cosmetic gacha and grades
 

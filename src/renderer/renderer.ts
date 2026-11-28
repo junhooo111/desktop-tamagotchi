@@ -257,22 +257,26 @@ let companionKey = '';
 function drawCompanion(v: PetView, pose: ReturnType<typeof resolvePose>, rect: { x: number; size: number }, scale: number, now: number): void {
   const c = v.companion;
   if (!c || v.surface !== 'floor' || v.mode === 'hang') return;
-  const sheet = spriteSet(c.speciesId, c.stage, { variant: 'default', accessory: 'none', neck: 'none', effect: 'none' });
+  const sheet = spriteSet(c.speciesId, c.stage, { variant: c.variant ?? 'default', accessory: c.accessory ?? 'none', neck: c.neck ?? 'none', effect: c.effect ?? 'none' });
   const rows = sheet.frames[pose.frame] ?? sheet.frames.idleA;
   const size = rect.size / 2;
   // 내 펫이 바라보는 쪽의 반대편(뒤)에 선다. 처음 나타날 때는 바로 그 자리에서 시작한다.
   const behind = pose.orientation.flip ? 1 : -1;
   const target = behind * (rect.size * 0.5 + size * 0.45);
-  const key = `${c.speciesId}|${c.stage}`;
+  const key = `${c.speciesId}|${c.stage}`; // 모습이 바뀌어도 위치는 그대로 이어진다
   if (key !== companionKey) {
     companionKey = key;
     companionX = target;
   }
   companionX += (target - companionX) * 0.18;
-  const hop = v.mode === 'walk' ? -Math.abs(Math.round(Math.sin(now / 130 + 1) * 2)) : 0;
+  // 내 펫이 쓰다듬어 좋아하면 친구 펫도 같이 좋아서 통통 뛰고 하트를 띄운다
+  const happy = pose.hearts;
+  const hop = v.mode === 'walk' ? -Math.abs(Math.round(Math.sin(now / 130 + 1) * 2)) : happy ? -Math.abs(Math.round(Math.sin(now / 110) * 3)) : 0;
   const x0 = Math.round(rect.x + rect.size / 2 + companionX - size / 2);
   const y0 = WINDOW.height - size + hop * scale;
   const cell = Math.max(1, scale);
+  // 걸을 때는 내 펫과 같은 방향을 보고, 가만히 있을 때는 내 펫 쪽을 마주 본다
+  const faceFlip = v.mode === 'idle' ? !pose.orientation.flip : pose.orientation.flip;
   for (let y = 0; y < 16; y++) {
     for (let x = 0; x < 16; x++) {
       let ch = '.';
@@ -285,11 +289,12 @@ function drawCompanion(v: PetView, pose: ReturnType<typeof resolvePose>, rect: {
       }
       const color = ch === '.' ? undefined : sheet.palette[ch];
       if (!color) continue;
-      const px = pose.orientation.flip ? 15 - x : x; // 내 펫과 같은 방향을 본다
+      const px = faceFlip ? 15 - x : x;
       ctx.fillStyle = color;
       ctx.fillRect(x0 + px * cell, y0 + y * cell, cell, cell);
     }
   }
+  if (happy) drawHearts(x0 + size / 2, y0 + 2 * cell, now, Math.max(1, Math.floor(scale / 2) || 1));
 }
 
 // ---- 소품: 펫 앞에서 통통 튀거나(공·뼈다귀…) 머리 높이에서 둥실 떠 있다(풍선·나비…) ----

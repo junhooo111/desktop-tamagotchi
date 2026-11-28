@@ -45,7 +45,7 @@ export const GACHA_ACCESSORIES: readonly Accessory[] = ACCESSORIES.filter((a) =>
 export const NECK_NAMES: Record<Neck, string> = { none: '없음', bell: '방울 목줄', scarf: '스카프', bowtie: '나비넥타이', pearl: '진주 목걸이', starpendant: '별 목걸이', goldchain: '황금 목걸이' };
 export const EFFECT_NAMES: Record<Effect, string> = { none: '없음', sparkles: '반짝이', hearts: '하트', notes: '음표', snow: '눈송이', flameaura: '불꽃 오라' };
 
-export const PROP_NAMES: Record<Prop, string> = { none: '없음', ball: '공', bone: '뼈다귀', fish: '생선', balloon: '풍선', pot: '꽃 화분', butterfly: '나비', lantern: '등불', dragonegg: '용의 알' };
+export const PROP_NAMES: Record<Prop, string> = { none: '없음', ball: '공', bone: '뼈다귀', fish: '생선', balloon: '풍선', pot: '꽃 화분', butterfly: '나비', lantern: '등불', dragonegg: '용의 알', yarn: '털실뭉치', kite: '연', snowman: '눈사람', cloud: '비구름' };
 
 export const VARIANT_NAMES: Record<Variant, string> = { default: '기본', pastel: '파스텔', deep: '진하게', mono: '흑백' };
 export const ACCESSORY_NAMES: Record<Accessory, string> = {

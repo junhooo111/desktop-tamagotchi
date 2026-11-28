@@ -78,6 +78,10 @@ export const COSMETIC_ITEMS: readonly CosmeticItem[] = [
   P('butterfly', 'special'),
   P('lantern', 'legend'),
   P('dragonegg', 'legend'),
+  P('yarn', 'uncommon'),
+  P('kite', 'rare'),
+  P('snowman', 'special'),
+  P('cloud', 'legend'),
   // 업적 전용(뽑기에는 나오지 않는다)
   A('headband', 'rare', false),
   A('antenna', 'rare', false),
@@ -93,7 +97,7 @@ export const COSMETIC_PITY = 25;
 /** 업적으로도 열 수 있는 꾸미기(장식 8종 + 색 3종): 업적으로 열어 둔 사람이 팔고도 계속 쓸 수 있어서 거래·선물을 막는다(서버 cosmetic_items.tradable 과 같다) */
 const ACHIEVEMENT_UNLOCKABLE: ReadonlySet<string> = new Set(['ribbon', 'glasses', 'crown', 'wings', 'sprout', 'flower', 'partyhat', 'halo', 'pastel', 'deep', 'mono']);
 
-/** 팔거나 선물할 수 있는 꾸미기: 뽑기로만 얻는 33종 */
+/** 팔거나 선물할 수 있는 꾸미기: 뽑기로만 얻는 37종 */
 export const cosmeticTradable = (kind: CosmeticKind, id: string): boolean => COSMETIC_ITEMS.some((i) => i.kind === kind && i.id === id && i.gacha) && !ACHIEVEMENT_UNLOCKABLE.has(id);
 
 export const cosmeticItem = (kind: CosmeticKind, id: string): CosmeticItem | undefined => COSMETIC_ITEMS.find((i) => i.kind === kind && i.id === id);

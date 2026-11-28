@@ -1038,6 +1038,85 @@ var TIPS = [
 var TIP_EVERY_MS = 20 * 6e4;
 var TIP_PENDING_MS = 10 * 6e4;
 
+// dist/shared/rarity.js
+var hasLegendFormRarity = (r) => r === "legend" || r === "hidden";
+var PITY_RESETS_ON = ["legend", "hidden"];
+
+// dist/shared/cosmetics.js
+var A = (id, rarity, gacha = true) => ({ kind: "accessory", id, rarity, gacha });
+var V = (id, rarity) => ({ kind: "variant", id, rarity, gacha: true });
+var N = (id, rarity) => ({ kind: "neck", id, rarity, gacha: true });
+var E = (id, rarity) => ({ kind: "effect", id, rarity, gacha: true });
+var P = (id, rarity) => ({ kind: "prop", id, rarity, gacha: true });
+var COSMETIC_ITEMS = [
+  // 일반
+  A("ribbon", "common"),
+  A("sprout", "common"),
+  A("flower", "common"),
+  A("cap", "common"),
+  // 고급
+  A("partyhat", "uncommon"),
+  A("glasses", "uncommon"),
+  A("chef", "uncommon"),
+  A("santa", "uncommon"),
+  V("pastel", "uncommon"),
+  // 희귀
+  A("witch", "rare"),
+  A("halo", "rare"),
+  V("deep", "rare"),
+  // 특별
+  A("crown", "special"),
+  V("mono", "special"),
+  // 전설
+  A("wings", "legend"),
+  // 새 머리 장식(2단계)
+  A("beret", "common"),
+  A("beanie", "common"),
+  A("bandana", "common"),
+  A("cowboy", "uncommon"),
+  A("headphones", "uncommon"),
+  A("pirate", "rare"),
+  A("knight", "rare"),
+  A("devil", "special"),
+  A("unicornhorn", "special"),
+  A("flamecrown", "legend"),
+  // 새 종류(3단계): 목 장식과 효과(모두 꾸미기 뽑기 전용)
+  N("bell", "common"),
+  N("scarf", "common"),
+  N("bowtie", "uncommon"),
+  E("sparkles", "uncommon"),
+  E("hearts", "uncommon"),
+  N("pearl", "rare"),
+  E("notes", "rare"),
+  E("snow", "rare"),
+  N("starpendant", "special"),
+  N("goldchain", "legend"),
+  E("flameaura", "legend"),
+  // 소품(4단계): 펫 곁을 따라다니는 물건(모두 꾸미기 뽑기 전용)
+  // 움직이는 물건이라 장식보다 한 단계 높은 등급이다(일반 소품은 없다)
+  P("ball", "uncommon"),
+  P("bone", "uncommon"),
+  P("fish", "rare"),
+  P("balloon", "rare"),
+  P("pot", "special"),
+  P("butterfly", "special"),
+  P("lantern", "legend"),
+  P("dragonegg", "legend"),
+  P("yarn", "uncommon"),
+  P("kite", "rare"),
+  P("snowman", "special"),
+  P("cloud", "legend"),
+  // 업적 전용(뽑기에는 나오지 않는다)
+  A("headband", "rare", false),
+  A("antenna", "rare", false),
+  A("bunnyears", "rare", false),
+  A("eyepatch", "rare", false),
+  A("monocle", "rare", false),
+  A("star", "special", false)
+];
+var cosmeticItem = (kind, id) => COSMETIC_ITEMS.find((i) => i.kind === kind && i.id === id);
+var cosmeticRarity = (kind, id) => cosmeticItem(kind, id)?.rarity ?? "common";
+
 // dist/shared/growth.js
 var emptyGrowth = () => ({
   days: [],
@@ -1102,7 +1181,13 @@ var ACHIEVEMENTS = [
   { id: "friend-3", name: "\uCE5C\uAD6C \uBD80\uC790", description: "\uCE5C\uAD6C\uAC00 3\uBA85\uC774 \uB418\uC5C8\uC5B4\uC694", metric: "friends", goal: 3, xp: 25 },
   { id: "friendship-3", name: "\uB2E8\uC9DD", description: "\uCE5C\uAD6C\uC640 \uCE5C\uBC00\uB3C4 \uB808\uBCA8 3\uC774 \uB418\uC5C8\uC5B4\uC694", metric: "friendLevel", goal: 3, xp: 25 },
   { id: "friendship-5", name: "\uC808\uCE5C", description: "\uCE5C\uAD6C\uC640 \uCE5C\uBC00\uB3C4 \uB808\uBCA8 5\uAC00 \uB418\uC5C8\uC5B4\uC694", metric: "friendLevel", goal: 5, xp: 50 },
-  { id: "friendship-10", name: "\uC601\uD63C\uC758 \uB2E8\uC9DD", description: "\uCE5C\uAD6C\uC640 \uCE5C\uBC00\uB3C4 \uB808\uBCA8 10\uC774 \uB418\uC5C8\uC5B4\uC694", metric: "friendLevel", goal: 10, xp: 150 }
+  { id: "friendship-10", name: "\uC601\uD63C\uC758 \uB2E8\uC9DD", description: "\uCE5C\uAD6C\uC640 \uCE5C\uBC00\uB3C4 \uB808\uBCA8 10\uC774 \uB418\uC5C8\uC5B4\uC694", metric: "friendLevel", goal: 10, xp: 150 },
+  { id: "cos-5", name: "\uC637\uC7A5 \uCC44\uC6B0\uAE30", description: "\uAFB8\uBBF8\uAE30\uB97C 5\uAC1C \uBAA8\uC558\uC5B4\uC694", metric: "cosmetics", goal: 5, xp: 20 },
+  { id: "cos-15", name: "\uD328\uC154\uB2C8\uC2A4\uD0C0", description: "\uAFB8\uBBF8\uAE30\uB97C 15\uAC1C \uBAA8\uC558\uC5B4\uC694", metric: "cosmetics", goal: 15, xp: 50 },
+  { id: "cos-legend", name: "\uC804\uC124\uC758 \uC637\uC7A5", description: "\uC804\uC124 \uAFB8\uBBF8\uAE30\uB97C \uC5BB\uC5C8\uC5B4\uC694", metric: "legendCosmetics", goal: 1, xp: 80 },
+  { id: "prop-1", name: "\uCCAB \uC18C\uD488", description: "\uC18C\uD488\uC744 \uCC98\uC74C \uC5BB\uC5C8\uC5B4\uC694", metric: "props", goal: 1, xp: 20 },
+  { id: "prop-all", name: "\uC18C\uD488 \uC218\uC9D1\uAC00", description: "\uC18C\uD488\uC744 \uBAA8\uB450 \uBAA8\uC558\uC5B4\uC694", metric: "props", goal: COSMETIC_ITEMS.filter((i) => i.kind === "prop").length, xp: 100 },
+  { id: "cos-all", name: "\uC637\uC7A5 \uC644\uC131", description: "\uBF51\uAE30\uC5D0 \uB098\uC624\uB294 \uAFB8\uBBF8\uAE30\uB97C \uBAA8\uB450 \uBAA8\uC558\uC5B4\uC694", metric: "cosmetics", goal: COSMETIC_ITEMS.filter((i) => i.gacha).length, xp: 200 }
 ];
 function rulesLearned(g) {
   return RULE_IDS.filter((id) => (g.rules[id]?.confirms ?? 0) > 0).length;
@@ -1137,6 +1222,12 @@ function metricValue(g, ctx, metric, today) {
       return ctx.friends ?? 0;
     case "friendLevel":
       return ctx.friendLevel ?? 0;
+    case "cosmetics":
+      return ctx.cosmetics ?? 0;
+    case "legendCosmetics":
+      return ctx.legendCosmetics ?? 0;
+    case "props":
+      return ctx.props ?? 0;
   }
 }
 function buildCodex(g, ctx, now) {
@@ -1149,6 +1240,7 @@ function buildCodex(g, ctx, now) {
     rulesTotal: RULE_IDS.length,
     tipsSeen: ctx.tipsSeen,
     tipsTotal: TIPS.length,
+    ...ctx.cosmeticProgress ? { cosmetics: ctx.cosmeticProgress } : {},
     rules: RULE_IDS.map((id) => {
       const stat = g.rules[id] ?? { confirms: 0, fixes: 0 };
       const status = stat.fixes > 0 ? "fixed" : stat.confirms > 0 ? "learned" : "unseen";
@@ -1280,16 +1372,16 @@ function shadeGrid(t, shade) {
     }
   }
 }
-function stamp(g, t, outline) {
+function stamp(g, t, outline2) {
   for (let y = 0; y < SIZE; y++) {
     for (let x = 0; x < SIZE; x++) {
       if ((t[y]?.[x] ?? ".") !== ".")
         continue;
-      if (outline === null)
+      if (outline2 === null)
         continue;
       const near = (t[y]?.[x - 1] ?? ".") !== "." || (t[y]?.[x + 1] ?? ".") !== "." || (t[y - 1]?.[x] ?? ".") !== "." || (t[y + 1]?.[x] ?? ".") !== ".";
       if (near)
-        px(g, x, y, outline);
+        px(g, x, y, outline2);
     }
   }
   for (let y = 0; y < SIZE; y++) {
@@ -1306,6 +1398,41 @@ function part(g, draw, opts) {
   if (opts.shade)
     shadeGrid(t, opts.shade);
   stamp(g, t, opts.outline);
+}
+function outline(g, c = "k") {
+  const filled = (x, y) => {
+    const v = g[y]?.[x];
+    return v !== void 0 && v !== ".";
+  };
+  return g.map((row, y) => row.map((cell, x) => {
+    if (cell !== ".")
+      return cell;
+    const near = filled(x - 1, y) || filled(x + 1, y) || filled(x, y - 1) || filled(x, y + 1);
+    return near ? c : ".";
+  }).join(""));
+}
+
+// dist/shared/art/detail.js
+var FINE_CHARS = "HSQR";
+function fineDetail(g, x, y, rows, chars, main, gem) {
+  const filled = (rx, ry) => {
+    const ch = rows[ry]?.[rx];
+    return ch !== void 0 && ch !== "." && ch !== " ";
+  };
+  rows.forEach((row, ry) => {
+    [...row].forEach((ch, rx) => {
+      const bx = x + rx * 2;
+      const by = y + ry * 2;
+      if (ch === main) {
+        if (!filled(rx, ry - 1))
+          rect(g, bx, by, 2, 1, chars.hi);
+        if (!filled(rx, ry + 1))
+          rect(g, bx, by + 1, 2, 1, chars.sh);
+      } else if (ch === gem) {
+        px(g, bx, by, chars.hi);
+      }
+    });
+  });
 }
 
 // dist/shared/art/chunky.js
@@ -1343,14 +1470,16 @@ function pickOf(cells3) {
 }
 function chunky(rows) {
   const out = [];
+  const fine = (c) => c !== void 0 && FINE_CHARS.includes(c);
   for (let by = 0; by < SIZE; by += 2) {
     let a = "";
     let b = "";
     for (let bx = 0; bx < SIZE; bx += 2) {
-      const cells3 = [rows[by]?.[bx] ?? ".", rows[by]?.[bx + 1] ?? ".", rows[by + 1]?.[bx] ?? ".", rows[by + 1]?.[bx + 1] ?? "."];
+      const raw = [rows[by]?.[bx], rows[by]?.[bx + 1], rows[by + 1]?.[bx], rows[by + 1]?.[bx + 1]];
+      const cells3 = raw.map((c) => fine(c) || c === void 0 ? "." : c);
       const ch = pickOf(cells3);
-      a += ch + ch;
-      b += ch + ch;
+      a += (fine(raw[0]) ? raw[0] : ch) + (fine(raw[1]) ? raw[1] : ch);
+      b += (fine(raw[2]) ? raw[2] : ch) + (fine(raw[3]) ? raw[3] : ch);
     }
     out.push(a, b);
   }
@@ -1429,6 +1558,8 @@ function cells(t, x, y, rows) {
     });
   });
 }
+var isHighGrade = (r) => r === "special" || PITY_RESETS_ON.includes(r);
+var fineNow = false;
 function placeOnHead(g, head, rows, opts = {}) {
   const overlap = opts.overlap ?? 2;
   const bottom = even(head.cy - head.ry) + overlap;
@@ -1440,6 +1571,8 @@ function placeOnHead(g, head, rows, opts = {}) {
   const x = even(head.cx + head.rx * (opts.dx ?? 0)) - Math.round(width / 2);
   const y = Math.max(0, bottom - fitted.length * 2);
   part(g, (t) => cells(t, x, y, fitted), { outline: "k" });
+  if (fineNow)
+    fineDetail(g, x, y, fitted, { hi: "H", sh: "S" }, "X", "Y");
 }
 function ringBlocks(t, cx, cy, rIn, rOut, ch, keep) {
   const r = Math.ceil(rOut / 2) * 2 + 2;
@@ -1452,6 +1585,7 @@ function ringBlocks(t, cx, cy, rIn, rOut, ch, keep) {
   }
 }
 function drawHeadAccessory(g, acc, head, eyes) {
+  fineNow = acc !== void 0 && acc !== "none" && isHighGrade(cosmeticRarity("accessory", acc));
   switch (acc) {
     case "crown":
       placeOnHead(g, head, ["X..X..X", "XXXXXXX", "XYXYXYX"]);
@@ -1603,6 +1737,7 @@ function drawBackWings(g, acc, x, y, size) {
   if (acc === "wings") {
     const rows = ["XXY....", "XXXY...", "XYXXY..", ".XXYXXY", "..XXYXX", "...XXXX"];
     part(g, (t) => cells(t, bx - 12, Math.max(0, by - 11), rows), { outline: "k" });
+    fineDetail(g, bx - 12, Math.max(0, by - 11), rows, { hi: "H", sh: "S" }, "X", "Y");
     void s;
     return;
   }
@@ -1670,6 +1805,8 @@ function drawNeckAccessory(g, neck, head) {
   const x = even2(head.cx - head.rx * 0.2) - Math.round(width / 2);
   const y = even2(head.cy + head.ry * 0.72);
   part(g, (t) => cells2(t, x, y, rows), { outline: "k" });
+  if (neck === "starpendant" || neck === "goldchain")
+    fineDetail(g, x, y, rows, { hi: "Q", sh: "R" }, "N", "M");
 }
 function applyEffect(rows, effect) {
   if (!effect || effect === "none")
@@ -1735,6 +1872,19 @@ function applyEffect(rows, effect) {
             grid[by * 2 + dy][bx * 2 + dx] = ch;
       }
     }
+    for (let by = 0; by < 16; by++) {
+      for (let bx = 0; bx < 16; bx++) {
+        if (grid[by * 2]?.[bx * 2] !== "." || (bx * 7 + by * 13) % 6 !== 0)
+          continue;
+        let ring = false;
+        for (let dy = -1; dy <= 1 && !ring; dy++)
+          for (let dx = -1; dx <= 1; dx++)
+            if ((dx || dy) && "UV".includes(grid[(by + dy) * 2]?.[(bx + dx) * 2] ?? "."))
+              ring = true;
+        if (ring)
+          grid[by * 2][bx * 2] = "V";
+      }
+    }
   }
   return grid.map((r) => r.join(""));
 }
@@ -1778,13 +1928,15 @@ function tintLook(look, variant) {
   };
 }
 function neckPalette(neck) {
-  return NECK_COLORS[neck ?? "none"];
+  const c = NECK_COLORS[neck ?? "none"];
+  return { ...c, Q: mix(c.N, "#ffffff", 0.65), R: mix(c.N, "#2a1f33", 0.4) };
 }
 function effectPalette(effect) {
   return EFFECT_COLORS[effect ?? "none"];
 }
 function accessoryPalette(acc) {
-  return ACCESSORY_COLORS[acc];
+  const c = ACCESSORY_COLORS[acc];
+  return { ...c, H: mix(c.X, "#ffffff", 0.65), S: mix(c.X, "#2a1f33", 0.4) };
 }
 
 // dist/shared/art/types.js
@@ -2173,8 +2325,8 @@ var FRAME_NAMES = [
 ];
 
 // dist/shared/art/bird-plan.js
-var P = basePose;
-var stand = (over = {}) => ({ shape: "stand", pose: P(over) });
+var P2 = basePose;
+var stand = (over = {}) => ({ shape: "stand", pose: P2(over) });
 function waddle(i, fast) {
   const reach = fast ? 3 : 2;
   const lift = fast ? 4 : 3;
@@ -2199,8 +2351,8 @@ function birdPlan() {
   return {
     idleA: stand({ tailAngle: 40 }),
     idleB: stand({ tailAngle: 70, headDy: -0.5, crouch: -0.5 }),
-    sitA: { shape: "sit", pose: P({ tailAngle: 40 }) },
-    sitB: { shape: "sit", pose: P({ tailAngle: 70, mouth: "none", eyes: "happy" }) },
+    sitA: { shape: "sit", pose: P2({ tailAngle: 40 }) },
+    sitB: { shape: "sit", pose: P2({ tailAngle: 70, mouth: "none", eyes: "happy" }) },
     walk1: waddle(0, false),
     walk2: waddle(1, false),
     walk3: waddle(2, false),
@@ -2209,21 +2361,21 @@ function birdPlan() {
     run2: waddle(1, true),
     run3: waddle(2, true),
     run4: waddle(3, true),
-    dozeA: { shape: "sit", pose: P({ headDy: 1, eyes: "sleepy" }) },
-    dozeB: { shape: "sit", pose: P({ headDy: 3, eyes: "closed" }) },
-    sleepA: { shape: "lie", pose: P({ eyes: "closed", stretch: 0 }) },
-    sleepB: { shape: "lie", pose: P({ eyes: "closed", stretch: 1 }) },
+    dozeA: { shape: "sit", pose: P2({ headDy: 1, eyes: "sleepy" }) },
+    dozeB: { shape: "sit", pose: P2({ headDy: 3, eyes: "closed" }) },
+    sleepA: { shape: "lie", pose: P2({ eyes: "closed", stretch: 0 }) },
+    sleepB: { shape: "lie", pose: P2({ eyes: "closed", stretch: 1 }) },
     jumpCrouch: stand({ crouch: 3, wing: 0, legs: { ff: leg(), fn: leg(1, 0), bf: leg(), bn: leg(-1, 0) } }),
     jumpUp: stand({ dy: -1, wing: 2, legs: { ff: leg(), fn: leg(1, 3), bf: leg(), bn: leg(-1, 3) }, mouth: "open" }),
     jumpPeak: stand({ dy: -2, wing: 2, legs: { ff: leg(), fn: leg(1, 4), bf: leg(), bn: leg(-1, 4) }, eyes: "happy", mouth: "open" }),
     jumpDown: stand({ dy: -1, wing: 1, legs: { ff: leg(), fn: leg(1, 2), bf: leg(), bn: leg(-1, 2) }, mouth: "open" }),
-    curl: { shape: "curl", pose: P({ eyes: "happy" }) },
+    curl: { shape: "curl", pose: P2({ eyes: "happy" }) },
     climbA: stand({ wing: 2, headDx: 1, legs: { ff: leg(), fn: leg(3, 2), bf: leg(), bn: leg(-2, 0) }, tailAngle: 30 }),
     climbB: stand({ wing: 1, headDx: 1, legs: { ff: leg(), fn: leg(2, 0), bf: leg(), bn: leg(-3, 2) }, tailAngle: 40 }),
     slipA: stand({ wing: 2, eyes: "wide", mouth: "open", legs: { ff: leg(), fn: leg(2, 2), bf: leg(), bn: leg(-2, 1) }, tailAngle: 80 }),
     slipB: stand({ wing: 1, dy: -1, eyes: "wide", mouth: "open", legs: { ff: leg(), fn: leg(3, 1), bf: leg(), bn: leg(-3, 2) }, tailAngle: 70 }),
-    hangA: { shape: "hang", pose: P({ legs: { ff: leg(), fn: leg(), bf: leg(2), bn: leg() } }) },
-    hangB: { shape: "hang", pose: P({ legs: { ff: leg(), fn: leg(), bf: leg(-2), bn: leg() }, eyes: "open" }) },
+    hangA: { shape: "hang", pose: P2({ legs: { ff: leg(), fn: leg(), bf: leg(2), bn: leg() } }) },
+    hangB: { shape: "hang", pose: P2({ legs: { ff: leg(), fn: leg(), bf: leg(-2), bn: leg() }, eyes: "open" }) },
     fall: stand({ wing: 2, eyes: "wide", mouth: "open", legs: { ff: leg(), fn: leg(2, 4), bf: leg(), bn: leg(-2, 4) }, tailAngle: 85 }),
     alertA: stand({ wing: 1, eyes: "wide", mouth: "open", tailAngle: 75 }),
     alertB: stand({ wing: 0, eyes: "wide", mouth: "open", crouch: -1, tailAngle: 88, legs: { ff: leg(), fn: leg(1, 2), bf: leg(), bn: leg() } }),
@@ -2949,9 +3101,9 @@ function trotLegs(phase, amp, liftH) {
   };
   return { fn: one(phase), bf: one(phase), ff: one(phase + 0.5), bn: one(phase + 0.5) };
 }
-var P2 = basePose;
+var P3 = basePose;
 function stand2(over = {}) {
-  return { shape: "stand", pose: P2(over) };
+  return { shape: "stand", pose: P3(over) };
 }
 function walkAndRun(gait) {
   if (gait === "hop") {
@@ -2991,8 +3143,8 @@ function quadPlan(gait) {
   const plan = {
     idleA: stand2({ tailAngle: 40 }),
     idleB: stand2({ tailAngle: 58, stretch: 0.15, headDy: -0.5 }),
-    sitA: { shape: "sit", pose: P2({ tailAngle: 28 }) },
-    sitB: { shape: "sit", pose: P2({ tailAngle: 52, mouth: "smile" }) },
+    sitA: { shape: "sit", pose: P3({ tailAngle: 28 }) },
+    sitB: { shape: "sit", pose: P3({ tailAngle: 52, mouth: "smile" }) },
     walk1: moving.walk1,
     walk2: moving.walk2,
     walk3: moving.walk3,
@@ -3001,21 +3153,21 @@ function quadPlan(gait) {
     run2: moving.run2,
     run3: moving.run3,
     run4: moving.run4,
-    dozeA: { shape: "sit", pose: P2({ headDy: 2, eyes: "sleepy", ears: "down", tailAngle: 20 }) },
-    dozeB: { shape: "sit", pose: P2({ headDy: 4, eyes: "closed", ears: "down", tailAngle: 20 }) },
-    sleepA: { shape: "lie", pose: P2({ eyes: "closed", ears: "down", stretch: 0 }) },
-    sleepB: { shape: "lie", pose: P2({ eyes: "closed", ears: "down", stretch: 1 }) },
+    dozeA: { shape: "sit", pose: P3({ headDy: 2, eyes: "sleepy", ears: "down", tailAngle: 20 }) },
+    dozeB: { shape: "sit", pose: P3({ headDy: 4, eyes: "closed", ears: "down", tailAngle: 20 }) },
+    sleepA: { shape: "lie", pose: P3({ eyes: "closed", ears: "down", stretch: 0 }) },
+    sleepB: { shape: "lie", pose: P3({ eyes: "closed", ears: "down", stretch: 1 }) },
     jumpCrouch: stand2({ crouch: 3, stretch: -0.6, legs: { ff: leg(1, 0), fn: leg(1, 0), bf: leg(-1, 0), bn: leg(-1, 0) }, ears: "back", tailAngle: 25 }),
     jumpUp: stand2({ dy: -1, stretch: 0.9, legs: { ff: leg(4, 3), fn: leg(4, 2), bf: leg(-4, 2), bn: leg(-4, 1) }, ears: "back", mouth: "open", tailAngle: 20 }),
     jumpPeak: stand2({ dy: -2, stretch: 0.2, legs: { ff: leg(2, 4), fn: leg(2, 4), bf: leg(-2, 4), bn: leg(-2, 4) }, eyes: "happy", mouth: "open", tailAngle: 80 }),
     jumpDown: stand2({ dy: -1, stretch: 0.4, legs: { ff: leg(3, 2), fn: leg(3, 1), bf: leg(-1, 3), bn: leg(-1, 3) }, ears: "back", mouth: "open", tailAngle: 60 }),
-    curl: { shape: "curl", pose: P2({ eyes: "happy", ears: "up" }) },
+    curl: { shape: "curl", pose: P3({ eyes: "happy", ears: "up" }) },
     climbA: stand2({ stretch: 1, legs: { ff: leg(5, 2), fn: leg(3, 0), bf: leg(-4, 1), bn: leg(-2, 0) }, ears: "back", tailAngle: 20 }),
     climbB: stand2({ stretch: 1, legs: { ff: leg(3, 0), fn: leg(5, 2), bf: leg(-2, 0), bn: leg(-4, 1) }, ears: "back", tailAngle: 28 }),
     slipA: stand2({ stretch: 0.6, legs: { ff: leg(4, 2), fn: leg(2, 1), bf: leg(-4, 2), bn: leg(-3, 1) }, eyes: "wide", mouth: "open", ears: "back", tailAngle: 85 }),
     slipB: stand2({ stretch: 0.6, dy: -1, legs: { ff: leg(5, 1), fn: leg(3, 2), bf: leg(-3, 1), bn: leg(-4, 2) }, eyes: "wide", mouth: "open", ears: "back", tailAngle: 70 }),
-    hangA: { shape: "hang", pose: P2({ legs: { ff: leg(), fn: leg(), bf: leg(2), bn: leg() }, mouth: "none" }) },
-    hangB: { shape: "hang", pose: P2({ legs: { ff: leg(), fn: leg(), bf: leg(-2), bn: leg() }, mouth: "smile" }) },
+    hangA: { shape: "hang", pose: P3({ legs: { ff: leg(), fn: leg(), bf: leg(2), bn: leg() }, mouth: "none" }) },
+    hangB: { shape: "hang", pose: P3({ legs: { ff: leg(), fn: leg(), bf: leg(-2), bn: leg() }, mouth: "smile" }) },
     fall: stand2({ stretch: 0.3, legs: { ff: leg(3, 4), fn: leg(4, 5), bf: leg(-3, 5), bn: leg(-4, 4) }, eyes: "wide", mouth: "open", tailAngle: 85 }),
     alertA: stand2({ eyes: "wide", mouth: "open", ears: "up", tailAngle: 75 }),
     alertB: stand2({ eyes: "wide", mouth: "open", ears: "up", tailAngle: 88, crouch: -1, legs: { ff: leg(), fn: leg(1, 2), bf: leg(), bn: leg() } }),
@@ -3586,8 +3738,245 @@ var KUMIHO = {
   tailScale: 1.3
 };
 
-// dist/shared/rarity.js
-var hasLegendFormRarity = (r) => r === "legend" || r === "hidden";
+// dist/shared/art/props.js
+var PROPS = ["none", "ball", "bone", "fish", "balloon", "pot", "butterfly", "lantern", "dragonegg", "yarn", "kite", "snowman", "cloud"];
+var isProp = (v) => typeof v === "string" && PROPS.includes(v);
+var PROP_MOTION = {
+  ball: "ground",
+  bone: "ground",
+  fish: "ground",
+  pot: "ground",
+  balloon: "float",
+  butterfly: "float",
+  lantern: "float",
+  dragonegg: "ground",
+  yarn: "ground",
+  kite: "float",
+  snowman: "ground",
+  cloud: "float"
+};
+var PROP_COLORS = {
+  ball: { a: "#e5484d", b: "#4a9bff", w: "#ffffff", k: "#3b2f2f" },
+  bone: { a: "#fffaf0", b: "#d9cfb8", w: "#ffffff", k: "#3b2f2f" },
+  fish: { a: "#ff9b2e", b: "#ffd34a", w: "#ffffff", k: "#3b2f2f" },
+  balloon: { a: "#ff6b8b", b: "#ffb3c8", w: "#ffffff", k: "#3b2f2f" },
+  pot: { a: "#c8693a", b: "#4fae5a", w: "#ff6b8b", k: "#3b2f2f" },
+  butterfly: { a: "#7a5cff", b: "#b8a8ff", w: "#ffffff", k: "#3b2f2f" },
+  lantern: { a: "#ff9b2e", b: "#ffe14a", w: "#fff6c8", k: "#3b2f2f" },
+  dragonegg: { a: "#7a5cff", b: "#ffd34a", w: "#c9b8ff", k: "#3b2f2f" },
+  yarn: { a: "#ff8bd0", b: "#ffc2e6", w: "#c2418f", k: "#3b2f2f" },
+  kite: { a: "#4a9bff", b: "#ffd34a", w: "#ffffff", k: "#3b2f2f" },
+  snowman: { a: "#ffffff", b: "#ff9b2e", w: "#e5484d", k: "#3b2f2f" },
+  cloud: { a: "#e8f4ff", b: "#4a9bff", w: "#ffe14a", k: "#3b2f2f" }
+};
+var DRAW = {
+  // 공: 둥근 모양과 살짝 찌그러진 모양이 번갈아(튀는 느낌), 줄무늬가 돈다
+  ball: (g, ph) => {
+    if (ph === 0) {
+      ellipse(g, 7, 7, 6, 6, "a");
+      rect(g, 1, 6, 13, 2, "w");
+      rect(g, 4, 2, 3, 2, "w");
+      px(g, 4, 4, "w");
+      rect(g, 9, 10, 3, 2, "b");
+    } else {
+      ellipse(g, 7, 8, 7, 5, "a");
+      rect(g, 0, 7, 15, 2, "w");
+      rect(g, 3, 4, 3, 2, "w");
+      rect(g, 9, 10, 3, 1, "b");
+    }
+  },
+  // 뼈다귀: 한쪽 끝이 까딱까딱
+  bone: (g, ph) => {
+    const l = ph === 0 ? 0 : 1;
+    const r = ph === 0 ? 1 : 0;
+    rect(g, 3, 5 + (l + r) / 2, 10, 4, "a");
+    ellipse(g, 3, 4 + l, 2.2, 2.2, "a");
+    ellipse(g, 3, 9 + l, 2.2, 2.2, "a");
+    ellipse(g, 12, 4 + r, 2.2, 2.2, "a");
+    ellipse(g, 12, 9 + r, 2.2, 2.2, "a");
+    rect(g, 4, 8 + (l + r) / 2, 8, 1, "b");
+    px(g, 2, 3 + l, "w");
+  },
+  // 생선: 몸 왼쪽이 머리, 꼬리가 좌우로 살랑살랑
+  fish: (g, ph) => {
+    ellipse(g, 6, 8, 6, 4, "a");
+    rect(g, 2, 9, 9, 2, "b");
+    rect(g, 5, 3, 4, 1, "a");
+    rect(g, 6, 2, 2, 1, "a");
+    const t = ph === 0 ? 0 : 1;
+    rect(g, 11, 6 + t, 2, 5, "a");
+    rect(g, 13, 4 + t, 2, 9, "a");
+    px(g, 14, 3 + t, "a");
+    px(g, 14, 13 + t, "a");
+    rect(g, 7, 6, 1, 5, "b");
+    rect(g, 9, 6, 1, 5, "b");
+    rect(g, 4, 6, 1, 4, "k");
+    px(g, 2, 7, "w");
+    px(g, 2, 8, "k");
+  },
+  // 풍선: 줄이 이리저리 흔들린다
+  balloon: (g, ph) => {
+    const sway = ph === 0 ? 0 : 1;
+    ellipse(g, 7, 5, 5, 5.5, "a");
+    rect(g, 3, 3, 2, 3, "w");
+    px(g, 4, 6, "w");
+    rect(g, 9, 7, 3, 2, "b");
+    rect(g, 6, 10, 3, 2, "a");
+    line(g, 7, 12, 7 + sway, 15, "b");
+  },
+  // 꽃 화분: 꽃이 바람에 살랑
+  pot: (g, ph) => {
+    const sw = ph === 0 ? 0 : 1;
+    rect(g, 3, 9, 9, 6, "a");
+    rect(g, 2, 8, 11, 2, "a");
+    rect(g, 3, 12, 9, 1, "b");
+    line(g, 7, 8, 7 + sw, 4, "b");
+    ellipse(g, 4, 6, 2, 1, "b");
+    ellipse(g, 11, 6, 2, 1, "b");
+    const fx = 7 + sw;
+    rect(g, fx - 2, 1, 5, 3, "w");
+    rect(g, fx - 1, 0, 3, 5, "w");
+    px(g, fx, 2, "b");
+  },
+  // 나비: 날개를 폈다 접었다
+  butterfly: (g, ph) => {
+    if (ph === 0) {
+      ellipse(g, 3.5, 5, 3.5, 3.5, "a");
+      ellipse(g, 11.5, 5, 3.5, 3.5, "a");
+      ellipse(g, 4.5, 10, 2.5, 2.5, "b");
+      ellipse(g, 10.5, 10, 2.5, 2.5, "b");
+      px(g, 3, 4, "w");
+      px(g, 12, 4, "w");
+    } else {
+      ellipse(g, 5.5, 6, 2, 4, "a");
+      ellipse(g, 9.5, 6, 2, 4, "a");
+      ellipse(g, 6, 10, 1.5, 2, "b");
+      ellipse(g, 9, 10, 1.5, 2, "b");
+      px(g, 5, 4, "w");
+    }
+    rect(g, 7, 3, 2, 9, "k");
+    px(g, 6, 2, "k");
+    px(g, 9, 2, "k");
+  },
+  // 등불: 불빛이 일렁인다
+  lantern: (g, ph) => {
+    rect(g, 6, 0, 4, 2, "a");
+    rect(g, 3, 2, 10, 2, "a");
+    rect(g, 3, 4, 10, 9, "a");
+    rect(g, 4, 5, 8, 7, "b");
+    if (ph === 0)
+      rect(g, 5, 6, 6, 5, "w");
+    else
+      rect(g, 6, 7, 4, 4, "w");
+    rect(g, 3, 13, 10, 2, "a");
+    px(g, 7, 15, "a");
+    px(g, 8, 15, "a");
+    if (ph === 1) {
+      px(g, 2, 1, "b");
+      px(g, 13, 2, "b");
+    }
+  },
+  // 용의 알: 좌우로 흔들린다(속에서 무언가 움직이는 듯)
+  dragonegg: (g, ph) => {
+    const o = ph === 0 ? 0 : 1;
+    ellipse(g, 7 + o, 8, 5.5, 7, "a");
+    for (let x = 2; x <= 12; x++)
+      px(g, x + o, 8 + x % 2, "b");
+    for (let x = 2; x <= 12; x++)
+      px(g, x + o, 12 - x % 2, "b");
+    rect(g, 4 + o, 2, 3, 2, "w");
+    px(g, 4 + o, 4, "w");
+    px(g, 9 + o, 5, "b");
+    px(g, 6 + o, 14, "b");
+    if (ph === 1) {
+      px(g, 8 + o, 6, "b");
+      px(g, 9 + o, 6, "b");
+    }
+  },
+  // 털실뭉치: 실 끝이 꼬물꼬물
+  yarn: (g, ph) => {
+    ellipse(g, 6, 7, 5.5, 5.5, "a");
+    line(g, 2, 5, 10, 3, "b");
+    line(g, 1, 8, 11, 6, "b");
+    line(g, 2, 11, 10, 10, "b");
+    line(g, 4, 2, 7, 12, "w");
+    const t = ph === 0 ? 0 : 1;
+    line(g, 10, 11, 12, 12 + t, "a");
+    line(g, 12, 12 + t, 14, 11 - t, "a");
+  },
+  // 연: 꼬리가 바람에 펄럭
+  kite: (g, ph) => {
+    triangle(g, 7, 0, 1, 5, 13, 5, "a");
+    triangle(g, 1, 5, 13, 5, 7, 11, "b");
+    line(g, 7, 0, 7, 11, "w");
+    line(g, 1, 5, 13, 5, "w");
+    const s = ph === 0 ? 0 : 1;
+    line(g, 7, 11, 6 + s, 13, "w");
+    rect(g, 5 + s, 13, 2, 1, "a");
+    line(g, 6 + s, 14, 8 - s, 15, "w");
+  },
+  // 눈사람: 팔이 까딱
+  snowman: (g, ph) => {
+    ellipse(g, 7, 11, 5, 4.5, "a");
+    ellipse(g, 7, 5, 3.6, 3.6, "a");
+    rect(g, 4, 8, 7, 1, "w");
+    rect(g, 9, 9, 2, 3, "w");
+    px(g, 6, 4, "k");
+    px(g, 9, 4, "k");
+    px(g, 7, 6, "b");
+    px(g, 8, 6, "b");
+    rect(g, 5, 11, 1, 1, "k");
+    rect(g, 5, 13, 1, 1, "k");
+    const a = ph === 0 ? 0 : 1;
+    line(g, 2, 10 - a, 0, 8 - a, "k");
+    line(g, 12, 10 + a, 14, 8 + a, "k");
+  },
+  // 구름: 빗방울이 떨어지고 번개가 깜빡
+  cloud: (g, ph) => {
+    ellipse(g, 4, 5, 3, 3, "a");
+    ellipse(g, 8, 4, 4, 4, "a");
+    ellipse(g, 12, 5.5, 3, 3, "a");
+    rect(g, 3, 5, 11, 3, "a");
+    const d = ph === 0 ? 0 : 2;
+    rect(g, 4, 10 + d, 1, 2, "b");
+    rect(g, 8, 11 - d + 2, 1, 2, "b");
+    rect(g, 12, 10 + d, 1, 2, "b");
+    if (ph === 1)
+      px(g, 8, 9, "w");
+  }
+};
+var cache = /* @__PURE__ */ new Map();
+function propFrames(prop) {
+  if (prop === "none")
+    return [];
+  const hit = cache.get(prop);
+  if (hit)
+    return hit;
+  const frames = [0, 1].map((ph) => {
+    const g = blank();
+    DRAW[prop](g, ph);
+    return outline(g, "k");
+  });
+  let x0 = 99;
+  let x1 = -1;
+  let y0 = 99;
+  let y1 = -1;
+  for (const rows of frames) {
+    rows.forEach((row, y) => {
+      [...row].forEach((ch, x) => {
+        if (ch === ".")
+          return;
+        x0 = Math.min(x0, x);
+        x1 = Math.max(x1, x);
+        y0 = Math.min(y0, y);
+        y1 = Math.max(y1, y);
+      });
+    });
+  }
+  const cropped = frames.map((rows) => rows.slice(y0, y1 + 1).map((r) => r.slice(x0, x1 + 1)));
+  cache.set(prop, cropped);
+  return cropped;
+}
 
 // dist/shared/species.js
 var DESIGNS = {
@@ -3671,10 +4060,10 @@ function legendDesign(d) {
 function chunkAll(frames) {
   return Object.fromEntries(Object.entries(frames).map(([k, v]) => [k, chunky(v)]));
 }
-var cache = /* @__PURE__ */ new Map();
+var cache2 = /* @__PURE__ */ new Map();
 function spriteSet(id, stage, style = DEFAULT_STYLE) {
   const key = stage === "egg" ? "egg" : [id, stage === "legend" && !hasLegendForm(id) ? "adult" : stage, style.variant, style.accessory, style.neck ?? "none", style.effect ?? "none"].join("/");
-  const cached = cache.get(key);
+  const cached = cache2.get(key);
   if (cached)
     return cached;
   let made;
@@ -3690,7 +4079,7 @@ function spriteSet(id, stage, style = DEFAULT_STYLE) {
     const withEffect = style.effect && style.effect !== "none" ? Object.fromEntries(Object.entries(chunked).map(([k, v]) => [k, applyEffect(v, style.effect)])) : chunked;
     made = { palette: { ...paletteOf(look), ...accessoryPalette(style.accessory), ...neckPalette(style.neck), ...effectPalette(style.effect) }, frames: withEffect, skin: d.skin };
   }
-  cache.set(key, made);
+  cache2.set(key, made);
   return made;
 }
 function isSpeciesId(value) {
@@ -3892,7 +4281,13 @@ function renderProfileCard(input) {
   const walk = ["walk1", "walk2", "walk3", "walk4"].map((n) => set.frames[n]);
   const sit = ["sitA", "sitB"].map((n) => set.frames[n]);
   const sleep = ["sleepA", "sleepB"].map((n) => set.frames[n]);
+  const prop = input.prop && input.prop !== "none" ? input.prop : null;
+  const propSet = prop ? propFrames(prop) : [];
+  const propH = propSet[0]?.length ?? 0;
+  const propW = propSet[0]?.[0]?.length ?? 0;
+  const propAt = (x) => prop ? `<g transform="translate(${x},${prop && PROP_MOTION[prop] === "float" ? 4 : CELL - propH})"><use class="pr0" href="#p1" opacity="0"/><use class="pr1" href="#p2" opacity="0"/></g>` : "";
   const defs = [
+    ...propSet.map((rows, i) => `<g id="p${i + 1}">${spriteRects(rows, prop ? PROP_COLORS[prop] : {})}</g>`),
     ...walk.map((rows, i) => `<g id="w${i + 1}">${spriteRects(rows, set.palette)}</g>`),
     ...sit.map((rows, i) => `<g id="s${i + 1}">${spriteRects(rows, set.palette)}</g>`),
     ...sleep.map((rows, i) => `<g id="z${i + 1}">${spriteRects(rows, set.palette)}</g>`)
@@ -3919,6 +4314,7 @@ function renderProfileCard(input) {
     // 앉기·졸기 프레임: 숨 쉬듯 두 장을 번갈아
     ...[0, 1].map((i) => `.st${i}{animation:on2 1.2s step-end infinite;animation-delay:${(i * 0.6).toFixed(1)}s}`),
     ...[0, 1].map((i) => `.sl${i}{animation:on2 2.4s step-end infinite;animation-delay:${(i * 1.2).toFixed(1)}s}`),
+    ".pr0{animation:on2 0.8s step-end infinite}.pr1{animation:on2 0.8s step-end infinite;animation-delay:0.4s}",
     "@keyframes on2{0%{opacity:1}50%{opacity:0}100%{opacity:0}}",
     // 걷는 구간 셋(올라가기·내려가기·돌아오기)과 쉬는 구간 둘(앉기·졸기)
     `.mUp,.mDown,.mBack{opacity:0}.mUp{animation:mvUp ${loop}s linear infinite}.mDown{animation:mvDown ${loop}s linear infinite}.mBack{animation:mvBack ${loop}s linear infinite}`,
@@ -3936,7 +4332,7 @@ function renderProfileCard(input) {
     ".zz2{animation-delay:1.2s}",
     "@keyframes zfloat{0%{opacity:0;transform:translate(0,0)}30%{opacity:1}100%{opacity:0;transform:translate(7px,-14px)}}",
     // 움직임을 줄이는 설정이면 멈춘 채 출발 자리에 서 있는다
-    "@media (prefers-reduced-motion:reduce){*{animation:none!important}.wk0{opacity:1!important}.mUp{opacity:1!important}}"
+    "@media (prefers-reduced-motion:reduce){*{animation:none!important}.wk0,.pr0{opacity:1!important}.mUp{opacity:1!important}}"
   ].join("");
   const standAt = (pt) => `translate(${pt[0]},${GROUND3 - 31 - pt[1] + 0})`;
   const chips = [
@@ -3972,11 +4368,11 @@ function renderProfileCard(input) {
     `<g class="houseZ"><text class="zz" x="${326 + 52}" y="${GROUND3 - 36}" font-size="11" font-weight="700" fill="${COLORS.violet}">Z</text><text class="zz zz2" x="${326 + 60}" y="${GROUND3 - 44}" font-size="9" font-weight="700" fill="${COLORS.violet}">z</text></g>`,
     // 펫: 올라가기 / 위에서 앉기 / 내려가서 집으로 / 돌아오기 / 왼쪽 끝에서 졸기
     `<g transform="translate(${START_X},${TOP})">`,
-    `<g class="mUp">${walkFrames(false)}</g>`,
-    `<g class="mDown">${walkFrames(false)}</g>`,
-    `<g class="mBack">${walkFrames(true)}</g>`,
+    `<g class="mUp">${walkFrames(false)}${propAt(CELL - 4)}</g>`,
+    `<g class="mDown">${walkFrames(false)}${propAt(CELL - 4)}</g>`,
+    `<g class="mBack">${walkFrames(true)}${propAt(4 - propW)}</g>`,
     `</g>`,
-    `<g transform="${standAt(SIT_AT)}"><g class="sitG">${sitFrames(false)}</g></g>`,
+    `<g transform="${standAt(SIT_AT)}"><g class="sitG">${sitFrames(false)}${propAt(CELL - 4)}</g></g>`,
     `<g transform="${standAt([START_X, 0])}"><g class="sleepG">${sleepFrames(true)}<text class="zz" x="${CELL - 6}" y="12" font-size="9" font-weight="700" fill="${COLORS.violet}">Z</text><text class="zz zz2" x="${CELL}" y="4" font-size="7" font-weight="700" fill="${COLORS.violet}">z</text></g></g>`,
     // 정보줄
     rect2(0, STRIP_Y, W, 2, COLORS.line),
@@ -4036,7 +4432,8 @@ function readExtras(raw, speciesId, now) {
     g.achievements[a.id] = now;
   });
   const codex = buildCodex(g, { tipsSeen: num(e["tips"], 1e3) }, now);
-  return { style, name, ...stage ? { stage } : {}, codex };
+  const prop = isProp(e["prop"]) && e["prop"] !== "none" ? e["prop"] : void 0;
+  return { style, name, ...prop ? { prop } : {}, ...stage ? { stage } : {}, codex };
 }
 function renderCardFromRow(row, now = Date.now()) {
   if (!row || row.found !== true)
@@ -4048,6 +4445,7 @@ function renderCardFromRow(row, now = Date.now()) {
   const svg = renderProfileCard({
     pet,
     style: extras?.style ?? DEFAULT_STYLE,
+    ...extras?.prop ? { prop: extras.prop } : {},
     ...extras ? { codex: extras.codex, ...extras.name ? { name: extras.name } : {}, ...extras.stage ? { stage: extras.stage } : {} } : {}
   });
   return { svg, status: species ? "ok" : "empty" };

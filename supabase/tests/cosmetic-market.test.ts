@@ -28,9 +28,9 @@ const active = (user: string) => as(db, user, async () => (await db.query<{ list
 const mine = (user: string) => as(db, user, async () => (await db.query<{ kind: string; item_id: string; tradable: boolean; listing_id: string | null; price: number | null }>('select * from public.my_cosmetics()')).rows);
 
 describe('꾸미기 거래', () => {
-  it('팔 수 있는 꾸미기 33종은 뽑기 전용(업적으로 못 여는 것)이고, 업적으로도 열리는 11종은 못 판다', async () => {
+  it('팔 수 있는 꾸미기 37종은 뽑기 전용(업적으로 못 여는 것)이고, 업적으로도 열리는 11종은 못 판다', async () => {
     const rows = (await db.query<{ kind: string; item_id: string; tradable: boolean }>('select kind, item_id, tradable from public.cosmetic_items where gacha')).rows;
-    expect(rows.filter((r) => r.tradable)).toHaveLength(33);
+    expect(rows.filter((r) => r.tradable)).toHaveLength(37);
     const locked = rows.filter((r) => !r.tradable).map((r) => r.item_id).sort();
     expect(locked).toEqual(['crown', 'deep', 'flower', 'glasses', 'halo', 'mono', 'partyhat', 'pastel', 'ribbon', 'sprout', 'wings']);
     const u = await signUp(db, 'cm-lock');

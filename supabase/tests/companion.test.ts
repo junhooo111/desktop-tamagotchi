@@ -80,3 +80,14 @@ describe('친구 펫 동행', () => {
     expect(await errorOf(() => as(db, u, () => db.query('select * from public.companion_ticks')))).toMatch(/permission denied/);
   });
 });
+
+describe('동행 친구 펫의 꾸민 모습', () => {
+  it('친구가 저장한 카드 꾸밈(extras)이 함께 나온다', async () => {
+    const { ua, ub, id } = await friends('co-look-a', 'co-look-b');
+    await givePet(db, ub, 'cat');
+    await as(db, ub, () => db.query("select public.set_card_extras('{\"variant\":\"pastel\",\"accessory\":\"none\",\"neck\":\"scarf\"}'::jsonb)"));
+    await set(ua, id);
+    const rows = await as(db, ua, async () => (await db.query<{ extras: { variant: string; neck: string } }>('select * from public.companion_current()')).rows);
+    expect(rows[0]!.extras).toMatchObject({ variant: 'pastel', neck: 'scarf' });
+  });
+});

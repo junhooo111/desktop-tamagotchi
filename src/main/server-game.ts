@@ -55,6 +55,8 @@ export interface CompanionInfo {
   species_id: string;
   pet_xp: number;
   friend_level: number;
+  /** 친구가 정한 꾸밈(서버가 걸러 둔 값: variant·accessory·neck·effect) */
+  extras?: Record<string, unknown> | null;
 }
 export interface CompanionTick {
   granted: boolean;
